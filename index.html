@@ -178,23 +178,23 @@ button,select,input{font-family:inherit;}
 </head>
 <body>
 
-<!-- LOGIN OVERLAY (Google OAuth 로그인 전 대시보드 차단) -->
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#1a73e8,#34a853);display:none;align-items:center;justify-content:center;flex-direction:column;color:#fff;font-family:'Helvetica',Arial,sans-serif;">
-  <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);padding:36px 44px;border-radius:12px;max-width:440px;text-align:center;border:1px solid rgba(255,255,255,.2);">
-    <div style="font-size:13px;opacity:.85;letter-spacing:2px;margin-bottom:4px;">KMTC</div>
-    <div style="font-size:26px;font-weight:700;margin-bottom:8px;">-3W Sales Dashboard</div>
-    <div style="font-size:13px;opacity:.9;line-height:1.6;margin-bottom:24px;">
-      사내 전용 대시보드입니다.<br>
-      <b>@ekmtc.com</b> 계정으로 로그인 후 이용하세요.
+<!-- LOGIN OVERLAY — displayed until Google OAuth (@ekmtc.com) sign-in succeeds -->
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#1a73e8,#34a853);display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font-family:Helvetica,Arial,sans-serif;padding:20px;box-sizing:border-box;">
+  <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);padding:40px 48px;border-radius:14px;width:100%;max-width:460px;text-align:center;border:1px solid rgba(255,255,255,.2);box-shadow:0 8px 40px rgba(0,0,0,.15);">
+    <div style="font-size:13px;opacity:.85;letter-spacing:3px;margin-bottom:6px;">KMTC</div>
+    <div style="font-size:26px;font-weight:700;margin-bottom:12px;">-3W Sales Dashboard</div>
+    <div style="font-size:13px;opacity:.9;line-height:1.7;margin-bottom:28px;">
+      Internal dashboard — restricted access.<br>
+      Sign in with your <b>@ekmtc.com</b> Google account to continue.
     </div>
     <button id="loginBtn" onclick="requestSignIn()" disabled
-       style="background:#fff;color:#1a73e8;border:none;padding:12px 28px;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.15);min-width:280px;">
-      🔐 Google 라이브러리 로딩 중...
+       style="background:#fff;color:#1a73e8;border:none;padding:13px 30px;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.18);min-width:300px;display:inline-block;">
+      🔐 Loading Google SDK...
     </button>
-    <div id="loginError" style="display:none;margin-top:18px;font-size:12px;color:#ffd1d1;background:rgba(0,0,0,.2);padding:10px 14px;border-radius:4px;"></div>
-    <div style="font-size:11px;opacity:.7;margin-top:26px;line-height:1.6;">
-      외부 계정 / 타 도메인은 접근 차단됩니다.<br>
-      문의: lhjin@ekmtc.com
+    <div id="loginError" style="display:none;margin-top:18px;font-size:12px;color:#ffd1d1;background:rgba(0,0,0,.25);padding:10px 14px;border-radius:4px;text-align:left;"></div>
+    <div style="font-size:11px;opacity:.7;margin-top:28px;line-height:1.7;">
+      External / non-ekmtc.com accounts are blocked.<br>
+      Contact: <a href="mailto:lhjin@ekmtc.com" style="color:#fff;text-decoration:underline;">lhjin@ekmtc.com</a>
     </div>
   </div>
 </div>
@@ -966,7 +966,7 @@ function _gisInit(){
     scope: OAUTH_SCOPE,
     hd: OAUTH_HD,
     callback: async (resp) => {
-      if (resp.error) { _showLoginError('로그인 실패: ' + (resp.error_description||resp.error)); return; }
+      if (resp.error) { _showLoginError('Sign-in failed: ' + (resp.error_description||resp.error)); return; }
       await onLoginSuccess();
     }
   });
@@ -975,7 +975,7 @@ function _gisInit(){
 function _maybeEnableLogin(){
   if (_gapiReady && _gisReady) {
     const btn = document.getElementById('loginBtn');
-    if (btn) { btn.disabled = false; btn.textContent = '🔐 @ekmtc.com 계정으로 로그인'; }
+    if (btn) { btn.disabled = false; btn.textContent = '🔐 Sign in with Google (@ekmtc.com)'; }
   }
 }
 function _showLoginError(msg){
@@ -984,10 +984,10 @@ function _showLoginError(msg){
 }
 function requestSignIn(){
   if (OAUTH_CLIENT_ID === '__CLIENT_ID__') {
-    _showLoginError('관리자에게 문의 — OAuth Client ID 미설정');
+    _showLoginError('Contact admin — OAuth Client ID not configured.');
     return;
   }
-  if (!_tokenClient) { _showLoginError('Google 라이브러리 로딩 중...'); return; }
+  if (!_tokenClient) { _showLoginError('Google SDK still loading, please wait...'); return; }
   _tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
@@ -1011,7 +1011,7 @@ async function onLoginSuccess(){
   if (overlay) overlay.style.display = 'none';
   await loadSnapshotIndex();
   const ok = await bootstrapData();
-  if (!ok) _showLoginError('데이터 로드 실패 — Drive 폴더 권한 확인');
+  if (!ok) _showLoginError('Data load failed — check Drive folder access.');
   RENDER.all();
   RENDER.salesOptions();
   CHARTS.initAll();
