@@ -1035,12 +1035,22 @@ async function loadSnapshotIndex(){
   }
 }
 
+async function _loadTargetsConfigStandalone(){
+  // 시트 최신 목표 — 스냅샷 내 필드보다 우선. 어느 날짜 스냅샷을 봐도 동일 목표 적용.
+  try {
+    return await fetchDriveJson('targets_config.json');
+  } catch (e) { return null; }
+}
+
 async function bootstrapData(dateOrLatest){
   const filename = (dateOrLatest && dateOrLatest !== 'latest')
     ? `3w_snapshot_${dateOrLatest}.json`
     : '3w_snapshot.json';
   try {
     const s = await fetchDriveJson(filename);
+    // 별도 파일의 targets_config 가 있으면 우선 사용 (매일 시트에서 재생성됨)
+    const standalone = await _loadTargetsConfigStandalone();
+    if (standalone) s.targets_config = standalone;
     DATA = {
       region:         s.region         || MOCK.region,
       perf:           s.perf           || null,
