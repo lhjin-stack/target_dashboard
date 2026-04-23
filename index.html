@@ -221,7 +221,7 @@ button,select,input{font-family:inherit;}
   <div class="f-group">
     <span class="f-lbl">Snapshot</span>
     <select class="f-sel" id="dateSel" onchange="changeSnapshotDate(this.value)">
-      <option value="latest" selected>최신</option>
+      <option value="latest" selected data-i18n="latest">최신</option>
     </select>
   </div>
   <div class="f-group">
@@ -315,47 +315,47 @@ button,select,input{font-family:inherit;}
 <!-- KPI CARDS: 매니저 전용 3개 (앞) + 팀 공통 5개 -->
 <div class="kpis" id="kpiCards">
   <div class="kpi" style="border-left:3px solid #f9ab00;">
-    <div class="kpi-l">🎯 목표 달성률</div>
+    <div class="kpi-l" data-i18n="kpiGoal">🎯 목표 달성률</div>
     <div class="kpi-v" id="kpi-goal-rate">—</div>
     <div class="kpi-s" id="kpi-goal-sub" style="color:var(--muted);font-size:11px;">—</div>
-    <span class="kpi-tt" title="3주전 BKG / (BSA × 시트 목표%). 관리자 시트에 Target_% 등록 시 계산">ⓘ</span>
+    <span class="kpi-tt" data-i18n-title="kpiGoalTt" title="">ⓘ</span>
   </div>
   <div class="kpi" style="border-left:3px solid #00b894;">
-    <div class="kpi-l">📈 전주 동시점 대비</div>
+    <div class="kpi-l" data-i18n="kpiWoW">📈 전주 동시점 대비</div>
     <div class="kpi-v" id="kpi-wow-delta">—</div>
     <div class="kpi-s" id="kpi-wow-sub" style="color:var(--muted);font-size:11px;">—</div>
-    <span class="kpi-tt" title="이전 주 스냅샷의 동시점 W+3 3주전 BKG 와 비교. 영업 활동 모멘텀 지표">ⓘ</span>
+    <span class="kpi-tt" data-i18n-title="kpiWoWTt" title="">ⓘ</span>
   </div>
   <div class="kpi" style="border-left:3px solid #ea4335;">
-    <div class="kpi-l">⚠️ Cancel 전환</div>
+    <div class="kpi-l" data-i18n="kpiCancel">⚠️ Cancel 전환</div>
     <div class="kpi-v" id="kpi-cancel">—</div>
     <div class="kpi-s" id="kpi-cancel-sub" style="color:var(--muted);font-size:11px;">—</div>
-    <span class="kpi-tt" title="WOS-3 범위 중 Cancel 상태로 전환된 FST TEU. 이탈 모니터링">ⓘ</span>
+    <span class="kpi-tt" data-i18n-title="kpiCancelTt" title="">ⓘ</span>
   </div>
   <div class="kpi">
-    <div class="kpi-l">3주전 BKG</div>
+    <div class="kpi-l" data-i18n="kpiW3Bkg">3주전 BKG</div>
     <div class="kpi-v" id="kpi-w3-bkg" style="color:#6c5ce7;">—</div>
-    <span class="kpi-tt" title="WOS-3 단계(출항 3주 전 이상 리드타임) 부킹 FST_TEU 합">ⓘ</span>
+    <span class="kpi-tt" data-i18n-title="kpiW3BkgTt" title="">ⓘ</span>
   </div>
   <div class="kpi">
-    <div class="kpi-l">3주전 실선적</div>
+    <div class="kpi-l" data-i18n="kpiW3Ship">3주전 실선적</div>
     <div class="kpi-v" id="kpi-w3-ship" style="color:#00b894;">—</div>
-    <span class="kpi-tt" title="WOS-3 단계 부킹 중 Normal LST_TEU 합">ⓘ</span>
+    <span class="kpi-tt" data-i18n-title="kpiW3ShipTt" title="">ⓘ</span>
   </div>
   <div class="kpi">
-    <div class="kpi-l">BSA</div>
+    <div class="kpi-l" data-i18n="kpiBsa">BSA</div>
     <div class="kpi-v" id="kpi-bsa" style="color:#5f6368;">—</div>
-    <span class="kpi-tt" title="해당 주차·Area의 BSA TEU 합 (DMSAE_101DS, OBT 팀)">ⓘ</span>
+    <span class="kpi-tt" data-i18n-title="kpiBsaTt" title="">ⓘ</span>
   </div>
   <div class="kpi">
-    <div class="kpi-l">소석률</div>
+    <div class="kpi-l" data-i18n="kpiOcc">소석률</div>
     <div class="kpi-v" id="kpi-occ">—</div>
-    <span class="kpi-tt" title="Normal LST_TEU / BSA — 120% 이하 녹색, 초과 주황">ⓘ</span>
+    <span class="kpi-tt" data-i18n-title="kpiOccTt" title="">ⓘ</span>
   </div>
   <div class="kpi">
-    <div class="kpi-l">실선적률</div>
+    <div class="kpi-l" data-i18n="kpiShipRate">실선적률</div>
     <div class="kpi-v" id="kpi-ship-rate">—</div>
-    <span class="kpi-tt" title="Normal LST_TEU / FST_TEU — 55% 이상 녹색">ⓘ</span>
+    <span class="kpi-tt" data-i18n-title="kpiShipRateTt" title="">ⓘ</span>
   </div>
 </div>
 
@@ -385,8 +385,8 @@ button,select,input{font-family:inherit;}
             <tr>
               <th>Sales</th>
               <th class="tbl-num">-3W BKG TEU</th>
-              <th class="tbl-num">실선적 TEU</th>
-              <th class="tbl-num">실선적률</th>
+              <th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th>
+              <th class="tbl-num" data-i18n="colFulfillRate">실선적률</th>
             </tr>
           </thead>
           <tbody id="salesPerfBody"></tbody>
@@ -407,8 +407,8 @@ button,select,input{font-family:inherit;}
       <div class="card">
         <div class="card-hdr">
           <div>
-            <div class="card-ttl">3주전 BKG / BSA (POD별)</div>
-            <div class="card-desc">출항 <span id="podW3DescWeek">—</span> 주차 · w3_fst ÷ BSA, %</div>
+            <div class="card-ttl" data-i18n="podW3Title">3주전 BKG / BSA (POD별)</div>
+            <div class="card-desc" data-i18n="podW3Desc">출항 주차 · w3_fst ÷ BSA, %</div>
           </div>
         </div>
         <div class="chart-wrap"><canvas id="podChartW3"></canvas></div>
@@ -416,8 +416,8 @@ button,select,input{font-family:inherit;}
       <div class="card">
         <div class="card-hdr">
           <div>
-            <div class="card-ttl">소석률 Normal/BSA (POD별)</div>
-            <div class="card-desc">출항 <span id="podOccDescWeek">—</span> 주차 · Normal LST ÷ BSA, %</div>
+            <div class="card-ttl" data-i18n="podOccTitle">소석률 Normal/BSA (POD별)</div>
+            <div class="card-desc" data-i18n="podOccDesc">출항 주차 · Normal LST ÷ BSA, %</div>
           </div>
         </div>
         <div class="chart-wrap"><canvas id="podChartOcc"></canvas></div>
@@ -428,28 +428,14 @@ button,select,input{font-family:inherit;}
   <!-- TARGET EXTRACT -->
   <div class="sub-panel" id="sub-target">
     <div class="card" style="background:var(--surface2);border-color:var(--blue);">
-      <div class="card-ttl" style="color:var(--blue);">타겟 판정 기준</div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-top:8px;">
-        최근 12주 부킹 이력과 <span class="scoring-wk">선택 주차</span> 3주전 BKG 을 비교해 우선순위를 매김. 현재 필터(Area/POL/POD/Sales) 반영.
-        <br>
-        <b style="color:var(--text);">긴급리콜</b> — A+B 등급 화주 + 3M 평균 ≥ 20 TEU/주 + <span class="scoring-wk">선택 주차</span> 부킹 0
-        <br>
-        <b style="color:var(--text);">감소추세</b> — 최근 4주 중 2회 이상 감소, 첫주→끝주 총 -20% 초과
-        <br>
-        <b style="color:var(--text);">고수익갭</b> — A+B 등급 화주 + <span class="scoring-wk">선택 주차</span> 부킹이 3M 평균의 70% 미만
-        <br>
-        <b style="color:var(--text);">관리대상</b> — 위 조건 외 3M 평균 대비 부킹 갭 발생 화주
-        <br>
-        우선순위: 긴급리콜 > 감소추세 > 고수익갭 > 관리대상 · 영업사원 1인당 최대 5개
-        <br>
-        점수: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">3M_Avg_TEU / (1 + Cancel_Rate)</code>
-      </div>
+      <div class="card-ttl" style="color:var(--blue);" data-i18n="scoringTitleNew">타겟 판정 기준</div>
+      <div data-i18n-html="scoringBodyNew" style="font-size:12px;color:var(--text2);line-height:1.7;margin-top:8px;"></div>
     </div>
     <div class="card">
       <div class="card-hdr">
         <div>
-          <div class="card-ttl"><span id="targetTitleWk">—</span> 타겟 화주 Top 30</div>
-          <div class="card-desc">현재 필터 기준 · 화주 행 클릭 → 판정 근거 + 최근 6개월 이력</div>
+          <div class="card-ttl"><span id="targetTitleWk">—</span> <span data-i18n="targetTop30">타겟 화주 Top 30</span></div>
+          <div class="card-desc" data-i18n="targetListDescNew">현재 필터 기준 · 화주 행 클릭 → 판정 근거 + 최근 6개월 이력</div>
         </div>
         <div class="card-actions">
           <button class="btn-sm" data-i18n="reextract">🔍 Re-extract</button>
@@ -459,9 +445,9 @@ button,select,input{font-family:inherit;}
       <table class="tbl">
         <thead>
           <tr>
-            <th>판정</th>
+            <th data-i18n="colPriority">판정</th>
             <th>Code</th>
-            <th>Shipper</th>
+            <th data-i18n="colShipper">Shipper</th>
             <th>Sales</th>
             <th>Area</th>
             <th>POL</th>
@@ -470,7 +456,7 @@ button,select,input{font-family:inherit;}
             <th class="tbl-num">-3W BKG TEU</th>
             <th class="tbl-num">Gap</th>
             <th class="tbl-num">Score</th>
-            <th>Grade</th>
+            <th data-i18n="colGrade">Grade</th>
           </tr>
         </thead>
         <tbody id="targetBody"></tbody>
@@ -524,8 +510,8 @@ button,select,input{font-family:inherit;}
           <tr>
             <th>Shipper</th><th>Sales</th><th>Area</th><th>POL</th><th>POD</th>
             <th class="tbl-num">Week</th><th>Month</th>
-            <th class="tbl-num">-3W BKG TEU</th><th class="tbl-num">실선적 BKG TEU</th>
-            <th class="tbl-num">실선적률</th>
+            <th class="tbl-num">-3W BKG TEU</th><th class="tbl-num" data-i18n="colShippedTeu">실선적 BKG TEU</th>
+            <th class="tbl-num" data-i18n="colFulfillRate">실선적률</th>
           </tr>
         </thead>
         <tbody id="rawBody"></tbody>
@@ -546,14 +532,14 @@ button,select,input{font-family:inherit;}
       <button class="modal-close" onclick="closeSales()">✕</button>
     </div>
     <div class="mini-stats">
-      <div class="mini-stat"><div class="mini-stat-l">3주전 BKG (현)</div><div class="mini-stat-v" id="salMiniW3">—</div></div>
-      <div class="mini-stat"><div class="mini-stat-l">전주 동시점 대비</div><div class="mini-stat-v" id="salMiniWoW" style="font-size:15px;">—</div></div>
-      <div class="mini-stat"><div class="mini-stat-l">Cancel 전환</div><div class="mini-stat-v" id="salMiniCanc" style="font-size:15px;">—</div></div>
-      <div class="mini-stat"><div class="mini-stat-l">Top Route</div><div class="mini-stat-v" id="salMiniTop" style="font-size:14px;">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l" data-i18n="salMiniW3">3주전 BKG (현)</div><div class="mini-stat-v" id="salMiniW3">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l" data-i18n="salMiniWoW">전주 동시점 대비</div><div class="mini-stat-v" id="salMiniWoW" style="font-size:15px;">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l" data-i18n="salMiniCanc">Cancel 전환</div><div class="mini-stat-v" id="salMiniCanc" style="font-size:15px;">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l" data-i18n="topRoute">Top Route</div><div class="mini-stat-v" id="salMiniTop" style="font-size:14px;">—</div></div>
     </div>
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">구간별 -3W 실적 (현 시점 vs 전주 동시점)</div>
+    <div data-i18n="salRoutePerf" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">구간별 -3W 실적 (현 시점 vs 전주 동시점)</div>
     <table class="tbl tbl-sm">
-      <thead><tr><th>Route</th><th class="tbl-num">-3W BKG TEU</th><th class="tbl-num">전주 대비</th><th class="tbl-num">실선적 TEU</th><th class="tbl-num">실선적률</th><th class="tbl-num">취소율</th><th>평가</th></tr></thead>
+      <thead><tr><th>Route</th><th class="tbl-num">-3W BKG TEU</th><th class="tbl-num" data-i18n="colVsLastWk">전주 대비</th><th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th><th class="tbl-num" data-i18n="colFulfillRate">실선적률</th><th class="tbl-num" data-i18n="colCancel">취소율</th><th data-i18n="rating">평가</th></tr></thead>
       <tbody id="salesRouteBody"></tbody>
     </table>
     <div class="chart-wrap-sm" style="margin-top:14px;"><canvas id="salesRouteChart"></canvas></div>
@@ -566,36 +552,36 @@ button,select,input{font-family:inherit;}
     <div class="modal-hdr">
       <div>
         <div class="modal-ttl" id="modal-ttl">—</div>
-        <div class="card-desc" id="modal-sub">타겟 판정 근거 + 최근 6개월 이력</div>
+        <div class="card-desc" id="modal-sub" data-i18n="shpModalSub">타겟 판정 근거 + 최근 6개월 이력</div>
       </div>
       <button class="modal-close" onclick="closeShipper()">✕</button>
     </div>
 
     <div id="shpJudgement" style="background:var(--surface2);border-left:3px solid var(--amber);padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:12px;">
-      <div style="font-weight:700;margin-bottom:4px;">타겟 판정 근거</div>
+      <div data-i18n="shpJudgeTitle" style="font-weight:700;margin-bottom:4px;">타겟 판정 근거</div>
       <div id="shpJudgeBody" style="color:var(--text2);line-height:1.6;"></div>
     </div>
 
     <div class="mini-stats">
-      <div class="mini-stat"><div class="mini-stat-l">6M 누적 TEU</div><div class="mini-stat-v" id="shpTot6m">—</div></div>
-      <div class="mini-stat"><div class="mini-stat-l">Cancel률 (6M)</div><div class="mini-stat-v" id="shpCancel">—</div></div>
-      <div class="mini-stat"><div class="mini-stat-l">평균 리드타임</div><div class="mini-stat-v" id="shpLead">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l" data-i18n="shpTotal">6M 누적 TEU</div><div class="mini-stat-v" id="shpTot6m">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l" data-i18n="shpCancel">Cancel률 (6M)</div><div class="mini-stat-v" id="shpCancel">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l" data-i18n="shpLead">평균 리드타임</div><div class="mini-stat-v" id="shpLead">—</div></div>
     </div>
 
     <div class="chart-wrap-sm" style="margin-bottom:14px;"><canvas id="shipperChart"></canvas></div>
 
     <div style="margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Top Route (6M)</div>
+      <div data-i18n="shpTopRoute" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Top Route (6M)</div>
       <table class="tbl tbl-sm">
         <thead><tr><th>Route</th><th class="tbl-num">TEU</th><th class="tbl-num">%</th></tr></thead>
         <tbody id="shpRoutesBody"></tbody>
       </table>
     </div>
     <div>
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">최근 부킹 (주재원 검증용)</div>
+      <div data-i18n="shpRecent" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">최근 부킹 (주재원 검증용)</div>
       <div style="max-height:300px;overflow:auto;">
       <table class="tbl tbl-sm">
-        <thead><tr><th>BKG_NO</th><th>Route</th><th class="tbl-num">TEU</th><th>상태</th><th>BKG일</th><th>ETD</th></tr></thead>
+        <thead><tr><th>BKG_NO</th><th>Route</th><th class="tbl-num">TEU</th><th data-i18n="colStatus">상태</th><th data-i18n="colBkgDate">BKG일</th><th>ETD</th></tr></thead>
         <tbody id="shpBkgsBody"></tbody>
       </table>
       </div>
@@ -606,7 +592,7 @@ button,select,input{font-family:inherit;}
 <!-- FOOTER -->
 <footer class="footer">
   <div data-i18n="footerL">
-    KMTC -3W Booking Dashboard · 매일 07:00 자동 갱신
+    <span data-i18n="footerLine">KMTC -3W Booking Dashboard · 매일 09:30 자동 갱신</span>
   </div>
   <div>
     445 Calendar · Base: 2026-01-04
@@ -774,7 +760,122 @@ const I18N = {
   trendRatio:      {ko:'BSA 대비 비중 (%)',                en:'Share of BSA (%)'},
   threeWTeu:       {ko:'-3W TEU',                          en:'-3W TEU'},
   legendFst:       {ko:'FST_TEU',                          en:'FST_TEU'},
-  legendLst:       {ko:'LST_TEU',                          en:'LST_TEU'}
+  legendLst:       {ko:'LST_TEU',                          en:'LST_TEU'},
+
+  // ── KPI 카드 (매니저 전용 3개 + 팀 공통 5개) ──
+  kpiGoal:         {ko:'🎯 목표 달성률',                    en:'🎯 Goal Achievement'},
+  kpiGoalTt:       {ko:'3주전 BKG / (BSA × 시트 목표%). 관리자 시트에 Target_% 등록 시 계산',
+                    en:'W3 Booking ÷ (BSA × sheet target %). Calculated when Target_% is registered in the sheet.'},
+  kpiWoW:          {ko:'📈 전주 동시점 대비',                en:'📈 vs Last Week'},
+  kpiWoWTt:        {ko:'이전 주 스냅샷의 동시점 W+3 3주전 BKG 와 비교. 영업 활동 모멘텀 지표',
+                    en:'Compared with prior week snapshot’s W+3 booking. Sales momentum indicator.'},
+  kpiCancel:       {ko:'⚠️ Cancel 전환',                    en:'⚠️ Cancel Shift'},
+  kpiCancelTt:     {ko:'WOS-3 범위 중 Cancel 상태로 전환된 FST TEU. 이탈 모니터링',
+                    en:'FST TEU that shifted to Cancel within WOS-3 scope. Churn monitor.'},
+  kpiW3Bkg:        {ko:'3주전 BKG',                          en:'W3 Booking'},
+  kpiW3BkgTt:      {ko:'WOS-3 단계(출항 3주 전 이상 리드타임) 부킹 FST_TEU 합',
+                    en:'Sum of FST_TEU for WOS-3 bookings (≥3-week lead time before ETD)'},
+  kpiW3Ship:       {ko:'3주전 실선적',                       en:'W3 Shipped'},
+  kpiW3ShipTt:     {ko:'WOS-3 단계 부킹 중 Normal LST_TEU 합',
+                    en:'Sum of Normal LST_TEU within WOS-3 bookings'},
+  kpiBsa:          {ko:'BSA',                                en:'BSA'},
+  kpiBsaTt:        {ko:'해당 주차·Area의 BSA TEU 합 (DMSAE_101DS, OBT 팀)',
+                    en:'Sum of BSA TEU for the selected week × Area (DMSAE_101DS, OBT team)'},
+  kpiOcc:          {ko:'소석률',                             en:'Occupancy'},
+  kpiOccTt:        {ko:'Normal LST_TEU / BSA — 120% 이하 녹색, 초과 주황',
+                    en:'Normal LST_TEU / BSA — green ≤120 %, orange if over.'},
+  kpiShipRate:     {ko:'실선적률',                            en:'Fulfill Rate'},
+  kpiShipRateTt:   {ko:'Normal LST_TEU / FST_TEU — 55% 이상 녹색',
+                    en:'Normal LST_TEU / FST_TEU — green when ≥55 %.'},
+
+  // ── Target tab ──
+  scoringTitleNew: {ko:'타겟 판정 기준',                     en:'Target Classification Criteria'},
+  scoringBodyNew:  {
+    ko:`최근 12주 부킹 이력과 <span class="scoring-wk">선택 주차</span> 3주전 BKG 을 비교해 우선순위를 매김. 현재 필터(Area/POL/POD/Sales) 반영.
+        <br><b style="color:var(--text);">긴급리콜</b> — A+B 등급 화주 + 3M 평균 ≥ 20 TEU/주 + <span class="scoring-wk">선택 주차</span> 부킹 0
+        <br><b style="color:var(--text);">감소추세</b> — 최근 4주 중 2회 이상 감소, 첫주→끝주 총 -20% 초과
+        <br><b style="color:var(--text);">고수익갭</b> — A+B 등급 화주 + <span class="scoring-wk">선택 주차</span> 부킹이 3M 평균의 70% 미만
+        <br><b style="color:var(--text);">관리대상</b> — 위 조건 외 3M 평균 대비 부킹 갭 발생 화주
+        <br>우선순위: 긴급리콜 > 감소추세 > 고수익갭 > 관리대상 · 영업사원 1인당 최대 5개
+        <br>점수: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">3M_Avg_TEU / (1 + Cancel_Rate)</code>`,
+    en:`Priority is set by comparing last 12-week booking history with <span class="scoring-wk">selected week</span> W3 booking. Current filters (Area/POL/POD/Sales) applied.
+        <br><b style="color:var(--text);">Urgent Recall</b> — A+B grade shipper + 3M avg ≥ 20 TEU/wk + 0 booking in <span class="scoring-wk">selected week</span>
+        <br><b style="color:var(--text);">Declining</b> — ≥2 weekly drops in last 4 weeks, total -20 % from first to last
+        <br><b style="color:var(--text);">Premium Gap</b> — A+B grade shipper + <span class="scoring-wk">selected week</span> booking below 70 % of 3M avg
+        <br><b style="color:var(--text);">Watchlist</b> — general gap vs 3M avg (other than above)
+        <br>Priority order: Urgent Recall > Declining > Premium Gap > Watchlist · capped at 5 per sales rep
+        <br>Score: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">3M_Avg_TEU / (1 + Cancel_Rate)</code>`
+  },
+  targetTop30:     {ko:'타겟 화주 Top 30',                  en:'Top 30 Target Shippers'},
+  targetListDescNew:{ko:'현재 필터 기준 · 화주 행 클릭 → 판정 근거 + 최근 6개월 이력',
+                    en:'Current filters · click a row for classification basis + 6-month history'},
+  colPriority:     {ko:'판정',                               en:'Priority'},
+  colShipper:      {ko:'Shipper',                            en:'Shipper'},
+  colGrade:        {ko:'Grade',                              en:'Grade'},
+  catA:            {ko:'긴급리콜',                           en:'Urgent Recall'},
+  catB:            {ko:'감소추세',                           en:'Declining'},
+  catC:            {ko:'고수익갭',                           en:'Premium Gap'},
+  catD:            {ko:'관리대상',                           en:'Watchlist'},
+  catATt:          {ko:'A+B 등급 + 3M 평균 ≥ 20 TEU + 이번주 부킹 0',
+                    en:'A+B grade + 3M avg ≥ 20 TEU + 0 booking this week'},
+  catBTt:          {ko:'최근 4주 중 2회 이상 감소, 총 -20% 초과',
+                    en:'≥2 drops in last 4 weeks, total -20%'},
+  catCTt:          {ko:'A+B 등급 + 이번주가 3M 평균의 70% 미만',
+                    en:'A+B grade + this-week booking below 70% of 3M avg'},
+  catDTt:          {ko:'평균 대비 부킹 갭 발생',             en:'General gap vs 3M average'},
+
+  // ── POD 차트 ──
+  podW3Title:      {ko:'3주전 BKG / BSA (POD별)',           en:'W3 Booking / BSA by POD'},
+  podW3Desc:       {ko:'출항 주차 · w3_fst ÷ BSA, %',        en:'Departure week · w3_fst ÷ BSA, %'},
+  podOccTitle:     {ko:'소석률 Normal/BSA (POD별)',         en:'Occupancy Normal/BSA by POD'},
+  podOccDesc:      {ko:'출항 주차 · Normal LST ÷ BSA, %',    en:'Departure week · Normal LST ÷ BSA, %'},
+
+  // ── Sales modal ──
+  salMiniW3:       {ko:'3주전 BKG (현)',                    en:'W3 Booking (current)'},
+  salMiniWoW:      {ko:'전주 동시점 대비',                    en:'vs Last Week'},
+  salMiniCanc:     {ko:'Cancel 전환',                        en:'Cancel Shift'},
+  salRoutePerf:    {ko:'구간별 -3W 실적 (현 시점 vs 전주 동시점)',
+                    en:'-3W Performance by Route (current vs last week)'},
+  colVsLastWk:     {ko:'전주 대비',                          en:'vs Last Week'},
+  colShippedShort: {ko:'실선적 TEU',                         en:'Shipped TEU'},
+
+  // ── Shipper modal ──
+  shpModalSub:     {ko:'타겟 판정 근거 + 최근 6개월 이력',    en:'Classification basis + 6-month history'},
+  shpJudgeTitle:   {ko:'타겟 판정 근거',                    en:'Target Classification Basis'},
+  shpTotal:        {ko:'6M 누적 TEU',                        en:'6M Total TEU'},
+  shpCancel:       {ko:'Cancel률 (6M)',                      en:'Cancel Rate (6M)'},
+  shpLead:         {ko:'평균 리드타임',                       en:'Avg Lead Time'},
+  shpTopRoute:     {ko:'Top Route (6M)',                    en:'Top Route (6M)'},
+  shpRecent:       {ko:'최근 부킹 (주재원 검증용)',          en:'Recent Bookings (verification)'},
+  colStatus:       {ko:'상태',                               en:'Status'},
+  colBkgDate:      {ko:'BKG일',                             en:'BKG Date'},
+
+  // ── Dynamic JS strings ──
+  selectAreaTab:   {ko:'Area 탭 선택 필요',                  en:'Select an Area tab'},
+  noTargetSheet:   {ko:'시트에 목표 % 미등록',              en:'No Target % in sheet'},
+  loadingPrev:     {ko:'이전 스냅샷 로드 중...',            en:'Loading previous snapshot...'},
+  ofTotalFst:      {ko:'전체 FST 대비',                     en:'of total FST'},
+  weeklyTarget:    {ko:'주간 목표',                          en:'Weekly target'},
+  monthlyTarget:   {ko:'월간 목표',                          en:'Monthly target'},
+  atSnapshot:      {ko:'시점',                               en:'at snapshot'},
+  noTargetsFilter: {ko:'현재 필터 조건에서 타겟 없음',       en:'No targets with current filters'},
+  ownerLabel:      {ko:'담당',                               en:'Owner'},
+  thisWeekW3Bkg:   {ko:'이번주 -3W BKG',                   en:'This week W3 BKG'},
+  threeMAvg:       {ko:'3M 평균',                            en:'3M Avg'},
+  perWeek:         {ko:'TEU/주',                             en:'TEU/wk'},
+  noHistory:       {ko:'이력 없음',                          en:'No history'},
+  historyLimited:  {ko:'6M 이력 미수집 (상위 600 화주만 포함)',
+                    en:'No 6M history (top 600 shippers only)'},
+  noData:          {ko:'데이터 없음',                        en:'No data'},
+  footerLine:      {ko:'KMTC -3W Booking Dashboard · 매일 09:30 자동 갱신',
+                    en:'KMTC -3W Booking Dashboard · daily 09:30 auto-refresh'},
+  catDescA:        {ko:'긴급리콜 — A+B 등급 + 3M 평균 ≥ 20 TEU + 이번주 부킹 0',
+                    en:'Urgent Recall — A+B grade + 3M avg ≥ 20 TEU + 0 booking this week'},
+  catDescB:        {ko:'감소추세 — 최근 4주 중 2회 이상 감소, 총 -20% 초과',
+                    en:'Declining — ≥2 drops in last 4 weeks, total -20%'},
+  catDescC:        {ko:'고수익갭 — A+B 등급 + 이번주가 3M 평균의 70% 미만',
+                    en:'Premium Gap — A+B grade + this-week booking below 70% of 3M avg'},
+  catDescD:        {ko:'관리대상 — 평균 대비 부킹 갭 발생',  en:'Watchlist — gap vs 3M average'},
 };
 function t(key){ const e = I18N[key]; return e ? (e[STATE.lang] || e.ko || key) : key; }
 function applyLang(){
@@ -1608,12 +1709,12 @@ const RENDER = {
         goalEl.textContent = ach.toFixed(0) + '%';
         goalEl.style.color = ach >= 100 ? '#34a853' : (ach >= 80 ? '#f9ab00' : '#ea4335');
       }
-      const typ = tgt.type === 'weekly' ? '주간' : '월간';
+      const typ = tgt.type === 'weekly' ? t('weeklyTarget') : t('monthlyTarget');
       const podS = tgt.pod !== 'ALL' ? ` · ${tgt.pod}` : '';
-      if (goalSub) goalSub.textContent = `${typ} 목표 ${Math.round(targetTeu).toLocaleString()} TEU (${tgt.pct}%${podS})`;
+      if (goalSub) goalSub.textContent = `${typ} ${Math.round(targetTeu).toLocaleString()} TEU (${tgt.pct}%${podS})`;
     } else {
       if (goalEl) { goalEl.textContent = '—'; goalEl.style.color = ''; }
-      if (goalSub) goalSub.textContent = (STATE.region === 'ALL') ? 'Area 탭 선택 필요' : '시트에 목표 % 미등록';
+      if (goalSub) goalSub.textContent = (STATE.region === 'ALL') ? t('selectAreaTab') : t('noTargetSheet');
     }
 
     // (3주전 BKG 카드 진행바 제거됨 — 🎯 목표 달성률 카드에서 동일 지표 표시)
@@ -1642,10 +1743,10 @@ const RENDER = {
         wowEl.textContent = `${mark} ${sign}${fmt(delta)}`;
         wowEl.style.color = delta > 0 ? '#ea4335' : (delta < 0 ? '#1a73e8' : '');
       }
-      if (wowSub) wowSub.textContent = `${prev._date || ''} 시점 W${String(prevTargetWk).padStart(2,'0')} = ${fmt(prevW3)} TEU`;
+      if (wowSub) wowSub.textContent = `${prev._date || ''} ${t('atSnapshot')} W${String(prevTargetWk).padStart(2,'0')} = ${fmt(prevW3)} TEU`;
     } else {
       if (wowEl) { wowEl.textContent = '—'; wowEl.style.color = ''; }
-      if (wowSub) wowSub.textContent = '이전 스냅샷 로드 중';
+      if (wowSub) wowSub.textContent = t('loadingPrev');
     }
 
     // ③ Cancel 전환 = WOS-3 범위 Cancel FST 합 (= 전체 Cancel 의 WOS-3 해당분)
@@ -1658,7 +1759,7 @@ const RENDER = {
       cEl.textContent = fmt(canc) + ' TEU';
       cEl.style.color = cancPct >= 10 ? '#ea4335' : (cancPct >= 5 ? '#f9ab00' : '');
     }
-    if (cSub) cSub.textContent = `전체 FST 대비 ${cancPct.toFixed(1)}%`;
+    if (cSub) cSub.textContent = `${t('ofTotalFst')} ${cancPct.toFixed(1)}%`;
   },
   regionTabBadges(){
     const pairs = [['ALL',0],['SZP',1],['CAN',2],['HKG',3]];
@@ -1732,14 +1833,14 @@ const RENDER = {
     if(!tbody) return;
     const rows = DATA_API.targets(STATE);
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="12" class="muted" style="text-align:center;padding:16px;">현재 필터 조건에서 타겟 없음</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="12" class="muted" style="text-align:center;padding:16px;">${t('noTargetsFilter')}</td></tr>`;
       return;
     }
     const CAT = {
-      'A': {lbl:'긴급리콜', cls:'tag-cancel'},
-      'B': {lbl:'감소추세', cls:'tag-waiting'},
-      'C': {lbl:'고수익갭', cls:'tag-normal'},
-      'D': {lbl:'관리대상', cls:''}
+      'A': {lbl: t('catA'), cls:'tag-cancel'},
+      'B': {lbl: t('catB'), cls:'tag-waiting'},
+      'C': {lbl: t('catC'), cls:'tag-normal'},
+      'D': {lbl: t('catD'), cls:''}
     };
     tbody.innerHTML = rows.map(r=>{
       const [code,name,sales,area,pol,pod,avg3m,w3teu,score,category,grade] = r;
@@ -2170,7 +2271,7 @@ function openSales(name, area){
         <td class="tbl-num ${rt.cls}">${r[3]}</td>
         <td class="tbl-num">${r[4]}</td>
         <td>${t(rt.key)}</td></tr>`;
-  }).join('') || '<tr><td colspan="7" class="muted" style="text-align:center;">데이터 없음</td></tr>';
+  }).join('') || `<tr><td colspan="7" class="muted" style="text-align:center;">${t('noData')}</td></tr>`;
   $('#salesModal').classList.add('show');
   setTimeout(()=>CHARTS.salesRoute(name), 50);
 }
@@ -2186,19 +2287,19 @@ function openShipper(code, name){
   if (trow) {
     const [,,sales,area,pol,pod,avg3m,w3teu,score,cat,grade] = trow;
     const CAT_DESC = {
-      'A': '🔴 긴급리콜 — A+B 등급 + 3M 평균 ≥ 20 TEU + 이번주 부킹 0',
-      'B': '🟡 감소추세 — 최근 4주 중 2회 이상 감소, 총 -20% 초과',
-      'C': '💎 고수익갭 — A+B 등급 + 이번주가 3M 평균의 70% 미만',
-      'D': '⚡ 관리대상 — 평균 대비 부킹 갭 발생'
+      'A': '🔴 ' + t('catDescA'),
+      'B': '🟡 ' + t('catDescB'),
+      'C': '💎 ' + t('catDescC'),
+      'D': '⚡ ' + t('catDescD')
     };
     judge.innerHTML = `
       <div>${CAT_DESC[cat] || CAT_DESC['D']}</div>
       <div style="margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;">
-        <span>담당: <b>${sales}</b></span>
+        <span>${t('ownerLabel')}: <b>${sales}</b></span>
         <span>Area: ${area}</span>
         <span>POL-POD: ${pol}-${pod}</span>
-        <span>3M 평균: <b>${Math.round(avg3m)}</b> TEU/주</span>
-        <span>이번주 -3W BKG: <b style="color:var(--${w3teu<avg3m*0.5?'red':'text'});">${Math.round(w3teu)}</b> TEU</span>
+        <span>${t('threeMAvg')}: <b>${Math.round(avg3m)}</b> ${t('perWeek')}</span>
+        <span>${t('thisWeekW3Bkg')}: <b style="color:var(--${w3teu<avg3m*0.5?'red':'text'});">${Math.round(w3teu)}</b> TEU</span>
         <span>Grade: <b>${grade || '-'}</b></span>
       </div>`;
     $('#shpJudgement').style.display = '';
@@ -2216,7 +2317,7 @@ function openShipper(code, name){
     const cancEl = $('#shpCancel');
     cancEl.textContent = ((h.cancel_rate||0)*100).toFixed(1) + '%';
     cancEl.className = 'mini-stat-v' + ((h.cancel_rate||0) >= 0.1 ? ' text-danger' : '');
-    $('#shpLead').textContent = h.avg_lead_days != null ? h.avg_lead_days.toFixed(0) + '일' : '—';
+    $('#shpLead').textContent = h.avg_lead_days != null ? h.avg_lead_days.toFixed(0) + (STATE.lang==='ko'?'일':'d') : '—';
     // Top Routes
     const routes = Object.entries(h.routes || {}).sort((a,b)=>b[1]-a[1]).slice(0,8);
     const routeTotal = Object.values(h.routes || {}).reduce((a,b)=>a+b,0);
@@ -2235,7 +2336,7 @@ function openShipper(code, name){
               <td class="${statCls}">${b.status}</td>
               <td style="font-size:11px;color:var(--muted);">${b.bkg_date}</td>
               <td style="font-size:11px;color:var(--muted);">${b.etd||'-'}</td></tr>`;
-    }).join('') || '<tr><td colspan="6" class="muted" style="text-align:center;">이력 없음</td></tr>';
+    }).join('') || `<tr><td colspan="6" class="muted" style="text-align:center;">${t('noHistory')}</td></tr>`;
   } else {
     $('#shpTot6m').textContent = '—';
     $('#shpCancel').textContent = '—';
