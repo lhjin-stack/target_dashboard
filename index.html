@@ -1,0 +1,2273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>KMTC -3W Booking Dashboard — Prototype v1</title>
+<script>
+/* Pre-render theme guard: applies saved theme (or light default) before body paints — no FOUC */
+(function(){
+  var t = localStorage.getItem('kmtc3w_theme');
+  if (t !== 'dark') document.documentElement.classList.add('light');
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<!-- Google OAuth + Drive API (사내 전용 접근 제어, 데이터는 Drive 에만) -->
+<script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script>
+<script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script>
+<script>
+if (window.ChartDataLabels) {
+  Chart.register(ChartDataLabels);
+  // 전역 기본: display=false — 필요한 dataset 에서 display:true 로 opt-in
+  Chart.defaults.set('plugins.datalabels', { display: false });
+}
+</script>
+<style>
+:root{
+  --bg:#0b0e14;--surface:#141821;--surface2:#1a1f2e;
+  --border:#232a3b;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --blue:#3b82f6;--blue2:#1d4ed8;--green:#10b981;--red:#ef4444;
+  --amber:#f59e0b;--purple:#8b5cf6;--cyan:#06b6d4;
+}
+html.light{
+  --bg:#f1f5f9;--surface:#ffffff;--surface2:#f8fafc;
+  --border:#e2e8f0;--text:#1e293b;--text2:#475569;--text3:#94a3b8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow-x:hidden;font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+button,select,input{font-family:inherit;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);}
+.hdr-l{display:flex;align-items:center;gap:10px;}
+.logo{font-size:17px;font-weight:800;}
+.logo span{color:var(--blue);}
+.badge-proto{font-size:10px;padding:2px 8px;border-radius:10px;background:#f59e0b25;color:var(--amber);font-weight:700;}
+.hdr-r{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text3);}
+.user-chip{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;}
+.user-dot{width:18px;height:18px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+.theme-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:4px;padding:4px 8px;font-size:12px;cursor:pointer;}
+.theme-btn:hover{border-color:var(--blue);color:var(--blue);}
+
+/* Global filter bar */
+.filter-bar{display:flex;align-items:center;gap:10px;padding:10px 20px;background:var(--surface2);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.f-group{display:flex;align-items:center;gap:6px;}
+.f-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;letter-spacing:.4px;}
+.f-sel{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:5px;font-size:13px;outline:none;cursor:pointer;}
+.f-sel:hover{border-color:var(--blue);}
+.f-multi{position:relative;}
+.f-multi-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:5px;font-size:13px;cursor:pointer;min-width:140px;text-align:left;}
+.f-multi-btn:hover{border-color:var(--blue);}
+.f-multi-btn::after{content:'▾';float:right;color:var(--text3);}
+.f-multi-drop{display:none;position:absolute;top:100%;left:0;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px;z-index:100;min-width:180px;max-height:260px;overflow-y:auto;box-shadow:0 4px 12px #00000040;}
+.f-multi.open .f-multi-drop{display:block;}
+.f-opt{display:flex;align-items:center;gap:8px;padding:4px 8px;cursor:pointer;border-radius:4px;font-size:13px;}
+.f-opt:hover{background:var(--surface2);}
+.f-opt input{cursor:pointer;}
+.f-multi-ctrl{display:flex;gap:4px;padding:0 4px 6px;border-bottom:1px solid var(--border);margin-bottom:4px;}
+.f-multi-mini{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer;font-weight:600;}
+.f-multi-mini:hover{border-color:var(--blue);color:var(--blue);}
+.week-info{margin-left:auto;font-size:12px;color:var(--text2);}
+.week-info b{color:var(--amber);}
+
+/* Region tabs */
+.region-tabs{display:flex;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);}
+.rtab{padding:11px 22px;font-size:14px;font-weight:700;color:var(--text3);border:none;background:none;border-bottom:2px solid transparent;cursor:pointer;}
+.rtab.active{color:var(--blue);border-bottom-color:var(--blue);}
+.rtab:hover:not(.active){color:var(--text2);}
+.rtab-badge{font-size:10px;margin-left:6px;padding:1px 6px;border-radius:8px;background:var(--surface2);color:var(--text2);font-weight:600;}
+.rtab.active .rtab-badge{background:#3b82f625;color:var(--blue);}
+
+/* KPI cards */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);}
+.kpi{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:13px 16px;position:relative;}
+.kpi-l{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;font-weight:700;}
+.kpi-v{font-size:26px;font-weight:800;line-height:1.1;}
+.kpi-v-sub{font-size:13px;color:var(--text3);font-weight:600;margin-top:2px;}
+.kpi-s{font-size:12px;color:var(--text3);margin-top:4px;}
+.kpi-s.up{color:var(--green);}
+.kpi-s.down{color:var(--red);}
+.kpi-tt{position:absolute;top:6px;right:8px;color:var(--text3);font-size:11px;cursor:help;}
+.kpi-tt:hover{color:var(--blue);}
+.kpi-split{display:flex;gap:12px;}
+.kpi-split-item{flex:1;}
+.kpi-split-l{font-size:10px;color:var(--text3);text-transform:uppercase;}
+.kpi-split-v{font-size:18px;font-weight:800;}
+
+/* Sub tabs */
+.sub-nav{display:flex;padding:0 20px;background:var(--bg);border-bottom:1px solid var(--border);gap:2px;}
+.snav-btn{padding:10px 16px;font-size:13px;font-weight:600;color:var(--text3);border:none;background:none;border-bottom:2px solid transparent;cursor:pointer;}
+.snav-btn.active{color:var(--text);border-bottom-color:var(--cyan);}
+.snav-btn:hover:not(.active){color:var(--text2);}
+
+/* Content area */
+.content{padding:16px 20px;min-height:calc(100vh - 280px);}
+.sub-panel{display:none;}
+.sub-panel.active{display:block;}
+
+/* Section card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px;}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.card-ttl{font-size:14px;font-weight:700;color:var(--text);}
+.card-desc{font-size:11px;color:var(--text3);margin-top:2px;}
+.card-actions{display:flex;gap:6px;}
+.btn-sm{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:5px 12px;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;}
+.btn-sm:hover{border-color:var(--blue);color:var(--blue);}
+.btn-primary{background:var(--blue);border:1px solid var(--blue);color:#fff;}
+.btn-primary:hover{background:var(--blue2);}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.tbl th{text-align:left;padding:8px 10px;background:var(--surface2);color:var(--text3);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);}
+.tbl tr:hover td{background:var(--surface2);}
+.tbl tr.clickable{cursor:pointer;}
+.tbl-num{text-align:right;font-variant-numeric:tabular-nums;}
+.tbl-sm{font-size:12px;}
+.tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;}
+.tag-szp{background:#06b6d420;color:var(--cyan);}
+.tag-can{background:#8b5cf620;color:var(--purple);}
+.tag-hkg{background:#f59e0b20;color:var(--amber);}
+.tag-normal{background:#10b98120;color:var(--green);}
+.tag-waiting{background:#f59e0b20;color:var(--amber);}
+.tag-cancel{background:#ef444420;color:var(--red);}
+
+/* Shipper detail modal */
+.modal-bg{display:none;position:fixed;inset:0;background:#000000aa;z-index:500;align-items:center;justify-content:center;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:640px;max-width:90vw;max-height:85vh;overflow-y:auto;padding:18px 20px;}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.modal-ttl{font-size:16px;font-weight:700;}
+.modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;}
+.modal-close:hover{color:var(--red);}
+.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.mini-stat{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center;}
+.mini-stat-l{font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px;}
+.mini-stat-v{font-size:18px;font-weight:800;}
+
+/* Grid layouts */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch;}
+.grid-2 > .card{display:flex;flex-direction:column;}
+.grid-2 > .card > .tbl{flex:1;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* Footer */
+.footer{padding:12px 20px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text3);}
+.validation-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:#10b98115;color:var(--green);border-radius:10px;font-weight:700;}
+.validation-chip.warn{background:#f59e0b15;color:var(--amber);}
+.validation-chip.fail{background:#ef444415;color:var(--red);}
+
+/* Chart */
+.chart-wrap{position:relative;height:260px;}
+.chart-wrap-sm{position:relative;height:180px;}
+
+/* Utility */
+.hidden{display:none !important;}
+.mt-sm{margin-top:8px;}
+.mb-sm{margin-bottom:8px;}
+.text-muted{color:var(--text3);}
+.text-danger{color:var(--red);}
+.text-good{color:var(--green);}
+.text-right{text-align:right;}
+
+/* Proto watermark */
+.proto-note{position:fixed;bottom:60px;right:16px;background:#f59e0b25;color:var(--amber);padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:1px solid #f59e0b55;z-index:300;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY (Google OAuth 로그인 전 대시보드 차단) -->
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#1a73e8,#34a853);display:none;align-items:center;justify-content:center;flex-direction:column;color:#fff;font-family:'Helvetica',Arial,sans-serif;">
+  <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);padding:36px 44px;border-radius:12px;max-width:440px;text-align:center;border:1px solid rgba(255,255,255,.2);">
+    <div style="font-size:13px;opacity:.85;letter-spacing:2px;margin-bottom:4px;">KMTC</div>
+    <div style="font-size:26px;font-weight:700;margin-bottom:8px;">-3W Sales Dashboard</div>
+    <div style="font-size:13px;opacity:.9;line-height:1.6;margin-bottom:24px;">
+      사내 전용 대시보드입니다.<br>
+      <b>@ekmtc.com</b> 계정으로 로그인 후 이용하세요.
+    </div>
+    <button id="loginBtn" onclick="requestSignIn()" disabled
+       style="background:#fff;color:#1a73e8;border:none;padding:12px 28px;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.15);min-width:280px;">
+      🔐 Google 라이브러리 로딩 중...
+    </button>
+    <div id="loginError" style="display:none;margin-top:18px;font-size:12px;color:#ffd1d1;background:rgba(0,0,0,.2);padding:10px 14px;border-radius:4px;"></div>
+    <div style="font-size:11px;opacity:.7;margin-top:26px;line-height:1.6;">
+      외부 계정 / 타 도메인은 접근 차단됩니다.<br>
+      문의: lhjin@ekmtc.com
+    </div>
+  </div>
+</div>
+
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-l">
+    <div class="logo">KMTC <span>-3W</span> Sales Dashboard</div>
+  </div>
+  <div class="hdr-r">
+    <span id="dataTime"><span data-i18n="dataLabel">데이터</span>: 2026-04-22 07:00</span>
+    <button class="theme-btn" onclick="toggleLang()" id="langBtn">🌐 EN</button>
+    <button class="theme-btn" onclick="toggleTheme()">🌓 <span data-i18n="theme">테마</span></button>
+    <div class="user-chip">
+      <span class="user-dot">L</span>
+      <span>LHJIN@ekmtc.com</span>
+    </div>
+  </div>
+</header>
+
+<!-- GLOBAL FILTER BAR -->
+<div class="filter-bar">
+  <div class="f-group">
+    <span class="f-lbl">Snapshot</span>
+    <select class="f-sel" id="dateSel" onchange="changeSnapshotDate(this.value)">
+      <option value="latest" selected>최신</option>
+    </select>
+  </div>
+  <div class="f-group">
+    <span class="f-lbl">Week</span>
+    <select class="f-sel" id="weekSel" onchange="applyFilters()">
+      <option value="19" selected data-i18n="wk19">W19 (5/10~5/16) — -3W Target</option>
+      <option value="18">W18 (5/03~5/09)</option>
+      <option value="17">W17 (4/26~5/02)</option>
+      <option value="16" data-i18n="wk16">W16 (4/19~4/25) — Current</option>
+      <option value="15">W15 (4/12~4/18)</option>
+      <option value="14">W14 (4/05~4/11)</option>
+    </select>
+  </div>
+  <div class="f-group">
+    <span class="f-lbl">Area</span>
+    <select class="f-sel" id="areaSel" onchange="applyArea(this.value)">
+      <option value="ALL">ALL</option>
+      <option value="SZP">SZP</option>
+      <option value="CAN">CAN</option>
+      <option value="HKG">HKG</option>
+    </select>
+  </div>
+  <div class="f-group">
+    <span class="f-lbl">POL</span>
+    <div class="f-multi" id="polMulti">
+      <button class="f-multi-btn" onclick="toggleMulti('polMulti')">ALL</button>
+      <div class="f-multi-drop">
+        <div class="f-multi-ctrl">
+          <button class="f-multi-mini" onclick="selectAll('polMulti',true)" data-i18n="selectAll">전체선택</button>
+          <button class="f-multi-mini" onclick="selectAll('polMulti',false)" data-i18n="clearAll">전체해제</button>
+        </div>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="SHK"> SHK</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="DCB"> DCB</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="NNS"> NNS</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="HUA"> HUA</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="HKG"> HKG</label>
+      </div>
+    </div>
+  </div>
+  <div class="f-group">
+    <span class="f-lbl">POD</span>
+    <div class="f-multi" id="podMulti">
+      <button class="f-multi-btn" onclick="toggleMulti('podMulti')">ALL</button>
+      <div class="f-multi-drop">
+        <div class="f-multi-ctrl">
+          <button class="f-multi-mini" onclick="selectAll('podMulti',true)" data-i18n="selectAll">전체선택</button>
+          <button class="f-multi-mini" onclick="selectAll('podMulti',false)" data-i18n="clearAll">전체해제</button>
+        </div>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="JP"> JP</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="TW"> TW</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="TH"> TH</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="VN"> VN</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="MY"> MY</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="SG"> SG</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="ID"> ID</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="PH"> PH</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="IN"> IN</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="PK"> PK</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="BD"> BD</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="LK"> LK</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="AE"> AE</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="SA"> SA</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="KW"> KW</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="QA"> QA</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="OM"> OM</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="BH"> BH</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="JO"> JO</label>
+        <label class="f-opt"><input type="checkbox" checked onchange="applyFilters()" value="EG"> EG</label>
+      </div>
+    </div>
+  </div>
+  <div class="f-group">
+    <span class="f-lbl">Sales</span>
+    <select class="f-sel" id="salSel" onchange="applyFilters()">
+      <option value="all">ALL</option>
+    </select>
+  </div>
+  <div class="week-info">
+    <span data-i18n="today">오늘</span> <b id="todayLabel">—</b> → <span data-i18n="threeWTarget">선택 주차</span> <b id="targetWeekLabel">—</b>
+  </div>
+</div>
+
+<!-- REGION TABS -->
+<nav class="region-tabs">
+  <button class="rtab active" onclick="switchRegion('ALL', this)"><span data-i18n="all">전체</span> <span class="rtab-badge">1,284 TEU</span></button>
+  <button class="rtab" onclick="switchRegion('SZP', this)">SZP <span class="rtab-badge">768 TEU</span></button>
+  <button class="rtab" onclick="switchRegion('CAN', this)">CAN <span class="rtab-badge">324 TEU</span></button>
+  <button class="rtab" onclick="switchRegion('HKG', this)">HKG <span class="rtab-badge">192 TEU</span></button>
+</nav>
+
+<!-- KPI CARDS: 매니저 전용 3개 (앞) + 팀 공통 5개 -->
+<div class="kpis" id="kpiCards">
+  <div class="kpi" style="border-left:3px solid #f9ab00;">
+    <div class="kpi-l">🎯 목표 달성률</div>
+    <div class="kpi-v" id="kpi-goal-rate">—</div>
+    <div class="kpi-s" id="kpi-goal-sub" style="color:var(--muted);font-size:11px;">—</div>
+    <span class="kpi-tt" title="3주전 BKG / (BSA × 시트 목표%). 관리자 시트에 Target_% 등록 시 계산">ⓘ</span>
+  </div>
+  <div class="kpi" style="border-left:3px solid #00b894;">
+    <div class="kpi-l">📈 전주 동시점 대비</div>
+    <div class="kpi-v" id="kpi-wow-delta">—</div>
+    <div class="kpi-s" id="kpi-wow-sub" style="color:var(--muted);font-size:11px;">—</div>
+    <span class="kpi-tt" title="이전 주 스냅샷의 동시점 W+3 3주전 BKG 와 비교. 영업 활동 모멘텀 지표">ⓘ</span>
+  </div>
+  <div class="kpi" style="border-left:3px solid #ea4335;">
+    <div class="kpi-l">⚠️ Cancel 전환</div>
+    <div class="kpi-v" id="kpi-cancel">—</div>
+    <div class="kpi-s" id="kpi-cancel-sub" style="color:var(--muted);font-size:11px;">—</div>
+    <span class="kpi-tt" title="WOS-3 범위 중 Cancel 상태로 전환된 FST TEU. 이탈 모니터링">ⓘ</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-l">3주전 BKG</div>
+    <div class="kpi-v" id="kpi-w3-bkg" style="color:#6c5ce7;">—</div>
+    <span class="kpi-tt" title="WOS-3 단계(출항 3주 전 이상 리드타임) 부킹 FST_TEU 합">ⓘ</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-l">3주전 실선적</div>
+    <div class="kpi-v" id="kpi-w3-ship" style="color:#00b894;">—</div>
+    <span class="kpi-tt" title="WOS-3 단계 부킹 중 Normal LST_TEU 합">ⓘ</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-l">BSA</div>
+    <div class="kpi-v" id="kpi-bsa" style="color:#5f6368;">—</div>
+    <span class="kpi-tt" title="해당 주차·Area의 BSA TEU 합 (DMSAE_101DS, OBT 팀)">ⓘ</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-l">소석률</div>
+    <div class="kpi-v" id="kpi-occ">—</div>
+    <span class="kpi-tt" title="Normal LST_TEU / BSA — 120% 이하 녹색, 초과 주황">ⓘ</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-l">실선적률</div>
+    <div class="kpi-v" id="kpi-ship-rate">—</div>
+    <span class="kpi-tt" title="Normal LST_TEU / FST_TEU — 55% 이상 녹색">ⓘ</span>
+  </div>
+</div>
+
+<!-- SUB NAV -->
+<nav class="sub-nav">
+  <button class="snav-btn active" onclick="switchSub('overview', this)">📊 <span data-i18n="tabOverview">Overview</span></button>
+  <button class="snav-btn" onclick="switchSub('target', this)">🎯 <span data-i18n="tabTarget">타겟 추출</span></button>
+  <button class="snav-btn" onclick="switchSub('perf', this)">📈 <span data-i18n="tabPerf">실적 관리</span></button>
+  <button class="snav-btn" onclick="switchSub('raw', this)">📋 <span data-i18n="tabRaw">Raw</span></button>
+</nav>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- OVERVIEW -->
+  <div class="sub-panel active" id="sub-overview">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-ttl" data-i18n="salesPerf">Sales Performance (-3W)</div>
+            <div class="card-desc"><span id="salesPerfDescWeek">—</span> <span data-i18n="salesPerfDescBase">— 현재 필터 기준 · Row 클릭 → 구간별 상세</span></div>
+          </div>
+        </div>
+        <table class="tbl tbl-sm">
+          <thead>
+            <tr>
+              <th>Sales</th>
+              <th class="tbl-num">-3W BKG TEU</th>
+              <th class="tbl-num">실선적 TEU</th>
+              <th class="tbl-num">실선적률</th>
+            </tr>
+          </thead>
+          <tbody id="salesPerfBody"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-ttl" data-i18n="trendTitle">주차별 실선적 추이 (5주)</div>
+            <div class="card-desc" data-i18n="trendDesc">FST_TEU vs BSA 대비 비중</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-2 mt-sm">
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-ttl">3주전 BKG / BSA (POD별)</div>
+            <div class="card-desc">출항 <span id="podW3DescWeek">—</span> 주차 · w3_fst ÷ BSA, %</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="podChartW3"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-ttl">소석률 Normal/BSA (POD별)</div>
+            <div class="card-desc">출항 <span id="podOccDescWeek">—</span> 주차 · Normal LST ÷ BSA, %</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="podChartOcc"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TARGET EXTRACT -->
+  <div class="sub-panel" id="sub-target">
+    <div class="card" style="background:var(--surface2);border-color:var(--blue);">
+      <div class="card-ttl" style="color:var(--blue);">타겟 판정 기준</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-top:8px;">
+        최근 12주 부킹 이력과 <span class="scoring-wk">선택 주차</span> 3주전 BKG 을 비교해 우선순위를 매김. 현재 필터(Area/POL/POD/Sales) 반영.
+        <br>
+        <b style="color:var(--text);">긴급리콜</b> — A+B 등급 화주 + 3M 평균 ≥ 20 TEU/주 + <span class="scoring-wk">선택 주차</span> 부킹 0
+        <br>
+        <b style="color:var(--text);">감소추세</b> — 최근 4주 중 2회 이상 감소, 첫주→끝주 총 -20% 초과
+        <br>
+        <b style="color:var(--text);">고수익갭</b> — A+B 등급 화주 + <span class="scoring-wk">선택 주차</span> 부킹이 3M 평균의 70% 미만
+        <br>
+        <b style="color:var(--text);">관리대상</b> — 위 조건 외 3M 평균 대비 부킹 갭 발생 화주
+        <br>
+        우선순위: 긴급리콜 > 감소추세 > 고수익갭 > 관리대상 · 영업사원 1인당 최대 5개
+        <br>
+        점수: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">3M_Avg_TEU / (1 + Cancel_Rate)</code>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr">
+        <div>
+          <div class="card-ttl"><span id="targetTitleWk">—</span> 타겟 화주 Top 30</div>
+          <div class="card-desc">현재 필터 기준 · 화주 행 클릭 → 판정 근거 + 최근 6개월 이력</div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-sm" data-i18n="reextract">🔍 Re-extract</button>
+          <button class="btn-sm btn-primary" onclick="downloadCSV()">📥 CSV</button>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>판정</th>
+            <th>Code</th>
+            <th>Shipper</th>
+            <th>Sales</th>
+            <th>Area</th>
+            <th>POL</th>
+            <th>POD</th>
+            <th class="tbl-num">3M Avg TEU</th>
+            <th class="tbl-num">-3W BKG TEU</th>
+            <th class="tbl-num">Gap</th>
+            <th class="tbl-num">Score</th>
+            <th>Grade</th>
+          </tr>
+        </thead>
+        <tbody id="targetBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PERFORMANCE -->
+  <div class="sub-panel" id="sub-perf">
+    <div class="card">
+      <div class="card-hdr">
+        <div>
+          <div class="card-ttl" data-i18n="salesRankTitle">Sales Ranking (-3W Fulfill Rate)</div>
+          <div class="card-desc" data-i18n="salesRankDesc">LST_TEU / FST_TEU · Bar 클릭 → 해당 영업사원 구간별 상세</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="salesChart"></canvas></div>
+    </div>
+
+    <div class="card mt-sm">
+      <div class="card-hdr">
+        <div>
+          <div class="card-ttl" data-i18n="matrixTitle">Area × POD Fulfill Rate Matrix</div>
+          <div class="card-desc"><span id="matrixDescWk">—</span> · Cell 클릭 시 해당 조합 상세 (실구현 예정)</div>
+        </div>
+      </div>
+      <table class="tbl tbl-sm">
+        <thead><tr><th>POD</th><th class="tbl-num">SZP</th><th class="tbl-num">CAN</th><th class="tbl-num">HKG</th><th class="tbl-num">ALL</th></tr></thead>
+        <tbody id="matrixBody">
+          <tr><td colspan="5" class="muted" style="text-align:center;padding:16px;">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RAW -->
+  <div class="sub-panel" id="sub-raw">
+    <div class="card">
+      <div class="card-hdr">
+        <div>
+          <div class="card-ttl" data-i18n="rawTitle">Raw Booking Data</div>
+          <div class="card-desc" data-i18n="rawDesc">현재 필터 반영 · Excel 다운로드</div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-sm btn-primary">📥 Excel</button>
+        </div>
+      </div>
+      <div class="card-desc" id="rawSummary" style="margin-bottom:8px;color:var(--muted);font-size:12px;">—</div>
+      <table class="tbl tbl-sm">
+        <thead>
+          <tr>
+            <th>Shipper</th><th>Sales</th><th>Area</th><th>POL</th><th>POD</th>
+            <th class="tbl-num">Week</th><th>Month</th>
+            <th class="tbl-num">-3W BKG TEU</th><th class="tbl-num">실선적 BKG TEU</th>
+            <th class="tbl-num">실선적률</th>
+          </tr>
+        </thead>
+        <tbody id="rawBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- SALES DETAIL MODAL -->
+<div class="modal-bg" id="salesModal" onclick="if(event.target===this) closeSales()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-ttl" id="sales-ttl">이현진 (SZP)</div>
+        <div class="card-desc" data-i18n="salesModalDesc">영업사원 구간별 실적 — -3W 기준</div>
+      </div>
+      <button class="modal-close" onclick="closeSales()">✕</button>
+    </div>
+    <div class="mini-stats">
+      <div class="mini-stat"><div class="mini-stat-l">3주전 BKG (현)</div><div class="mini-stat-v" id="salMiniW3">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l">전주 동시점 대비</div><div class="mini-stat-v" id="salMiniWoW" style="font-size:15px;">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l">Cancel 전환</div><div class="mini-stat-v" id="salMiniCanc" style="font-size:15px;">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l">Top Route</div><div class="mini-stat-v" id="salMiniTop" style="font-size:14px;">—</div></div>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">구간별 -3W 실적 (현 시점 vs 전주 동시점)</div>
+    <table class="tbl tbl-sm">
+      <thead><tr><th>Route</th><th class="tbl-num">-3W BKG TEU</th><th class="tbl-num">전주 대비</th><th class="tbl-num">실선적 TEU</th><th class="tbl-num">실선적률</th><th class="tbl-num">취소율</th><th>평가</th></tr></thead>
+      <tbody id="salesRouteBody"></tbody>
+    </table>
+    <div class="chart-wrap-sm" style="margin-top:14px;"><canvas id="salesRouteChart"></canvas></div>
+  </div>
+</div>
+
+<!-- SHIPPER DETAIL MODAL (타겟 상세 — 주재원 검증용 근거 데이터) -->
+<div class="modal-bg" id="shipperModal" onclick="if(event.target===this) closeShipper()">
+  <div class="modal" style="max-width:900px;">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-ttl" id="modal-ttl">—</div>
+        <div class="card-desc" id="modal-sub">타겟 판정 근거 + 최근 6개월 이력</div>
+      </div>
+      <button class="modal-close" onclick="closeShipper()">✕</button>
+    </div>
+
+    <div id="shpJudgement" style="background:var(--surface2);border-left:3px solid var(--amber);padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:12px;">
+      <div style="font-weight:700;margin-bottom:4px;">타겟 판정 근거</div>
+      <div id="shpJudgeBody" style="color:var(--text2);line-height:1.6;"></div>
+    </div>
+
+    <div class="mini-stats">
+      <div class="mini-stat"><div class="mini-stat-l">6M 누적 TEU</div><div class="mini-stat-v" id="shpTot6m">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l">Cancel률 (6M)</div><div class="mini-stat-v" id="shpCancel">—</div></div>
+      <div class="mini-stat"><div class="mini-stat-l">평균 리드타임</div><div class="mini-stat-v" id="shpLead">—</div></div>
+    </div>
+
+    <div class="chart-wrap-sm" style="margin-bottom:14px;"><canvas id="shipperChart"></canvas></div>
+
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Top Route (6M)</div>
+      <table class="tbl tbl-sm">
+        <thead><tr><th>Route</th><th class="tbl-num">TEU</th><th class="tbl-num">%</th></tr></thead>
+        <tbody id="shpRoutesBody"></tbody>
+      </table>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">최근 부킹 (주재원 검증용)</div>
+      <div style="max-height:300px;overflow:auto;">
+      <table class="tbl tbl-sm">
+        <thead><tr><th>BKG_NO</th><th>Route</th><th class="tbl-num">TEU</th><th>상태</th><th>BKG일</th><th>ETD</th></tr></thead>
+        <tbody id="shpBkgsBody"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div data-i18n="footerL">
+    KMTC -3W Booking Dashboard · 매일 07:00 자동 갱신
+  </div>
+  <div>
+    445 Calendar · Base: 2026-01-04
+  </div>
+</footer>
+
+
+<script>
+/* ============================================================================
+ *  KMTC -3W Booking Dashboard — Prototype
+ *
+ *  Module layout (top → bottom):
+ *    1. CONFIG   : constants (445 calendar, chart palette, area→pol map)
+ *    2. I18N     : dictionary + t() / applyLang() / toggleLang()
+ *    3. THEME    : toggleTheme() + persistence
+ *    4. STATE    : single source of truth (filters, region, sub tab)
+ *    5. MOCK     : static prototype data — REPLACE WITH API in production
+ *    6. DATA_API : getSnapshot(state) — only place that touches MOCK.
+ *                  Swap this function's body with fetch('/api/...') and
+ *                  the rest of the app keeps working unchanged.
+ *    7. RENDER   : pure view functions (state → DOM). No data, no fetch.
+ *    8. CHARTS   : Chart.js creation + refresh helpers
+ *    9. EVENTS   : filter / region / modal handlers → mutate STATE → renderAll()
+ *   10. INIT     : DOMContentLoaded
+ * ========================================================================== */
+
+// ═════════════════════════════ 1. CONFIG ══════════════════════════════════
+const CONFIG = {
+  YEAR_START: {2025:'2025-01-05', 2026:'2026-01-04', 2027:'2027-01-03'},
+  AREA_TO_POL: {
+    ALL: ['SHK','DCB','NNS','HUA','HKG'],
+    SZP: ['SHK','DCB'],
+    CAN: ['NNS','HUA'],
+    HKG: ['HKG']
+  },
+  // Rating: route fulfill rate vs same-Area average. ±5%p bands.
+  RATING_THRESHOLD: 0.10,
+  CHART_COLORS: {
+    blue:'#3b82f6', green:'#10b981', amber:'#f59e0b', red:'#ef4444',
+    purple:'#8b5cf6', cyan:'#06b6d4', grid:'#232a3b44', text:'#94a3b8'
+  }
+};
+// Derived reverse map: POL → Area (auto-built, stays in sync).
+CONFIG.POL_TO_AREA = (() => {
+  const m = {};
+  Object.entries(CONFIG.AREA_TO_POL).forEach(([area, pols]) => {
+    if (area === 'ALL') return;
+    pols.forEach(p => m[p] = area);
+  });
+  return m;
+})();
+function currentWeek(today = new Date('2026-04-22')){
+  const start = new Date(CONFIG.YEAR_START[2026]);
+  const diff = Math.floor((today - start)/(1000*60*60*24));
+  return Math.floor(diff/7) + 1;
+}
+function pd_today(){
+  const d = new Date('2026-04-22');
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd= String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function weekRange(wk){
+  if (!wk) return '';
+  const start = new Date(CONFIG.YEAR_START[2026]);
+  const s = new Date(start.getTime() + (wk-1)*7*86400000);
+  const e = new Date(s.getTime() + 6*86400000);
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${fmt(s)}~${fmt(e)}`;
+}
+
+// ═════════════════════════════ 2. I18N ════════════════════════════════════
+const I18N = {
+  dataLabel:       {ko:'데이터',                           en:'Data'},
+  theme:           {ko:'테마',                             en:'Theme'},
+  selectAll:       {ko:'전체선택',                         en:'Select All'},
+  clearAll:        {ko:'전체해제',                         en:'Clear'},
+  today:           {ko:'오늘',                             en:'Today'},
+  threeWTarget:    {ko:'-3W 타겟',                         en:'-3W Target'},
+  all:             {ko:'전체',                             en:'All'},
+  wk19:            {ko:'W19 (5/10~5/16) — -3W 타겟',       en:'W19 (5/10~5/16) — -3W Target'},
+  wk16:            {ko:'W16 (4/19~4/25) — 현재',           en:'W16 (4/19~4/25) — Current'},
+  kpi1:            {ko:'-3W 부킹 TEU',                     en:'-3W Booking TEU'},
+  kpi2:            {ko:'BSA 대비 -3W 비중',                 en:'-3W Share of BSA'},
+  kpi3:            {ko:'-3W 부킹 캔슬률',                   en:'-3W Cancel Rate'},
+  kpi4:            {ko:'전체 부킹 캔슬률',                 en:'Total Cancel Rate'},
+  kpi1tt:          {ko:'현재주(-3W 시점) 기간 중 등록된 선택주차 출항 부킹의 FST_TEU 합계 (445 캘린더 기준)',
+                    en:'Sum of FST_TEU for selected-week departure bookings registered during the current (-3W) week (445 calendar basis)'},
+  kpi2tt:          {ko:'현재주 스냅샷 시점 기준 선택주차 예정 선박 BSA 합계 대비 -3W 부킹 TEU 비중. 딜레이 반영된 현재 기준 값은 Overview 차트 참조.',
+                    en:'Share of -3W booking TEU over selected-week planned BSA at current snapshot. Delay-adjusted value shown in Overview chart.'},
+  kpi3tt:          {ko:'-3W 타겟 모수 중 현재 Cancel 상태 TEU + ETD 경과 후 Waiting TEU 비율. 즉시캔슬(≤3일) 및 조기캔슬(리드21일+·≤7일)은 모수에서 제외.',
+                    en:'Ratio of current Cancel TEU + post-ETD Waiting TEU within the -3W target cohort. Instant cancels (≤3d) and early cancels (lead ≥21d, cancel ≤7d) excluded.'},
+  kpi4tt:          {ko:'선택주차 출항 예정 전체 부킹(등록 시점 무관) 중 Cancel 비율. -3W 타겟 캔슬률과 비교 시 타겟 외 늦부킹 포함.',
+                    en:'Cancel ratio of all bookings for selected-week departure (regardless of registration time). Includes late bookings vs -3W cohort.'},
+  tabOverview:     {ko:'Overview',                         en:'Overview'},
+  tabTarget:       {ko:'타겟 추출',                         en:'Target'},
+  tabPerf:         {ko:'실적 관리',                         en:'Performance'},
+  tabRaw:          {ko:'Raw',                              en:'Raw'},
+  salesPerf:       {ko:'Sales Performance (-3W)',          en:'Sales Performance (-3W)'},
+  salesPerfDescBase:{ko:'타겟 — 현재 필터 기준 · Row 클릭 → 구간별 상세',
+                    en:'target · current filters · click row for route detail'},
+  trendTitle:      {ko:'주차별 실선적 추이 (5주)',            en:'Weekly Shipped Trend (5 weeks)'},
+  trendDesc:       {ko:'FST_TEU vs BSA 대비 비중',          en:'FST_TEU vs BSA share'},
+  podDistTitle:    {ko:'POD 국가별 -3W 부킹 분포',          en:'-3W Booking Distribution by POD Country'},
+  podDescBase:     {ko:'기준 상위 도착지',                  en:'Top destinations'},
+  scoringTitle:    {ko:'🎯 타겟 추출 기준 (Target Scoring)', en:'🎯 Target Scoring Criteria'},
+  scoringBody:     {
+    ko:`다음 조건을 만족하는 화주를 점수화하여 상위 N개 선정 · 현재 필터(Area/POL/POD/Sales) 반영
+        <br><b style="color:var(--text);">① 최근 3M 활성 화주</b>: 지난 90일간 동일 Area·POL에서 부킹 이력 존재
+        <br><b style="color:var(--text);">② Booking Lead Time ≥ 14일</b>: 평균 부킹일~출항일 간격이 2주 이상 (조기부킹 가능성)
+        <br><b style="color:var(--text);">③ <span class="scoring-wk">선택주차</span> 확보 &lt; 월평균 × 0.9</b>: 현재까지 <span class="scoring-wk">선택주차</span> 예약 TEU가 월평균 대비 90% 미만인 화주
+        <br><b style="color:var(--text);">④ 캔슬률 &lt; 10%</b>: 최근 6M 캔슬률이 안정적인 화주 (리스크 제외)
+        <br>점수: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">(3M_Avg_TEU × Lead_Weight) / (1 + Cancel_Rate)</code>`,
+    en:`Shippers meeting the following criteria are scored and ranked · current filters (Area/POL/POD/Sales) applied
+        <br><b style="color:var(--text);">① Active in last 3M</b>: has booking history in the same Area·POL within 90 days
+        <br><b style="color:var(--text);">② Booking Lead Time ≥ 14d</b>: avg gap between booking and ETD is ≥2 weeks (early-booking likelihood)
+        <br><b style="color:var(--text);">③ <span class="scoring-wk">selected week</span> booked &lt; monthly avg × 0.9</b>: current <span class="scoring-wk">selected-week</span> TEU below 90% of monthly average
+        <br><b style="color:var(--text);">④ Cancel rate &lt; 10%</b>: stable cancel behaviour over last 6M (risk screen)
+        <br>Score: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">(3M_Avg_TEU × Lead_Weight) / (1 + Cancel_Rate)</code>`
+  },
+  targetShippersSuffix:{ko:'타겟 화주 (Top 30)',             en:'Target Shippers (Top 30)'},
+  targetListDesc:  {ko:'현재 필터 기준 · 화주 Row 클릭 → 3M 이력', en:'Current filters · click shipper row for 3M history'},
+  reextract:       {ko:'🔍 재추출',                         en:'🔍 Re-extract'},
+  shipped:         {ko:'선적 완료',                         en:'Shipped'},
+  inProgress:      {ko:'진행 중',                           en:'In Progress'},
+  cancelled:       {ko:'캔슬',                              en:'Cancelled'},
+  ofTotal3W:       {ko:'전체 -3W 의',                       en:'of total -3W:'},
+  salesRankTitle:  {ko:'Sales Ranking (-3W Fulfill Rate)',  en:'Sales Ranking (-3W Fulfill Rate)'},
+  salesRankDesc:   {ko:'LST_TEU / FST_TEU · Bar 클릭 → 해당 영업사원 구간별 상세',
+                    en:'LST_TEU / FST_TEU · click bar for sales rep route detail'},
+  matrixTitle:     {ko:'Area × POD Fulfill Rate Matrix',   en:'Area × POD Fulfill Rate Matrix'},
+  matrixDesc:      {ko:'· Cell 클릭 시 해당 조합 상세 (실구현 예정)',
+                    en:'· click cell for combination detail (coming soon)'},
+  rawTitle:        {ko:'Raw Booking Data',                 en:'Raw Booking Data'},
+  rawDesc:         {ko:'현재 필터 반영 · Excel 다운로드',   en:'Current filters · Excel download'},
+  salesModalDesc:  {ko:'영업사원 구간별 실적 — -3W 기준',    en:'Sales rep performance by route — -3W basis'},
+  topRoute:        {ko:'Top Route',                        en:'Top Route'},
+  fulfillBest:     {ko:'Fulfill 최고',                     en:'Best Fulfill'},
+  fulfillWorst:    {ko:'Fulfill 최저',                     en:'Worst Fulfill'},
+  routePerf3W:     {ko:'구간별 -3W 실적',                  en:'-3W Performance by Route'},
+  rating:          {ko:'평가',                             en:'Rating'},
+  shipperModalDesc:{ko:'현재 필터(Area/POL/POD/Sales) 기준 최근 3개월',
+                    en:'Last 3 months with current filters (Area/POL/POD/Sales)'},
+  apr2026Wip:      {ko:'2026-04 (진행)',                   en:'2026-04 (WIP)'},
+  footerL:         {ko:'KMTC -3W Booking Dashboard · 매일 07:00 자동 갱신',
+                    en:'KMTC -3W Booking Dashboard · daily 07:00 auto-refresh'},
+  protoNote:       {ko:'🧪 프로토타입 — 모든 숫자는 가짜 데이터',
+                    en:'🧪 Prototype — all figures are mock data'},
+  clickDetail:     {ko:'[클릭] 구간별 상세 보기',           en:'[Click] Route-level detail'},
+  ratingGood:      {ko:'🟢 우수',                           en:'🟢 Good'},
+  ratingBad:       {ko:'🔴 관리',                           en:'🔴 Attention'},
+  ratingNeutral:   {ko:'⚪ 보통',                           en:'⚪ Neutral'},
+  areaAvgLabel:    {ko:'Area 평균 실선적률',                 en:'Area Avg Fulfill'},
+  ratingBasis:     {ko:'평가 기준 ±10%p',                    en:'Threshold ±10%p'},
+  colSales:        {ko:'영업사원',                            en:'Sales'},
+  colBkgTeu:       {ko:'-3W BKG TEU',                       en:'-3W BKG TEU'},
+  colShippedTeu:   {ko:'실선적 BKG TEU',                     en:'Shipped BKG TEU'},
+  colFulfillRate:  {ko:'실선적률',                            en:'Fulfill %'},
+  colCancel:       {ko:'취소율',                              en:'Cancel %'},
+  statusOK:        {ko:'OK',                               en:'OK'},
+  statusShort:     {ko:'Short',                            en:'Short'},
+  statusCritical:  {ko:'Critical',                         en:'Critical'},
+  cancelPartial:   {ko:'Cancel(일부)',                     en:'Cancel (partial)'},
+  trendRatio:      {ko:'BSA 대비 비중 (%)',                en:'Share of BSA (%)'},
+  threeWTeu:       {ko:'-3W TEU',                          en:'-3W TEU'},
+  legendFst:       {ko:'FST_TEU',                          en:'FST_TEU'},
+  legendLst:       {ko:'LST_TEU',                          en:'LST_TEU'}
+};
+function t(key){ const e = I18N[key]; return e ? (e[STATE.lang] || e.ko || key) : key; }
+function applyLang(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n');
+    if(I18N[k]) el.textContent = t(k);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>{
+    const k = el.getAttribute('data-i18n-html');
+    if(I18N[k]) el.innerHTML = t(k);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    const k = el.getAttribute('data-i18n-title');
+    if(I18N[k]) el.setAttribute('title', t(k));
+  });
+  document.documentElement.setAttribute('lang', STATE.lang);
+  const btn = document.getElementById('langBtn');
+  if(btn) btn.textContent = STATE.lang === 'ko' ? '🌐 EN' : '🌐 KR';
+}
+function toggleLang(){
+  STATE.lang = (STATE.lang === 'ko') ? 'en' : 'ko';
+  localStorage.setItem('kmtc3w_lang', STATE.lang);
+  applyLang();
+  RENDER.all();      // rerender dynamic content with new labels
+  CHARTS.rebuild();  // chart labels are baked at creation; rebuild to relabel
+}
+
+// ═════════════════════════════ 3. THEME ═══════════════════════════════════
+function toggleTheme(){
+  document.documentElement.classList.toggle('light');
+  const isLight = document.documentElement.classList.contains('light');
+  localStorage.setItem('kmtc3w_theme', isLight ? 'light' : 'dark');
+  if(window._charts) Object.values(window._charts).forEach(c=>c && c.update());
+}
+
+// ═════════════════════════════ 4. STATE ═══════════════════════════════════
+/*  Single source of truth for the UI.
+ *  All event handlers MUST mutate STATE (not DOM directly) and then call RENDER.all().
+ */
+const STATE = {
+  lang:   localStorage.getItem('kmtc3w_lang') || 'ko',
+  week:   19,
+  area:   'ALL',
+  pol:    ['SHK','DCB','NNS','HUA','HKG'],
+  pod:    ['JP','TW','TH','VN','MY','SG','ID','PH','IN','PK','BD','LK','AE','SA','KW','QA','OM','BH','JO','EG'],
+  sales:  'all',
+  region: 'ALL',
+  sub:    'overview'
+};
+
+// ═════════════════════════════ 5. MOCK DATA ═══════════════════════════════
+/*  Static prototype data.  In production, DELETE this block and implement
+ *  DATA_API.getSnapshot() to fetch from SQLite/backend.  RENDER layer below
+ *  depends only on the shape returned by getSnapshot(), so nothing else changes.
+ */
+const MOCK = {
+  region: {
+    ALL: {fst:1284, bsa1:72, c1:4.1, c2:6.8},
+    SZP: {fst:768,  bsa1:74, c1:3.8, c2:6.2},
+    CAN: {fst:324,  bsa1:71, c1:3.2, c2:7.1},
+    HKG: {fst:192,  bsa1:82, c1:4.9, c2:7.4}
+  },
+  salesByArea: {
+    ALL: ['이현진','김OO','박OO','최OO','이OO'],
+    SZP: ['이현진','김OO','이OO'],
+    CAN: ['박OO'],
+    HKG: ['최OO']
+  },
+  salesTable: [
+    ['이현진','SZP',284,78,3.5,89],
+    ['김OO',  'SZP',186,64,5.4,84],
+    ['박OO',  'CAN',324,71,2.8,91],
+    ['최OO',  'HKG',192,82,4.9,86],
+    ['이OO',  'SZP',298,69,6.2,79]
+  ],
+  targets: [
+    ['SZKILS','심천킬스','이현진','SZP','SHK','TH',284,220,97],
+    ['SZHUAW','심천화웨이','이현진','SZP','SHK','VN',156,160,92],
+    ['SZTCL','심천TCL','김OO','SZP','DCB','IN',98,42,88],
+    ['GZPANTO','판토스 / 광저우','박OO','CAN','NNS','TH',193,140,86],
+    ['HKLGSA','LG전자 홍콩','최OO','HKG','HKG','AE',86,72,84],
+    ['SZIKEA','IKEA / 센다이','이현진','SZP','SHK','JP',144,112,83],
+    ['SZAPPLE','심천애플물류','김OO','SZP','SHK','JP',178,140,82],
+    ['SZDELL','심천델','이OO','SZP','DCB','AE',112,88,80],
+    ['GZHYUN','현대 / 광저우','박OO','CAN','NNS','VN',136,98,79],
+    ['SZXIAO','심천샤오미','이현진','SZP','SHK','IN',224,156,78],
+    ['HKFUJI','홍콩후지제록스','최OO','HKG','HKG','JP',68,52,76],
+    ['SZLENO','심천레노버','김OO','SZP','DCB','SA',92,58,74],
+    ['GZZTE','광저우ZTE','박OO','CAN','HUA','IN',118,72,72],
+    ['SZBYD','심천BYD','이OO','SZP','SHK','MY',146,104,71],
+    ['SZBOSCH','심천보쉬','이현진','SZP','SHK','VN',98,82,70],
+    ['HKSAMS','삼성전자홍콩','최OO','HKG','HKG','TH',72,60,69],
+    ['SZPANA','심천파나소닉','김OO','SZP','DCB','ID',84,50,67],
+    ['GZTOYO','도요타 / 광저우','박OO','CAN','NNS','SG',102,78,66],
+    ['SZSONY','심천소니','이OO','SZP','SHK','PH',76,48,65],
+    ['HKDELL','델 홍콩물류','최OO','HKG','HKG','VN',58,42,64],
+    ['SZCANON','심천캐논','이현진','SZP','DCB','TH',112,92,63],
+    ['GZBMW','BMW / 광저우','박OO','CAN','HUA','AE',94,60,62],
+    ['SZHP','심천HP','김OO','SZP','SHK','MY',82,54,60],
+    ['SZASUS','심천ASUS','이OO','SZP','SHK','ID',66,38,59],
+    ['HKHERM','에르메스 홍콩','최OO','HKG','HKG','SA',44,28,58],
+    ['SZACER','심천ACER','이현진','SZP','DCB','PK',58,32,56],
+    ['GZVOLK','폭스바겐 / 광저우','박OO','CAN','NNS','BD',72,44,55],
+    ['SZMSI','심천MSI','김OO','SZP','SHK','LK',48,26,53],
+    ['HKSUN','선화물류 홍콩','최OO','HKG','HKG','KW',38,22,51],
+    ['SZGOER','심천고어텍','이OO','SZP','DCB','QA',52,30,50]
+  ],
+  salesRoutes: {
+    '이현진': [
+      ['SHK-TH',120,108,'90%','2.5%','text-good'],
+      ['SHK-JP',84,77,'92%','1.8%','text-good'],
+      ['SHK-VN',52,46,'88%','3.8%',''],
+      ['SHK-IN',28,21,'75%','7.1%','text-danger']
+    ],
+    '김OO': [
+      ['DCB-IN',56,44,'79%','5.4%',''],
+      ['DCB-SA',40,32,'80%','6.2%',''],
+      ['SHK-JP',58,52,'90%','2.1%','text-good'],
+      ['SHK-MY',32,26,'81%','4.8%','']
+    ],
+    '박OO': [
+      ['NNS-TH',124,116,'94%','2.1%','text-good'],
+      ['NNS-VN',98,88,'90%','3.0%','text-good'],
+      ['HUA-IN',62,48,'77%','5.8%',''],
+      ['HUA-AE',40,34,'85%','4.2%','']
+    ],
+    '최OO': [
+      ['HKG-AE',72,62,'86%','4.9%',''],
+      ['HKG-JP',56,50,'89%','2.4%','text-good'],
+      ['HKG-VN',38,35,'92%','3.1%','text-good'],
+      ['HKG-SA',26,18,'69%','8.1%','text-danger']
+    ],
+    '이OO': [
+      ['SHK-MY',84,66,'79%','5.8%',''],
+      ['DCB-ID',66,50,'76%','6.4%',''],
+      ['SHK-PH',48,38,'79%','4.9%',''],
+      ['DCB-QA',30,20,'67%','7.8%','text-danger']
+    ]
+  },
+  trend: {
+    labels: ['W09','W10','W11','W12','W13','W14','W15','W16'],
+    teu:    [980,1120,1050,1180,1090,1240,1272,1284],
+    ratio:  [62,65,63,67,64,70,71,72]
+  },
+  pod: {
+    labels: ['TH','VN','JP','IN','AE','MY','ID','SA'],
+    teu:    [412,286,198,144,98,76,42,28]
+  },
+  salesChart: {
+    labels: ['박OO (CAN)','최OO (HKG)','이현진 (SZP)','김OO (SZP)','이OO (SZP)'],
+    nameMap:{'박OO (CAN)':['박OO','CAN'],'최OO (HKG)':['최OO','HKG'],'이현진 (SZP)':['이현진','SZP'],'김OO (SZP)':['김OO','SZP'],'이OO (SZP)':['이OO','SZP']},
+    fst:    [324,192,284,186,298],
+    lst:    [295,165,253,156,235]
+  },
+  shipperHistory: {
+    labels: ['2026-02','2026-03','2026-04'],
+    fst:    [296,272,284],
+    lst:    [278,256,250]
+  }
+};
+
+// ═════════════════════════════ 5.5 DATA ═══════════════════════════════════
+/* 현장 데이터 소스. 부팅 시 MOCK 으로 시작 → bootstrapData() 성공 시 스냅샷으로 교체.
+ * 실패 시 MOCK 유지 (프로토타입 상태로 계속 동작).
+ */
+let DATA = MOCK;
+
+// ════════════════════════════ AUTH & DRIVE ════════════════════════════════
+// 데이터는 repo 에 없고 Google Drive 의 비공개 폴더에만. 로그인한 @ekmtc.com
+// 계정 권한으로 Drive API 호출 → fetch. 외부인은 Drive 권한 없어 403.
+const OAUTH_CLIENT_ID = '__CLIENT_ID__';    // Google Cloud Console 발급 후 교체
+const OAUTH_HD = 'ekmtc.com';               // @ekmtc.com 계정만 허용
+const OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+const DRIVE_FOLDER_ID = '1jO8XcoDAlIVMdZJ0igq4-6xwMM0vO-iX';
+
+let _gapiReady = false, _gisReady = false, _tokenClient = null;
+const _driveFileCache = {};
+
+function _gapiInit(){
+  gapi.load('client', async () => {
+    await gapi.client.init({});
+    await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
+    _gapiReady = true; _maybeEnableLogin();
+  });
+}
+function _gisInit(){
+  _tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: OAUTH_CLIENT_ID,
+    scope: OAUTH_SCOPE,
+    hd: OAUTH_HD,
+    callback: async (resp) => {
+      if (resp.error) { _showLoginError('로그인 실패: ' + (resp.error_description||resp.error)); return; }
+      await onLoginSuccess();
+    }
+  });
+  _gisReady = true; _maybeEnableLogin();
+}
+function _maybeEnableLogin(){
+  if (_gapiReady && _gisReady) {
+    const btn = document.getElementById('loginBtn');
+    if (btn) { btn.disabled = false; btn.textContent = '🔐 @ekmtc.com 계정으로 로그인'; }
+  }
+}
+function _showLoginError(msg){
+  const el = document.getElementById('loginError');
+  if (el) { el.textContent = msg; el.style.display = ''; }
+}
+function requestSignIn(){
+  if (OAUTH_CLIENT_ID === '__CLIENT_ID__') {
+    _showLoginError('관리자에게 문의 — OAuth Client ID 미설정');
+    return;
+  }
+  if (!_tokenClient) { _showLoginError('Google 라이브러리 로딩 중...'); return; }
+  _tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+async function fetchDriveJson(filename){
+  let fid = _driveFileCache[filename];
+  if (!fid) {
+    const listRes = await gapi.client.drive.files.list({
+      q: `'${DRIVE_FOLDER_ID}' in parents and name='${filename}' and trashed=false`,
+      fields: 'files(id,name)', pageSize: 1,
+    });
+    const files = listRes.result.files || [];
+    if (!files.length) throw new Error('Drive 파일 없음: ' + filename);
+    fid = files[0].id; _driveFileCache[filename] = fid;
+  }
+  const r = await gapi.client.drive.files.get({ fileId: fid, alt: 'media' });
+  return JSON.parse(r.body);
+}
+
+async function onLoginSuccess(){
+  const overlay = document.getElementById('loginOverlay');
+  if (overlay) overlay.style.display = 'none';
+  await loadSnapshotIndex();
+  const ok = await bootstrapData();
+  if (!ok) _showLoginError('데이터 로드 실패 — Drive 폴더 권한 확인');
+  RENDER.all();
+  RENDER.salesOptions();
+  CHARTS.initAll();
+  console.log('[3W] ready (Drive auth, folder=' + DRIVE_FOLDER_ID + ')');
+}
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadSnapshotIndex(){
+  try {
+    const idx = await fetchDriveJson('snapshots_index.json');
+    const sel = document.getElementById('dateSel');
+    if (!sel) return;
+    const latest = idx.latest;
+    const past = (idx.dates || []).filter(d => d !== latest);
+    const opts = ['<option value="latest" selected>최신 ('+(latest||'—')+')</option>']
+      .concat(past.map(d =>
+        `<option value="${d}">${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}</option>`));
+    sel.innerHTML = opts.join('');
+  } catch (e) {
+    console.warn('[idx] load failed:', e.message);
+  }
+}
+
+async function bootstrapData(dateOrLatest){
+  const filename = (dateOrLatest && dateOrLatest !== 'latest')
+    ? `3w_snapshot_${dateOrLatest}.json`
+    : '3w_snapshot.json';
+  try {
+    const s = await fetchDriveJson(filename);
+    DATA = {
+      region:         s.region         || MOCK.region,
+      perf:           s.perf           || null,
+      targets_config: s.targets_config || {weekly:{}, monthly:{}},
+      salesByArea:    s.salesByArea    || MOCK.salesByArea,
+      salesTable:     s.salesTable     || MOCK.salesTable,
+      targets:        s.targets        || MOCK.targets,
+      salesRoutes:    s.salesRoutes    || MOCK.salesRoutes,
+      trend:          s.trend          || MOCK.trend,
+      pod:            s.pod            || MOCK.pod,
+      salesChart:     s.salesChart     || MOCK.salesChart,
+      shipperHistory: s.shipperHistory || MOCK.shipperHistory,
+      shipperHistory6m: s.shipperHistory6m || {},
+      rows:           s.rows           || [],
+      rows_schema:    s.rows_schema    || null,
+      shipper_names:  s.shipper_names  || {},
+      shipper_grades: s.shipper_grades || {},
+      current_week:   s.current_week   || null,
+      bsa:            s.bsa            || {rows_schema:null, rows:[]}
+    };
+    if (s.current_week) STATE.week = s.current_week + 3;
+    // 헤더 "데이터: ..." 라벨을 snapshot generated_at 으로 갱신
+    const dt = document.getElementById('dataTime');
+    if (dt && s.generated_at) {
+      const iso = s.generated_at.replace('T', ' ').slice(0, 16);
+      dt.innerHTML = `<span data-i18n="dataLabel">데이터</span>: ${iso}`;
+    }
+    // POD 체크박스를 rows 의 실제 유니크 dest 로 동적 구성 (누락 국가 방지)
+    populatePodFilter();
+    // 전주 동시점 비교용 이전 snapshot 로드 (비동기 — 블로킹 없음)
+    DATA._prev = null;
+    loadPrevSnapshot(s.generated_at).then(prev => {
+      DATA._prev = prev;
+      if (typeof RENDER !== 'undefined' && RENDER.kpis) RENDER.kpis();
+    });
+    console.log(`[DATA] snapshot loaded (${url}, gen ${s.generated_at}, W${s.current_week})`);
+    return true;
+  } catch (e) {
+    console.warn('[DATA] Drive fetch failed:', e.message, e);
+    return false;
+  }
+}
+
+function populatePodFilter(){
+  if (!AGG._hasRows()) return;
+  const I = AGG.IDX;
+  const pods = [...new Set(DATA.rows.map(r => r[I.pod]).filter(p => p && p !== '-'))].sort();
+  const drop = document.querySelector('#podMulti .f-multi-drop');
+  if (!drop) return;
+  drop.querySelectorAll('.f-opt').forEach(el => el.remove());
+  pods.forEach(p => {
+    const label = document.createElement('label');
+    label.className = 'f-opt';
+    label.innerHTML = `<input type="checkbox" checked onchange="applyFilters()" value="${p}"> ${p}`;
+    drop.appendChild(label);
+  });
+  // STATE.pod 도 전체 반영
+  STATE.pod = pods.slice();
+}
+
+// 이전 (약 7일 전) snapshot 로드 → WoW 비교용 DATA._prev 저장 (Drive)
+async function loadPrevSnapshot(curGenIso){
+  try {
+    const idx = await fetchDriveJson('snapshots_index.json');
+    const dates = (idx.dates || []);
+    if (!dates.length) return null;
+    const toD = s => new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8));
+    const curYmd = (curGenIso || '').slice(0,10).replace(/-/g,'');
+    if (!curYmd) return null;
+    const curD = toD(curYmd);
+    const candidates = dates.filter(d => d < curYmd);
+    if (!candidates.length) return null;
+    const pick = candidates.reduce((best, d) => {
+      const diff = Math.abs((curD - toD(d)) / 86400000 - 7);
+      return (best == null || diff < best.diff) ? {d, diff} : best;
+    }, null);
+    if (!pick) return null;
+    const prev = await fetchDriveJson(`3w_snapshot_${pick.d}.json`);
+    prev._date = pick.d;
+    return prev;
+  } catch (e) { console.warn('[WoW] prev load failed:', e.message); return null; }
+}
+
+async function changeSnapshotDate(value){
+  const ok = await bootstrapData(value);
+  if (!ok) return;
+  // Week 드롭다운은 snapshot 의 current_week 기반으로 STATE.week 가 자동 설정됨.
+  // weekSel 의 selected 를 그에 맞춰 동기화.
+  const wsel = document.getElementById('weekSel');
+  if (wsel && STATE.week != null) wsel.value = String(STATE.week);
+  RENDER.all();
+  if (typeof CHARTS !== 'undefined' && CHARTS.rebuild) CHARTS.rebuild();
+  RENDER.salesOptions();
+}
+
+// ═════════════════════════════ 5.7 AGG ════════════════════════════════════
+/* 클라이언트 사이드 재집계. snapshot.rows (compact) 를 STATE 필터로 매번 re-agg.
+ * Schema : [shpr, sal, area, pol, pod, wk, mon, fst, lst]
+ * 필터 없거나 rows 없으면 snapshot의 pre-aggregated 블록을 사용 (fallback).
+ */
+const AGG = {
+  // 확장 스키마: 한 행에 all/w3 TEU + CM1 병렬 저장 (차장 weekly 스키마와 호환)
+  IDX: {
+    shpr:0, sal:1, area:2, pol:3, pod:4, wk:5, mon:6,
+    fst_all:7, w3_fst:8, lst_all:9, w3_lst:10, fst_cancel:11, cm1:12,
+    // 별칭 — 기존 코드가 WOS-3 값을 가리키도록 유지
+    fst: 8,   // = w3_fst
+    lst: 10,  // = w3_lst
+  },
+
+  _hasRows(){ return Array.isArray(DATA.rows) && DATA.rows.length > 0; },
+
+  /* BSA for (week, POLs, PODs) — DATA.bsa.rows schema [pol, pod, wk, bsa]. */
+  bsaForWeek(state){
+    const bsa = DATA.bsa;
+    if (!bsa || !Array.isArray(bsa.rows) || !bsa.rows.length) return 0;
+    const wk = state.week;
+    const polSet = new Set(state.pol || []);
+    const podSet = new Set(state.pod || []);
+    let teu = 0;
+    bsa.rows.forEach(r => {
+      if (wk != null && r[2] !== wk) return;
+      if (polSet.size && !polSet.has(r[0])) return;
+      if (podSet.size && !podSet.has(r[1])) return;
+      teu += r[3];
+    });
+    return teu;
+  },
+
+  _filter(state, opts = {}){
+    const I = this.IDX;
+    let rs = DATA.rows;
+    if (!opts.skipPol && state.pol && state.pol.length)
+      rs = rs.filter(r => state.pol.includes(r[I.pol]));
+    if (!opts.skipPod && state.pod && state.pod.length)
+      rs = rs.filter(r => state.pod.includes(r[I.pod]));
+    if (!opts.skipSales && state.sales && state.sales !== 'all')
+      rs = rs.filter(r => r[I.sal] === state.sales);
+    if (!opts.skipWeek && state.week != null)
+      rs = rs.filter(r => r[I.wk] === state.week);
+    return rs;
+  },
+
+  regionKpis(state){
+    if (!this._hasRows()) return DATA.region[state.region] || DATA.region.ALL;
+    const area = state.region || 'ALL';
+    const I = this.IDX;
+    const rs = this._filter(state).filter(r => area === 'ALL' || r[I.area] === area);
+    let fst_all=0, lst_all=0, w3_fst=0, w3_lst=0, cancel_fst=0, cm1=0;
+    const shprs = new Set();
+    rs.forEach(r => {
+      fst_all    += r[I.fst_all]    || 0;
+      w3_fst     += r[I.w3_fst]     || 0;
+      lst_all    += r[I.lst_all]    || 0;
+      w3_lst     += r[I.w3_lst]     || 0;
+      cancel_fst += r[I.fst_cancel] || 0;
+      cm1        += r[I.cm1]        || 0;
+      shprs.add(r[I.shpr]);
+    });
+    return {
+      fst_all:    +fst_all.toFixed(1),
+      lst_all:    +lst_all.toFixed(1),
+      w3_fst:     +w3_fst.toFixed(1),
+      w3_lst:     +w3_lst.toFixed(1),
+      cancel_fst: +cancel_fst.toFixed(1),
+      cm1:        Math.round(cm1),
+      shippers:   shprs.size,
+      // 호환 필드 (기존 코드용)
+      fst:  +w3_fst.toFixed(1),
+      lst:  +w3_lst.toFixed(1),
+      bsa1: w3_fst > 0 ? +(w3_lst/w3_fst*100).toFixed(1) : 0,
+      c1:   fst_all > 0 ? +(cancel_fst/fst_all*100).toFixed(1) : 0,
+    };
+  },
+
+  salesByArea(state){
+    if (!this._hasRows()) return DATA.salesByArea[state.area] || DATA.salesByArea.ALL;
+    const I = this.IDX;
+    const area = state.area || 'ALL';
+    const rs = DATA.rows.filter(r => area === 'ALL' || r[I.area] === area);
+    const sal = new Set();
+    rs.forEach(r => { if (r[I.sal] && r[I.sal] !== '-') sal.add(r[I.sal]); });
+    return [...sal].sort();
+  },
+
+  salesChart(state){
+    if (!this._hasRows()) return DATA.salesChart;
+    const I = this.IDX;
+    const rs = this._filter(state);
+    const agg = {}, areaBySal = {};
+    rs.forEach(r => {
+      const s = r[I.sal]; if (!s || s === '-') return;
+      if (!agg[s]) { agg[s] = {fst:0, lst:0}; areaBySal[s] = {}; }
+      agg[s].fst += r[I.fst]; agg[s].lst += r[I.lst];
+      areaBySal[s][r[I.area]] = (areaBySal[s][r[I.area]] || 0) + r[I.lst];
+    });
+    const top = Object.entries(agg).sort((a,b)=>b[1].lst-a[1].lst).slice(0,15);
+    const labels=[], fst=[], lst=[], nameMap={};
+    top.forEach(([s, v]) => {
+      const mainArea = Object.entries(areaBySal[s]).sort((a,b)=>b[1]-a[1])[0][0];
+      const lbl = `${s} (${mainArea})`;
+      labels.push(lbl); fst.push(+v.fst.toFixed(1)); lst.push(+v.lst.toFixed(1));
+      nameMap[lbl] = [s, mainArea];
+    });
+    return {labels, fst, lst, nameMap};
+  },
+
+  salesRoutes(state, name){
+    if (!this._hasRows()) return DATA.salesRoutes[name] || [];
+    const I = this.IDX;
+    // 주차/POL/POD 필터는 적용, sales 는 name 으로 직접 필터하므로 skip
+    const rs = this._filter(state, {skipSales: true}).filter(r => r[I.sal] === name);
+    const g = {};
+    rs.forEach(r => {
+      const route = `${r[I.pol]}-${r[I.pod]}`;
+      if (!g[route]) g[route] = {fst:0, lst:0};
+      g[route].fst += r[I.fst]; g[route].lst += r[I.lst];
+    });
+    return Object.entries(g)
+      .sort((a,b)=>b[1].lst-a[1].lst)
+      .slice(0, 10)
+      .map(([route, v]) => {
+        const f = v.fst > 0 ? v.lst / v.fst * 100 : 0;
+        const c = v.fst > 0 ? (v.fst - v.lst) / v.fst * 100 : 0;
+        return [route, +v.fst.toFixed(1), +v.lst.toFixed(1),
+                `${Math.round(f)}%`, `${c.toFixed(1)}%`, ''];
+      });
+  },
+
+  trend(state){
+    if (!this._hasRows()) return DATA.trend;
+    const I = this.IDX;
+    const cur = state.week || DATA.current_week || 16;
+    const weeks = [];
+    for (let i = cur - 4; i <= cur; i++) weeks.push(i);
+    const g = {};
+    this._filter(state, {skipWeek:true}).forEach(r => {
+      if (!g[r[I.wk]]) g[r[I.wk]] = {fst:0, lst:0};
+      g[r[I.wk]].fst += r[I.fst]; g[r[I.wk]].lst += r[I.lst];
+    });
+    return {
+      labels: weeks.map(w => `W${String(w).padStart(2,'0')}`),
+      teu:    weeks.map(w => +((g[w]||{lst:0}).lst).toFixed(1)),
+      ratio:  weeks.map(w => {
+        const x = g[w] || {fst:0, lst:0};
+        return x.fst > 0 ? +(x.lst/x.fst*100).toFixed(1) : 0;
+      })
+    };
+  },
+
+  pod(state){
+    if (!this._hasRows()) return DATA.pod;
+    const I = this.IDX;
+    const g = {};
+    this._filter(state, {skipPod:true}).forEach(r => {
+      g[r[I.pod]] = (g[r[I.pod]] || 0) + r[I.lst];
+    });
+    const top = Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    return {labels: top.map(e=>e[0]), teu: top.map(e => +e[1].toFixed(1))};
+  },
+
+  // POD 별 (w3_fst, lst_all, BSA) 동시 집계 — 두 차트 용도
+  podRatios(state){
+    if (!this._hasRows()) return {labels:[], w3Ratio:[], occ:[]};
+    const I = this.IDX;
+    const g = {};  // pod -> {w3, lst, bsa}
+    this._filter(state, {skipPod:true}).forEach(r => {
+      const p = r[I.pod];
+      if (!g[p]) g[p] = {w3:0, lst:0, bsa:0};
+      g[p].w3  += r[I.w3_fst]  || 0;
+      g[p].lst += r[I.lst_all] || 0;
+    });
+    // BSA: DATA.bsa.rows [pol, pod, wk, bsa]
+    const bsa = DATA.bsa;
+    if (bsa && Array.isArray(bsa.rows)) {
+      const wk = state.week;
+      const polSet = new Set(state.pol || []);
+      bsa.rows.forEach(r => {
+        if (wk != null && r[2] !== wk) return;
+        if (polSet.size && !polSet.has(r[0])) return;
+        if (!g[r[1]]) g[r[1]] = {w3:0, lst:0, bsa:0};
+        g[r[1]].bsa += r[3];
+      });
+    }
+    // 상위 10 POD (BSA 기준 — 해당 주차 선복 큰 순으로)
+    const top = Object.entries(g).sort((a,b)=>b[1].bsa - a[1].bsa).slice(0,10);
+    return {
+      labels:  top.map(e => e[0]),
+      w3Ratio: top.map(e => e[1].bsa > 0 ? +(e[1].w3 / e[1].bsa * 100).toFixed(1) : 0),
+      occ:     top.map(e => e[1].bsa > 0 ? +(e[1].lst / e[1].bsa * 100).toFixed(1) : 0),
+      w3Teu:   top.map(e => +e[1].w3.toFixed(1)),
+      lstTeu:  top.map(e => +e[1].lst.toFixed(1)),
+      bsaTeu:  top.map(e => +e[1].bsa.toFixed(1)),
+    };
+  },
+
+  targets(state){
+    // 새 구조: snapshot pre-agg (DATA.targets) 를 Area/POD/Sales 로 프론트 필터.
+    // 스키마: [code,name,sales,area,pol,pod,avg3m,w3teu,score,category,grade]
+    let rows = Array.isArray(DATA.targets) ? DATA.targets.slice() : [];
+    const area = state.region || 'ALL';
+    if (area !== 'ALL') rows = rows.filter(r => r[3] === area);
+    // POD 오버라이드 — 시트에 (Area, 특정POD) 행이 있으면 그 POD 로만 한정
+    const cfg = DATA.targets_config;
+    const yr = String(new Date().getFullYear());
+    const wkKey = state.week ? `${yr}-W${String(state.week).padStart(2,'0')}` : null;
+    if (cfg && wkKey && cfg.weekly && cfg.weekly[wkKey] && cfg.weekly[wkKey][area]) {
+      const entries = cfg.weekly[wkKey][area];
+      const overrides = Object.keys(entries).filter(k => k !== 'ALL');
+      if (overrides.length) {
+        const whitelist = new Set(overrides);
+        rows = rows.filter(r => whitelist.has(r[5]));
+      }
+    }
+    if (state.sales && state.sales !== 'all') rows = rows.filter(r => r[2] === state.sales);
+    return rows.slice(0, 30);  // 프론트에서 TOP 30 고정
+  },
+
+  _targets_legacy(state){
+    // (old rows-based 재집계 로직 — 호환 위해 남겨두지만 현재 사용 안함)
+    if (!this._hasRows()) return DATA.targets;
+    const I = this.IDX;
+    const cur = state.week || DATA.current_week || 16;
+    const rs = this._filter(state, {skipWeek:true});
+    const hist = rs.filter(r => r[I.wk] >= cur-12 && r[I.wk] < cur);
+    const curRs = rs.filter(r => r[I.wk] === cur);
+
+    const byWk = {};
+    const histAll = {};
+    hist.forEach(r => {
+      const s = r[I.shpr];
+      if (!byWk[s]) byWk[s] = {};
+      if (!byWk[s][r[I.wk]]) byWk[s][r[I.wk]] = {fst:0, lst:0};
+      byWk[s][r[I.wk]].fst += r[I.fst]; byWk[s][r[I.wk]].lst += r[I.lst];
+      if (!histAll[s]) histAll[s] = {fst:0, lst:0};
+      histAll[s].fst += r[I.fst]; histAll[s].lst += r[I.lst];
+    });
+    const curAgg = {};
+    curRs.forEach(r => { curAgg[r[I.shpr]] = (curAgg[r[I.shpr]] || 0) + r[I.lst]; });
+    const meta = {};
+    rs.forEach(r => { meta[r[I.shpr]] = [r[I.sal], r[I.area], r[I.pol], r[I.pod]]; });
+
+    const names = DATA.shipper_names || {};
+    const out = [];
+    Object.entries(byWk).forEach(([shpr, weeks]) => {
+      const vals = Object.values(weeks);
+      if (!vals.length) return;
+      const avg = vals.reduce((a,b)=>a+b.lst, 0) / vals.length;
+      if (avg < 5) return;
+      const curTeu = curAgg[shpr] || 0;
+      const gap = avg - curTeu;
+      if (gap <= 2) return;
+      const h = histAll[shpr] || {fst:0, lst:0};
+      const cr = h.fst > 0 ? (h.fst - h.lst) / h.fst : 0;
+      const score = avg / (1 + cr);
+      const m = meta[shpr] || ['-','-','-','-'];
+      out.push([shpr, names[shpr] || shpr, m[0] || '-', m[1] || '-',
+                m[2] || '-', m[3] || '-',
+                +avg.toFixed(1), +curTeu.toFixed(1), +score.toFixed(1)]);
+    });
+    out.sort((a,b)=>b[8]-a[8]);
+    return out.slice(0, 30);
+  },
+
+  salesTable(state){
+    // [name, area, teu(LST), fulfill%, cancel%, score]
+    // cancel% = Cancel 상태 FST / 전체 FST (차장 정의)
+    if (!this._hasRows()) return DATA.salesTable;
+    const I = this.IDX;
+    const rs = this._filter(state);
+    const agg = {}, areaLst = {};
+    rs.forEach(r => {
+      const s = r[I.sal]; if (!s || s === '-') return;
+      if (!agg[s]) agg[s] = {fst:0, lst:0, cancel_fst:0};
+      agg[s].fst += r[I.fst]; agg[s].lst += r[I.lst];
+      agg[s].cancel_fst += r[I.fst_cancel] || 0;
+      if (!areaLst[s]) areaLst[s] = {};
+      areaLst[s][r[I.area]] = (areaLst[s][r[I.area]] || 0) + r[I.lst];
+    });
+    return Object.entries(agg)
+      .sort((a,b) => b[1].lst - a[1].lst)
+      .map(([name, v]) => {
+        const mainArea = Object.entries(areaLst[name]).sort((a,b)=>b[1]-a[1])[0][0];
+        const fulfill = v.fst > 0 ? +(v.lst/v.fst*100).toFixed(1) : 0;
+        const cancel  = v.fst > 0 ? +(v.cancel_fst/v.fst*100).toFixed(1) : 0;
+        return [name, mainArea, Math.round(v.lst), fulfill, cancel, Math.round(fulfill - cancel)];
+      });
+  },
+
+  shipperHist(code){
+    if (!this._hasRows()) {
+      const h = DATA.shipperHistory;
+      if (h && typeof h === 'object' && !Array.isArray(h)) {
+        if (h[code])       return h[code];
+        if ('labels' in h) return h;
+      }
+      return MOCK.shipperHistory;
+    }
+    const I = this.IDX;
+    const rs = DATA.rows.filter(r => r[I.shpr] === code);
+    const m = {};
+    rs.forEach(r => {
+      if (!m[r[I.mon]]) m[r[I.mon]] = {fst:0, lst:0};
+      m[r[I.mon]].fst += r[I.fst]; m[r[I.mon]].lst += r[I.lst];
+    });
+    const labels = Object.keys(m).sort().slice(-3);
+    return {
+      labels,
+      fst: labels.map(k => +m[k].fst.toFixed(1)),
+      lst: labels.map(k => +m[k].lst.toFixed(1))
+    };
+  }
+};
+
+// ═════════════════════════════ 6. DATA_API ════════════════════════════════
+/*  SINGLE SWAP POINT. Delegates to AGG for filter-aware aggregation.
+ */
+const DATA_API = {
+  regionKpis:  (state) => AGG.regionKpis(state),
+  salesByArea: (state) => AGG.salesByArea(state),
+  salesTable:  (state) => AGG.salesTable(state),
+  targets:     (state) => AGG.targets(state),
+  salesRoutes: (name)  => AGG.salesRoutes(STATE, name),
+  // Area 평균 실선적률 = LST_TEU / FST_TEU (TEU 가중, 전 영업사원·전 구간 통합)
+  areaAvgRate: (area) => {
+    if (AGG._hasRows()) {
+      const I = AGG.IDX;
+      let fst = 0, lst = 0;
+      DATA.rows.forEach(r => {
+        if (r[I.area] === area) { fst += r[I.fst]; lst += r[I.lst]; }
+      });
+      return fst > 0 ? lst / fst : 0;
+    }
+    // Fallback: MOCK 단순 route-level average
+    const rates = [];
+    Object.values(MOCK.salesRoutes).forEach(routes => {
+      routes.forEach(r => {
+        if (CONFIG.POL_TO_AREA[r[0].split('-')[0]] === area && r[1] > 0) {
+          rates.push(r[2] / r[1]);
+        }
+      });
+    });
+    return rates.length ? rates.reduce((a,b)=>a+b,0) / rates.length : 0;
+  },
+  // 구간 평가: 본인 달성률 - Area 평균. ±RATING_THRESHOLD 밴드로 3단계 분류.
+  ratingFor: (row, area) => {
+    const own = row[1] > 0 ? row[2] / row[1] : 0;
+    const dev = own - DATA_API.areaAvgRate(area);
+    const th  = CONFIG.RATING_THRESHOLD;
+    if (dev >=  th) return {cls:'text-good',   key:'ratingGood',    dev};
+    if (dev <= -th) return {cls:'text-danger', key:'ratingBad',     dev};
+    return                  {cls:'',            key:'ratingNeutral', dev};
+  },
+  trend:       (state) => AGG.trend(state),
+  pod:         (state) => AGG.pod(state),
+  podRatios:   (state) => AGG.podRatios(state),
+  salesChart:  (state) => AGG.salesChart(state),
+  shipperHist: (code)  => AGG.shipperHist(code)
+};
+
+// ═════════════════════════════ 7. RENDER ══════════════════════════════════
+const RENDER = {
+  all(){
+    this.weekLabels();
+    this.kpis();
+    this.salesTable();
+    this.targets();
+    this.raw();
+    this.regionTabBadges();
+    this.perf();
+    this.matrix();
+  },
+
+  weekLabels(){
+    const wk = STATE.week;
+    const wkTag = wk ? `W${String(wk).padStart(2,'0')}` : '—';
+    const range = weekRange(wk);
+    const today = pd_today();
+    const curW  = currentWeek();
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('todayLabel',         `${today} (W${String(curW).padStart(2,'0')})`);
+    setTxt('targetWeekLabel',    range ? `${wkTag} (${range})` : wkTag);
+    setTxt('salesPerfDescWeek',  `${wkTag} 타겟`);
+    setTxt('podDescWeek',        `${wkTag}`);
+    setTxt('targetTitleWk',      wkTag);
+    setTxt('matrixDescWk',       wkTag);
+    document.querySelectorAll('.scoring-wk').forEach(el => el.textContent = wkTag);
+  },
+
+  raw(){
+    const tbody = $('#rawBody'); if (!tbody) return;
+    if (!AGG._hasRows()) {
+      tbody.innerHTML = `<tr><td colspan="10" class="muted" style="text-align:center;padding:16px;">데이터 로드 실패 — 로컬 HTTP 서버로 열어주세요</td></tr>`;
+      $('#rawSummary').textContent = '';
+      return;
+    }
+    const rs = AGG._filter(STATE);
+    const max = 500;
+    const slice = rs.slice(0, max);
+    const names = DATA.shipper_names || {};
+    tbody.innerHTML = slice.map(r => {
+      // Raw 탭은 WOS-3 기준 (w3_fst/w3_lst) — 인덱스 8, 10
+      const shpr=r[0], sal=r[1]||'-', area=r[2]||'-', pol=r[3]||'-', pod=r[4]||'-',
+            wk=r[5], mon=r[6]||'-', fst=r[8]||0, lst=r[10]||0;
+      const ful = fst>0 ? (lst/fst*100).toFixed(1) : '0.0';
+      const nm  = names[shpr] || shpr;
+      return `<tr>
+        <td>${shpr} <span style="color:var(--muted);font-size:11px;">${nm}</span></td>
+        <td>${sal}</td><td>${tagArea(area)}</td><td>${pol}</td><td>${pod}</td>
+        <td class="tbl-num">W${String(wk).padStart(2,'0')}</td><td>${mon}</td>
+        <td class="tbl-num">${fst.toFixed(1)}</td>
+        <td class="tbl-num">${lst.toFixed(1)}</td>
+        <td class="tbl-num">${ful}%</td>
+      </tr>`;
+    }).join('');
+    $('#rawSummary').textContent = `현재 필터 적용 결과: ${rs.length.toLocaleString()} rows (상위 ${Math.min(rs.length,max)} 표시) · 집계 단위: 화주×영업×POL×POD×주차`;
+  },
+  kpis(){
+    const d = DATA_API.regionKpis(STATE);
+    const fmt = n => Math.round(n||0).toLocaleString();
+    const setTxt = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
+    const pol = (STATE.region && STATE.region !== 'ALL')
+      ? (CONFIG.AREA_TO_POL[STATE.region] || STATE.pol)
+      : STATE.pol;
+    const bsaTeu = AGG.bsaForWeek({...STATE, pol});
+
+    // 팀 공유 5개
+    setTxt('kpi-w3-bkg',  fmt(d.w3_fst));
+    setTxt('kpi-w3-ship', fmt(d.w3_lst));
+    setTxt('kpi-bsa',     bsaTeu > 0 ? fmt(bsaTeu) : '—');
+
+    const occ = bsaTeu > 0 ? (d.lst_all / bsaTeu * 100) : null;
+    const occEl = $('#kpi-occ');
+    if (occEl) {
+      occEl.textContent = occ != null ? occ.toFixed(1) + '%' : '—';
+      occEl.style.color = occ == null ? '' : (occ <= 120 ? '#34a853' : '#ea4335');
+    }
+    const sr = d.fst_all > 0 ? (d.lst_all / d.fst_all * 100) : null;
+    const srEl = $('#kpi-ship-rate');
+    if (srEl) {
+      srEl.textContent = sr != null ? sr.toFixed(1) + '%' : '—';
+      srEl.style.color = sr == null ? '' : (sr >= 55 ? '#34a853' : '#f9ab00');
+    }
+
+    // ─── 매니저 전용 3카드 ──────────────────────────────────────────
+    const tgt = lookupTarget();
+
+    // ① 목표 달성률 = 3주전 BKG / (BSA × 목표%)
+    const goalEl = $('#kpi-goal-rate');
+    const goalSub = $('#kpi-goal-sub');
+    if (tgt && bsaTeu > 0) {
+      const targetTeu = Math.round(bsaTeu * tgt.pct / 100);
+      const ach = targetTeu > 0 ? (d.w3_fst / targetTeu * 100) : 0;
+      if (goalEl) {
+        goalEl.textContent = ach.toFixed(0) + '%';
+        goalEl.style.color = ach >= 100 ? '#34a853' : (ach >= 80 ? '#f9ab00' : '#ea4335');
+      }
+      const typ = tgt.type === 'weekly' ? '주간' : '월간';
+      const podS = tgt.pod !== 'ALL' ? ` · ${tgt.pod}` : '';
+      if (goalSub) goalSub.textContent = `${typ} 목표 ${Math.round(targetTeu).toLocaleString()} TEU (${tgt.pct}%${podS})`;
+    } else {
+      if (goalEl) { goalEl.textContent = '—'; goalEl.style.color = ''; }
+      if (goalSub) goalSub.textContent = (STATE.region === 'ALL') ? 'Area 탭 선택 필요' : '시트에 목표 % 미등록';
+    }
+
+    // (3주전 BKG 카드 진행바 제거됨 — 🎯 목표 달성률 카드에서 동일 지표 표시)
+
+    // ② 전주 동시점 대비 = 이전 snapshot 의 "당시 current+3 주차" w3_fst 대비
+    const wowEl = $('#kpi-wow-delta');
+    const wowSub = $('#kpi-wow-sub');
+    const prev = DATA._prev;
+    if (prev && Array.isArray(prev.rows) && prev.rows.length) {
+      const pIDX = (prev.rows_schema || []).reduce((m,k,i)=>(m[k]=i,m), {});
+      const prevTargetWk = (prev.current_week || 0) + 3;
+      const area = STATE.region || 'ALL';
+      const podSet = new Set(STATE.pod || []);
+      let prevW3 = 0;
+      prev.rows.forEach(r => {
+        if (r[pIDX.wk] !== prevTargetWk) return;
+        if (area !== 'ALL' && r[pIDX.area] !== area) return;
+        if (podSet.size && !podSet.has(r[pIDX.pod])) return;
+        prevW3 += r[pIDX.w3_fst] || 0;
+      });
+      const delta = d.w3_fst - prevW3;
+      // 국내 관례: 상승=빨강, 하락=파랑, 삼각형
+      const mark = delta > 0 ? '▲' : (delta < 0 ? '▼' : '—');
+      const sign = delta > 0 ? '+' : '';
+      if (wowEl) {
+        wowEl.textContent = `${mark} ${sign}${fmt(delta)}`;
+        wowEl.style.color = delta > 0 ? '#ea4335' : (delta < 0 ? '#1a73e8' : '');
+      }
+      if (wowSub) wowSub.textContent = `${prev._date || ''} 시점 W${String(prevTargetWk).padStart(2,'0')} = ${fmt(prevW3)} TEU`;
+    } else {
+      if (wowEl) { wowEl.textContent = '—'; wowEl.style.color = ''; }
+      if (wowSub) wowSub.textContent = '이전 스냅샷 로드 중';
+    }
+
+    // ③ Cancel 전환 = WOS-3 범위 Cancel FST 합 (= 전체 Cancel 의 WOS-3 해당분)
+    //   현재 스키마 fst_cancel 은 all WOS 기준이라 근사치. 화면 라벨 명시.
+    const cEl = $('#kpi-cancel');
+    const cSub = $('#kpi-cancel-sub');
+    const canc = d.cancel_fst || 0;
+    const cancPct = d.fst_all > 0 ? (canc / d.fst_all * 100) : 0;
+    if (cEl) {
+      cEl.textContent = fmt(canc) + ' TEU';
+      cEl.style.color = cancPct >= 10 ? '#ea4335' : (cancPct >= 5 ? '#f9ab00' : '');
+    }
+    if (cSub) cSub.textContent = `전체 FST 대비 ${cancPct.toFixed(1)}%`;
+  },
+  regionTabBadges(){
+    const pairs = [['ALL',0],['SZP',1],['CAN',2],['HKG',3]];
+    const rtabs = document.querySelectorAll('.rtab .rtab-badge');
+    const src = (DATA.region && DATA.region.ALL) ? DATA.region : MOCK.region;
+    pairs.forEach(([key,i])=>{
+      if(rtabs[i] && src[key]) rtabs[i].textContent = Math.round(src[key].fst||0).toLocaleString() + ' TEU';
+    });
+  },
+  perf(){ /* 실적 관리 탭 KPI 3카드 제거됨 (2026-04-23) — no-op 유지 */ },
+  matrix(){
+    const tb = $('#matrixBody'); if (!tb) return;
+    if (!AGG._hasRows()) {
+      tb.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:16px;">데이터 로드 실패</td></tr>';
+      return;
+    }
+    const I = AGG.IDX;
+    // POD 필터는 무시 (matrix는 POD 전체 분포를 보는 용도), 그 외 필터는 적용
+    const rs = AGG._filter(STATE, {skipPod: true});
+    const areas = ['SZP','CAN','HKG'];
+    const cellKeys = [...areas, 'ALL'];
+    const g = {};             // 'area|pod' → {fst,lst}
+    const podLst = {};        // pod → 전체 lst (상위 추출용)
+    rs.forEach(r => {
+      const pod = r[I.pod], area = r[I.area];
+      podLst[pod] = (podLst[pod] || 0) + r[I.lst];
+      [area, 'ALL'].forEach(a => {
+        const k = a + '|' + pod;
+        if (!g[k]) g[k] = {fst:0, lst:0};
+        g[k].fst += r[I.fst]; g[k].lst += r[I.lst];
+      });
+    });
+    const topPods = Object.entries(podLst).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]);
+    if (!topPods.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:16px;">No data</td></tr>';
+      return;
+    }
+    tb.innerHTML = topPods.map(pod => {
+      const cells = cellKeys.map(a => {
+        const x = g[a + '|' + pod];
+        if (!x || x.fst <= 0) return '<td class="tbl-num muted">—</td>';
+        const f = x.lst / x.fst * 100;
+        const cls = f >= 85 ? 'text-good' : (f < 70 ? 'text-danger' : '');
+        return `<td class="tbl-num ${cls}">${Math.round(f)}%</td>`;
+      }).join('');
+      return `<tr><td>${pod}</td>${cells}</tr>`;
+    }).join('');
+  },
+  salesTable(){
+    const tbody = $('#salesPerfBody');
+    if(!tbody) return;
+    const rows = DATA_API.salesTable(STATE);
+    if(!rows || !rows.length){
+      tbody.innerHTML = `<tr><td colspan="5" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(r=>{
+      const [name, area, lstTeu, fulfill /*, cancel, score */] = r;
+      const fstTeu = fulfill > 0 ? Math.round(lstTeu / (fulfill/100)) : lstTeu;
+      const fulCls = fulfill >= 85 ? 'text-good' : (fulfill < 70 ? 'text-danger' : '');
+      return `<tr class="clickable" onclick="openSales('${name}','${area}')">
+        <td>${name} <span class="tag tag-${area.toLowerCase()}">${area}</span></td>
+        <td class="tbl-num">${fstTeu.toLocaleString()}</td>
+        <td class="tbl-num">${Math.round(lstTeu).toLocaleString()}</td>
+        <td class="tbl-num ${fulCls}">${fulfill}%</td>
+      </tr>`;
+    }).join('');
+  },
+  targets(){
+    const tbody = $('#targetBody');
+    if(!tbody) return;
+    const rows = DATA_API.targets(STATE);
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="12" class="muted" style="text-align:center;padding:16px;">현재 필터 조건에서 타겟 없음</td></tr>';
+      return;
+    }
+    const CAT = {
+      'A': {lbl:'긴급리콜', cls:'tag-cancel'},
+      'B': {lbl:'감소추세', cls:'tag-waiting'},
+      'C': {lbl:'고수익갭', cls:'tag-normal'},
+      'D': {lbl:'관리대상', cls:''}
+    };
+    tbody.innerHTML = rows.map(r=>{
+      const [code,name,sales,area,pol,pod,avg3m,w3teu,score,category,grade] = r;
+      const c = CAT[category] || CAT['D'];
+      const gap = Math.round(w3teu - avg3m);
+      const gapCls = gap>=0 ? 'text-good' : 'text-danger';
+      const safeName = String(name||'').replace(/'/g,"\\'");
+      const gradeHtml = grade === 'A+B'
+        ? '<span class="tag tag-normal">A+B</span>'
+        : (grade === 'C+D' ? '<span class="tag" style="background:var(--grid);">C+D</span>' : '');
+      return `<tr class="clickable" onclick="openShipper('${code}','${safeName}')">
+        <td><span class="tag ${c.cls}" style="white-space:nowrap;">${c.lbl}</span></td>
+        <td>${code}</td><td><b>${name}</b></td><td>${sales}</td>
+        <td>${tagArea(area)}</td><td>${pol}</td><td>${pod}</td>
+        <td class="tbl-num">${Math.round(avg3m)}</td>
+        <td class="tbl-num">${Math.round(w3teu)}</td>
+        <td class="tbl-num ${gapCls}">${gap>0?'+':''}${gap}</td>
+        <td class="tbl-num"><b>${Math.round(score)}</b></td>
+        <td>${gradeHtml}</td>
+      </tr>`;
+    }).join('');
+  },
+  salesOptions(){
+    const sel = $('#salSel');
+    const current = sel.value;
+    const list = DATA_API.salesByArea(STATE);
+    sel.innerHTML = '<option value="all">ALL</option>' + list.map(n=>`<option>${n}</option>`).join('');
+    if([...sel.options].some(o=>o.value===current)) sel.value = current;
+    STATE.sales = sel.value;
+  },
+  filterButtonLabels(){
+    ['polMulti','podMulti'].forEach(id=>{
+      const all  = document.querySelectorAll('#'+id+' input');
+      const chks = document.querySelectorAll('#'+id+' input:checked');
+      const btn  = document.querySelector('#'+id+' .f-multi-btn');
+      if(chks.length===0)             btn.textContent = 'NONE';
+      else if(chks.length===all.length) btn.textContent = 'ALL';
+      else if(chks.length<=3)           btn.textContent = [...chks].map(c=>c.value).join(',');
+      else                              btn.textContent = chks.length + ' selected';
+    });
+  }
+};
+
+// Small helpers used by RENDER.
+const $ = sel => document.querySelector(sel);
+function statusOf(gap){
+  if(gap >= 0)   return `<span class="tag tag-normal">${t('statusOK')}</span>`;
+  if(gap >= -30) return `<span class="tag tag-waiting">${t('statusShort')}</span>`;
+  return `<span class="tag tag-cancel">${t('statusCritical')}</span>`;
+}
+function tagArea(a){ return `<span class="tag tag-${a.toLowerCase()}">${a}</span>`; }
+
+// 445 달력 주차 → 월 (1월=W1~4, 2월=W5~8, 3월=W9~13, ...)
+const _WW_BUCKETS = [4,4,5,4,4,5,4,4,5,4,4,5];
+function weekToMonth(wk){
+  let acc = 0;
+  for (let i=0; i<12; i++){
+    if (wk <= acc + _WW_BUCKETS[i]) return i+1;
+    acc += _WW_BUCKETS[i];
+  }
+  return 12;
+}
+
+// 현재 STATE 기준 목표 조회. Area='ALL'이면 null (전체 목표 없음).
+// POD: 1개만 선택되면 그 POD override, 아니면 'ALL'.
+// 주간 우선 → 월간 fallback.
+function lookupTarget(){
+  const cfg = DATA.targets_config;
+  if (!cfg) return null;
+  const area = STATE.region || 'ALL';
+  if (area === 'ALL') return null;
+  const podSel = STATE.pod || [];
+  const podKey = (podSel.length === 1) ? podSel[0] : 'ALL';
+  const yr = String(new Date().getFullYear());
+  const wkKey = STATE.week ? `${yr}-W${String(STATE.week).padStart(2,'0')}` : null;
+  const moKey = STATE.week ? `${yr}-${String(weekToMonth(STATE.week)).padStart(2,'0')}` : null;
+  const pickPct = (entry) => {
+    if (!entry) return null;
+    if (entry[podKey] != null) return {pct: entry[podKey], pod: podKey};
+    if (entry['ALL']  != null) return {pct: entry['ALL'],  pod: 'ALL'};
+    return null;
+  };
+  if (wkKey && cfg.weekly && cfg.weekly[wkKey]){
+    const hit = pickPct(cfg.weekly[wkKey][area]);
+    if (hit) return {type:'weekly', key:wkKey, ...hit};
+  }
+  if (moKey && cfg.monthly && cfg.monthly[moKey]){
+    const hit = pickPct(cfg.monthly[moKey][area]);
+    if (hit) return {type:'monthly', key:moKey, ...hit};
+  }
+  return null;
+}
+
+// Keep symbol compatibility for inline HTML onclick handlers.
+function renderTargets(){ RENDER.targets(); }
+function updateSalesOptions(){ RENDER.salesOptions(); }
+
+// ═════════════════════════════ 8. CHARTS ══════════════════════════════════
+window._charts = {};
+const CHARTS = {
+  initAll(){
+    this.trend();
+    this.pod();
+    this.salesBar();
+  },
+  rebuild(){
+    Object.keys(window._charts).forEach(k=>{
+      if(window._charts[k] && window._charts[k].destroy){ window._charts[k].destroy(); window._charts[k] = null; }
+    });
+    this.initAll();
+  },
+  trend(){
+    const ctx = document.getElementById('trendChart'); if(!ctx) return;
+    const d = DATA_API.trend(STATE);
+    const C = CONFIG.CHART_COLORS;
+    if (window._charts.trend) window._charts.trend.destroy();
+    window._charts.trend = new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels: d.labels,
+        datasets:[
+          {label:'실선적 TEU', data:d.teu,
+           backgroundColor:C.blue+'cc', borderRadius:4, order:2,
+           datalabels:{
+             display:true, anchor:'end', align:'top', color:C.text, font:{size:11, weight:'bold'},
+             formatter: v => Math.round(v).toLocaleString()
+           }},
+          {label:'실선적률 %', data:d.ratio,
+           type:'line', borderColor:C.amber, backgroundColor:C.amber,
+           yAxisID:'y1', tension:0, pointRadius:4, borderWidth:2, order:1,
+           datalabels:{
+             display:true, anchor:'end', align:'top', color:C.amber, font:{size:10, weight:'bold'},
+             formatter: v => v.toFixed(1)+'%'
+           }}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:18}},
+        plugins:{legend:{labels:{color:C.text, font:{size:11}}}},
+        scales:{
+          y:{ticks:{color:C.text}, grid:{color:C.grid}, beginAtZero:true},
+          y1:{position:'right', min:0, max:100, ticks:{color:C.amber, callback:v=>v+'%'}, grid:{drawOnChartArea:false}},
+          x:{ticks:{color:C.text}, grid:{color:C.grid}}
+        }
+      }
+    });
+  },
+  pod(){
+    // 두 개 POD 차트 동시 렌더링 (3주전 BKG/BSA + Normal/BSA)
+    const C = CONFIG.CHART_COLORS;
+    const d = DATA_API.podRatios(STATE);
+    const labelText = (arr, teuArr) => arr.map((v, i) =>
+      `${v.toFixed(1)}% (${Math.round(teuArr[i])} TEU)`);
+    const _mkChart = (ctxId, values, teuArr, barColor) => {
+      const ctx = document.getElementById(ctxId); if (!ctx) return null;
+      return new Chart(ctx, {
+        type:'bar',
+        data:{
+          labels: d.labels,
+          datasets:[{
+            label:'%', data: values,
+            backgroundColor: barColor + 'cc',
+            borderRadius:4
+          }]
+        },
+        options:{
+          indexAxis:'y', responsive:true, maintainAspectRatio:false,
+          plugins:{
+            legend:{display:false},
+            tooltip:{callbacks:{label:(ctx)=> `${ctx.parsed.x.toFixed(1)}% · ${Math.round(teuArr[ctx.dataIndex])} TEU`}},
+            datalabels:{
+              display:true,
+              anchor:'end', align:'right', color:C.text, font:{size:10},
+              formatter: (v, ctx) => `${v.toFixed(0)}% (${Math.round(teuArr[ctx.dataIndex])})`
+            }
+          },
+          scales:{
+            x:{ticks:{color:C.text, callback: v => v+'%'}, grid:{color:C.grid}, suggestedMax: Math.max(100, Math.max(...values)*1.2)},
+            y:{ticks:{color:C.text}, grid:{display:false}}
+          }
+        }
+      });
+    };
+    if (window._charts.podW3) window._charts.podW3.destroy();
+    if (window._charts.podOcc) window._charts.podOcc.destroy();
+    window._charts.podW3  = _mkChart('podChartW3',  d.w3Ratio, d.w3Teu,  C.purple);
+    window._charts.podOcc = _mkChart('podChartOcc', d.occ,     d.lstTeu, C.green);
+  },
+  salesBar(){
+    const ctx = document.getElementById('salesChart'); if(!ctx) return;
+    const d = DATA_API.salesChart(STATE);
+    const C = CONFIG.CHART_COLORS;
+    const lblOpt = {display:true, anchor:'end', align:'top', color:C.text, font:{size:9},
+                    formatter: v => Math.round(v)};
+    window._charts.sales = new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels: d.labels,
+        datasets:[
+          {label:t('legendFst'), data:d.fst, backgroundColor:C.blue+'cc', datalabels:lblOpt},
+          {label:t('legendLst'), data:d.lst, backgroundColor:C.green+'cc', datalabels:lblOpt}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:12}},
+        plugins:{legend:{labels:{color:C.text}}, tooltip:{callbacks:{afterBody:()=>t('clickDetail')}}},
+        onClick:(e,items)=>{
+          if(items.length===0) return;
+          const lbl = d.labels[items[0].index];
+          const [name, area] = d.nameMap[lbl];
+          openSales(name, area);
+        },
+        scales:{
+          x:{ticks:{color:C.text}, grid:{color:C.grid}},
+          y:{ticks:{color:C.text}, grid:{color:C.grid}}
+        }
+      }
+    });
+  },
+  salesRoute(name){
+    const ctx = document.getElementById('salesRouteChart'); if(!ctx) return;
+    const rows = DATA_API.salesRoutes(name);
+    const C = CONFIG.CHART_COLORS;
+    const lblOpt = {display:true, anchor:'end', align:'top', color:C.text,
+                    font:{size:10, weight:'bold'}, formatter: v => Math.round(v)};
+    if(window._charts.salesRoute) window._charts.salesRoute.destroy();
+    window._charts.salesRoute = new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels: rows.map(r=>r[0]),
+        datasets:[
+          {label:t('legendFst'), data: rows.map(r=>r[1]), backgroundColor:C.blue+'cc', datalabels:lblOpt},
+          {label:t('legendLst'), data: rows.map(r=>r[2]), backgroundColor:C.green+'cc', datalabels:lblOpt}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:14}},
+        plugins:{legend:{labels:{color:C.text, font:{size:11}}}},
+        scales:{
+          x:{ticks:{color:C.text}, grid:{display:false}},
+          y:{ticks:{color:C.text}, grid:{color:C.grid}}
+        }
+      }
+    });
+  },
+  shipper(code){
+    const ctx = document.getElementById('shipperChart'); if(!ctx) return;
+    const C = CONFIG.CHART_COLORS;
+    if(window._charts.shipper) window._charts.shipper.destroy();
+    // 6개월 이력 우선, 없으면 기존 3M fallback
+    const h6 = (DATA.shipperHistory6m || {})[code];
+    let labels, fst;
+    if (h6 && h6.monthly && Object.keys(h6.monthly).length) {
+      const months = Object.keys(h6.monthly).sort();
+      labels = months;
+      fst = months.map(m => h6.monthly[m] || 0);
+    } else {
+      const d = DATA_API.shipperHist(code);
+      labels = d.labels; fst = d.fst;
+    }
+    window._charts.shipper = new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels,
+        datasets:[
+          {label:'월별 FST TEU', data: fst, backgroundColor: C.blue + 'cc', borderRadius:4,
+           datalabels:{display:true, anchor:'end', align:'top', color:C.text,
+                       font:{size:11, weight:'bold'}, formatter: v => Math.round(v)}}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:14}},
+        plugins:{legend:{labels:{color:C.text, font:{size:11}}}},
+        scales:{
+          x:{ticks:{color:C.text}, grid:{display:false}},
+          y:{ticks:{color:C.text}, grid:{color:C.grid}}
+        }
+      }
+    });
+  }
+};
+
+// Keep init-charts symbol for backwards compatibility.
+function initCharts(){ CHARTS.initAll(); }
+
+// ═════════════════════════════ 9. EVENTS ══════════════════════════════════
+function toggleMulti(id){
+  const el = document.getElementById(id);
+  document.querySelectorAll('.f-multi.open').forEach(x=>{if(x!==el) x.classList.remove('open');});
+  el.classList.toggle('open');
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.f-multi'))
+    document.querySelectorAll('.f-multi.open').forEach(x=>x.classList.remove('open'));
+});
+
+function selectAll(id, checked){
+  document.querySelectorAll('#'+id+' input[type=checkbox]').forEach(x=>{x.checked=checked;});
+  applyFilters();
+}
+
+// Unified filter entry point. Every filter control calls this → STATE is updated → re-render.
+function applyFilters(){
+  STATE.pol   = [...document.querySelectorAll('#polMulti input:checked')].map(x=>x.value);
+  STATE.pod   = [...document.querySelectorAll('#podMulti input:checked')].map(x=>x.value);
+  STATE.week  = parseInt($('#weekSel').value, 10);
+  STATE.sales = $('#salSel').value;
+  RENDER.filterButtonLabels();
+  RENDER.salesOptions();
+  RENDER.all();
+  if (typeof CHARTS !== 'undefined' && CHARTS.rebuild) CHARTS.rebuild();
+}
+
+function applyArea(area){
+  // switchRegion 이 region/area/탭활성/areaSel/POL/applyFilters 를 모두 처리
+  const btn = [...document.querySelectorAll('.rtab')].find(b=>b.textContent.trim().startsWith(area));
+  switchRegion(area, btn || null);
+}
+
+function switchRegion(region, btn){
+  STATE.region = region;
+  STATE.area   = region;
+  document.querySelectorAll('.rtab').forEach(x=>x.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else {
+    const b = [...document.querySelectorAll('.rtab')].find(x=>x.textContent.trim().startsWith(region));
+    if (b) b.classList.add('active');
+  }
+  // Area 드롭다운과 POL 체크박스를 탭 선택에 맞춰 동기화
+  const areaSel = document.getElementById('areaSel');
+  if (areaSel) areaSel.value = region;
+  const pols = CONFIG.AREA_TO_POL[region] || CONFIG.AREA_TO_POL.ALL;
+  document.querySelectorAll('#polMulti input[type=checkbox]').forEach(x => {
+    x.checked = pols.includes(x.value);
+  });
+  applyFilters();
+}
+
+function switchSub(name, btn){
+  STATE.sub = name;
+  document.querySelectorAll('.snav-btn').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.sub-panel').forEach(x=>x.classList.remove('active'));
+  document.getElementById('sub-'+name).classList.add('active');
+}
+
+// CSV download (targets).
+function downloadCSV(){
+  const header = ['Code','Shipper','Sales','Area','POL','POD','3M_Avg_TEU','-3W_BKG_TEU','Gap','Score'];
+  const rows = [header, ...DATA_API.targets(STATE).map(r=>{
+    const gap = r[7]-r[6];
+    return [r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7],gap,r[8]];
+  })];
+  const csv = '\uFEFF' + rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const wkTag = STATE.week ? `W${String(STATE.week).padStart(2,'0')}` : 'Wxx';
+  const dtTag = pd_today().replace(/-/g,'');
+  a.href = url; a.download = `targets_${wkTag}_${dtTag}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Modals.
+function openSales(name, area){
+  $('#sales-ttl').textContent = `${name} (${area})`;
+  const rows = DATA_API.salesRoutes(name);  // 현 시점, 주차 필터 적용된 [route, fst, lst, ful%, canc%, '']
+  const avg  = DATA_API.areaAvgRate(area);
+  const subEl = document.querySelector('#salesModal .modal-hdr .card-desc');
+  if (subEl) {
+    subEl.textContent = `Area 평균 실선적률 ${(avg*100).toFixed(1)}% · 평가 기준 ±10%p`;
+  }
+  // 전주 동시점 데이터 — DATA._prev 에서 같은 영업사원 Route 집계
+  const prev = DATA._prev;
+  const prevByRoute = {};
+  if (prev && Array.isArray(prev.rows)) {
+    const pI = (prev.rows_schema || []).reduce((m,k,i)=>(m[k]=i,m),{});
+    const prevTgtWk = (prev.current_week || 0) + 3;
+    prev.rows.forEach(r => {
+      if (r[pI.sal] !== name) return;
+      if (r[pI.wk] !== prevTgtWk) return;
+      const rt = `${r[pI.pol]}-${r[pI.pod]}`;
+      prevByRoute[rt] = (prevByRoute[rt] || 0) + (r[pI.w3_fst] || 0);
+    });
+  }
+  // 핵심 지표 계산
+  let totFst=0, totLst=0, totCanc=0;
+  const I = AGG.IDX;
+  (AGG._filter(STATE, {skipSales:true}).filter(r => r[I.sal] === name)).forEach(r => {
+    totFst += r[I.w3_fst] || 0;
+    totLst += r[I.w3_lst] || 0;
+    totCanc += r[I.fst_cancel] || 0;
+  });
+  const prevTot = Object.values(prevByRoute).reduce((a,b)=>a+b, 0);
+  const wow = totFst - prevTot;
+  const cancPct = totFst > 0 ? (totCanc / totFst * 100) : 0;
+  const topRt = rows.length ? rows[0][0] : '—';
+
+  // 국내 관례: 상승=빨강, 하락=파랑 · ▲/▼ 삼각형
+  const deltaMark = v => v > 0 ? '▲' : (v < 0 ? '▼' : '—');
+  const deltaColor = v => v > 0 ? '#ea4335' : (v < 0 ? '#1a73e8' : '');
+  $('#salMiniW3').textContent = Math.round(totFst).toLocaleString();
+  const wowEl = $('#salMiniWoW');
+  wowEl.textContent = `${deltaMark(wow)} ${(wow > 0 ? '+' : '')}${Math.round(wow).toLocaleString()}`;
+  wowEl.className = 'mini-stat-v';
+  wowEl.style.color = deltaColor(wow);
+  const cancEl = $('#salMiniCanc');
+  cancEl.textContent = Math.round(totCanc) + ' TEU (' + cancPct.toFixed(1) + '%)';
+  cancEl.className = 'mini-stat-v' + (cancPct >= 10 ? ' text-danger' : (cancPct >= 5 ? ' text-warn' : ''));
+  $('#salMiniTop').textContent = topRt;
+
+  // Route 테이블 — 전주 대비 컬럼 추가 (국내 관례 색상)
+  $('#salesRouteBody').innerHTML = rows.map(r=>{
+    const rt = DATA_API.ratingFor(r, area);
+    const prevV = prevByRoute[r[0]] || 0;
+    const delta = r[1] - prevV;
+    const deltaTxt = `${deltaMark(delta)} ${(delta > 0 ? '+' : '')}${Math.round(delta)}`;
+    const col = deltaColor(delta);
+    return `<tr><td>${r[0]}</td>
+        <td class="tbl-num">${r[1]}</td>
+        <td class="tbl-num" style="color:${col};">${deltaTxt}</td>
+        <td class="tbl-num">${r[2]}</td>
+        <td class="tbl-num ${rt.cls}">${r[3]}</td>
+        <td class="tbl-num">${r[4]}</td>
+        <td>${t(rt.key)}</td></tr>`;
+  }).join('') || '<tr><td colspan="7" class="muted" style="text-align:center;">데이터 없음</td></tr>';
+  $('#salesModal').classList.add('show');
+  setTimeout(()=>CHARTS.salesRoute(name), 50);
+}
+function closeSales(){
+  $('#salesModal').classList.remove('show');
+  if(window._charts.salesRoute){window._charts.salesRoute.destroy(); window._charts.salesRoute=null;}
+}
+function openShipper(code, name){
+  $('#modal-ttl').textContent = `${name} (${code})`;
+  // 타겟 판정 근거 찾기 (DATA.targets 에서 code 매칭)
+  const trow = (DATA.targets || []).find(r => r[0] === code);
+  const judge = $('#shpJudgeBody');
+  if (trow) {
+    const [,,sales,area,pol,pod,avg3m,w3teu,score,cat,grade] = trow;
+    const CAT_DESC = {
+      'A': '🔴 긴급리콜 — A+B 등급 + 3M 평균 ≥ 20 TEU + 이번주 부킹 0',
+      'B': '🟡 감소추세 — 최근 4주 중 2회 이상 감소, 총 -20% 초과',
+      'C': '💎 고수익갭 — A+B 등급 + 이번주가 3M 평균의 70% 미만',
+      'D': '⚡ 관리대상 — 평균 대비 부킹 갭 발생'
+    };
+    judge.innerHTML = `
+      <div>${CAT_DESC[cat] || CAT_DESC['D']}</div>
+      <div style="margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;">
+        <span>담당: <b>${sales}</b></span>
+        <span>Area: ${area}</span>
+        <span>POL-POD: ${pol}-${pod}</span>
+        <span>3M 평균: <b>${Math.round(avg3m)}</b> TEU/주</span>
+        <span>이번주 -3W BKG: <b style="color:var(--${w3teu<avg3m*0.5?'red':'text'});">${Math.round(w3teu)}</b> TEU</span>
+        <span>Grade: <b>${grade || '-'}</b></span>
+      </div>`;
+    $('#shpJudgement').style.display = '';
+  } else {
+    $('#shpJudgement').style.display = 'none';
+  }
+  // 6개월 이력 데이터
+  const h = (DATA.shipperHistory6m || {})[code];
+  if (h) {
+    const months = Object.keys(h.monthly || {}).sort();
+    const teus = months.map(m => h.monthly[m] || 0);
+    const total = teus.reduce((a,b)=>a+b,0);
+    const monAvg = months.length ? total / months.length : 0;
+    $('#shpTot6m').textContent = Math.round(total).toLocaleString();
+    const cancEl = $('#shpCancel');
+    cancEl.textContent = ((h.cancel_rate||0)*100).toFixed(1) + '%';
+    cancEl.className = 'mini-stat-v' + ((h.cancel_rate||0) >= 0.1 ? ' text-danger' : '');
+    $('#shpLead').textContent = h.avg_lead_days != null ? h.avg_lead_days.toFixed(0) + '일' : '—';
+    // Top Routes
+    const routes = Object.entries(h.routes || {}).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const routeTotal = Object.values(h.routes || {}).reduce((a,b)=>a+b,0);
+    $('#shpRoutesBody').innerHTML = routes.map(([r,v]) => `
+      <tr><td>${r}</td><td class="tbl-num">${Math.round(v)}</td>
+      <td class="tbl-num">${routeTotal>0?((v/routeTotal*100).toFixed(0)+'%'):'-'}</td></tr>
+    `).join('');
+    // 최근 BKG
+    const bkgs = h.recent_bookings || [];
+    $('#shpBkgsBody').innerHTML = bkgs.map(b => {
+      const statCls = b.status === 'Cancel' ? 'text-danger'
+                    : b.status === 'Normal' ? 'text-good' : '';
+      return `<tr><td style="font-family:monospace;">${b.bkg_no}</td>
+              <td>${b.route}</td>
+              <td class="tbl-num">${b.fst}</td>
+              <td class="${statCls}">${b.status}</td>
+              <td style="font-size:11px;color:var(--muted);">${b.bkg_date}</td>
+              <td style="font-size:11px;color:var(--muted);">${b.etd||'-'}</td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="muted" style="text-align:center;">이력 없음</td></tr>';
+  } else {
+    $('#shpTot6m').textContent = '—';
+    $('#shpCancel').textContent = '—';
+    $('#shpLead').textContent = '—';
+    $('#shpRoutesBody').innerHTML = '<tr><td colspan="3" class="muted" style="text-align:center;">6M 이력 미수집 (상위 600 화주만 포함)</td></tr>';
+    $('#shpBkgsBody').innerHTML = '';
+  }
+  $('#shipperModal').classList.add('show');
+  setTimeout(()=>CHARTS.shipper(code), 50);
+}
+function closeShipper(){
+  $('#shipperModal').classList.remove('show');
+  if(window._charts && window._charts.shipper){
+    window._charts.shipper.destroy();
+    window._charts.shipper = null;
+  }
+}
+
+// ══════════════════════════════ 10. INIT ══════════════════════════════════
+window.addEventListener('DOMContentLoaded', async ()=>{
+  applyLang();
+  // 로그인 전: 오버레이 표시 + 버튼 비활성 → _gapi/_gis Init 완료 후 활성
+  const overlay = document.getElementById('loginOverlay');
+  if (overlay) overlay.style.display = '';
+  // 이전 로직 (바로 bootstrap) 은 로그인 후 onLoginSuccess 에서 실행됨.
+  return;
+
+  // ─── 아래는 호환 위해 남겨둔 dead code (참조 없음) ───
+  await loadSnapshotIndex();
+  const ok = await bootstrapData();
+  if (!ok) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;padding:10px 16px;font-size:13px;text-align:center;font-weight:600;';
+    banner.textContent = '⚠ 스냅샷(data/3w_snapshot.json) 로드 실패 — MOCK 데이터 표시 중. file:// 대신 로컬 HTTP 서버로 열어주세요 (예: cd booking_agent && python -m http.server 8765).';
+    document.body.appendChild(banner);
+  }
+  RENDER.all();
+  RENDER.salesOptions();
+  CHARTS.initAll();
+  console.log('[3W] snapshot ok:', ok, '| STATE:', JSON.stringify(STATE), '| rows:', (DATA.rows||[]).length);
+});
+
+</script>
+</body>
+</html>

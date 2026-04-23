@@ -1,0 +1,27 @@
+# 데이터 파일 절대 커밋 X (Drive 에만 존재)
+data/
+*.json
+!package.json
+!manifest.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Secrets (절대 커밋 X)
+credentials.json
+tokens.json
+.env
+secrets.*
