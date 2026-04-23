@@ -480,7 +480,7 @@ button,select,input{font-family:inherit;}
       <div class="card-hdr">
         <div>
           <div class="card-ttl" data-i18n="matrixTitle">Area × POD Fulfill Rate Matrix</div>
-          <div class="card-desc"><span id="matrixDescWk">—</span> · Cell 클릭 시 해당 조합 상세 (실구현 예정)</div>
+          <div class="card-desc"><span id="matrixDescWk">—</span> <span data-i18n="matrixDesc">· Cell 클릭 시 해당 조합 상세 (실구현 예정)</span></div>
         </div>
       </div>
       <table class="tbl tbl-sm">
@@ -831,6 +831,7 @@ const I18N = {
   podOccDesc:      {ko:'출항 주차 · Normal LST ÷ BSA, %',    en:'Departure week · Normal LST ÷ BSA, %'},
 
   // ── Sales modal ──
+  targetSuffix:    {ko:'타겟',                               en:'Target'},
   salMiniW3:       {ko:'3주전 BKG (현)',                    en:'W3 Booking (current)'},
   salMiniWoW:      {ko:'전주 동시점 대비',                    en:'vs Last Week'},
   salMiniCanc:     {ko:'Cancel 전환',                        en:'Cancel Shift'},
@@ -1634,7 +1635,7 @@ const RENDER = {
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     setTxt('todayLabel',         `${today} (W${String(curW).padStart(2,'0')})`);
     setTxt('targetWeekLabel',    range ? `${wkTag} (${range})` : wkTag);
-    setTxt('salesPerfDescWeek',  `${wkTag} 타겟`);
+    setTxt('salesPerfDescWeek',  `${wkTag} ${t('targetSuffix')}`);
     setTxt('podDescWeek',        `${wkTag}`);
     setTxt('targetTitleWk',      wkTag);
     setTxt('matrixDescWk',       wkTag);
