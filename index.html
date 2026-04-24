@@ -569,7 +569,7 @@ button,select,input{font-family:inherit;}
       <div class="mini-stat"><div class="mini-stat-l" data-i18n="salMiniCanc">Cancel 전환</div><div class="mini-stat-v" id="salMiniCanc" style="font-size:15px;">—</div></div>
       <div class="mini-stat"><div class="mini-stat-l" data-i18n="topRoute">Top Route</div><div class="mini-stat-v" id="salMiniTop" style="font-size:14px;">—</div></div>
     </div>
-    <div data-i18n="salDodTitle" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;margin-top:4px;">최근 7일 -3W BKG TEU 추이 (일별)</div>
+    <div data-i18n="salDodTitle" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;margin-top:4px;">일간 추이 — 전일대비 -3W BKG TEU 증감 (최근 7일)</div>
     <div class="chart-wrap-sm" style="margin-bottom:14px;"><canvas id="salesDodChart"></canvas></div>
     <div data-i18n="salRoutePerf" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">구간별 -3W 실적 (현 시점 vs 전주 동시점)</div>
     <table class="tbl tbl-sm">
@@ -877,7 +877,8 @@ const I18N = {
   colShippedShort: {ko:'실선적 TEU',                         en:'Shipped TEU'},
   colDodDelta:     {ko:'Δ 전일',                             en:'Δ vs prev day'},
   colWowDelta:     {ko:'Δ 전주',                             en:'Δ vs prev week'},
-  salDodTitle:     {ko:'최근 7일 -3W BKG TEU 추이 (일별)',    en:'Last 7 days -3W BKG TEU trend (daily)'},
+  salDodTitle:     {ko:'일간 추이 — 전일대비 -3W BKG TEU 증감 (최근 7일)',
+                    en:'Daily trend — DoD Δ in -3W BKG TEU (last 7 days)'},
   profitHigh:      {ko:'고수익',                             en:'High-profit'},
   profitLow:       {ko:'저수익',                             en:'Low-profit'},
   loadingData:     {ko:'데이터 로딩 중...',                   en:'Loading data...'},
@@ -2215,30 +2216,29 @@ const CHARTS = {
       }
     });
   },
-  // 영업사원 일별 -3W BKG TEU 추이 (최근 7일 archive에서 sal별 w3_fst 집계)
+  // 영업사원 일별 -3W BKG TEU 전일대비 증감 (최근 8일치 스냅샷 → Δ 7개 bar)
   async salesDod(name){
     const ctx = document.getElementById('salesDodChart'); if(!ctx) return;
     const C = CONFIG.CHART_COLORS;
     if(window._charts.salesDod) { window._charts.salesDod.destroy(); window._charts.salesDod = null; }
     try {
       const idx = await fetchDriveJson('snapshots_index.json');
-      const dates = (idx.dates || []).slice().sort().slice(-7); // 오래된→최신 7개
-      if (!dates.length) return;
+      const dates = (idx.dates || []).slice().sort().slice(-8); // 최근 8일 → Δ 7개
+      if (dates.length < 2) return;
       if (!window._archiveCache) window._archiveCache = {};
       const cache = window._archiveCache;
       const snaps = await Promise.all(dates.map(async d => {
         if (!cache[d]) cache[d] = await fetchDriveJson(`3w_snapshot_${d}.json`);
         return {date: d, snap: cache[d]};
       }));
-      const labels = [], values = [];
-      snaps.forEach(({date, snap}) => {
-        if (!snap || !Array.isArray(snap.rows)) { labels.push(date.slice(4)); values.push(0); return; }
+      const area = STATE.region || 'ALL';
+      const polSet = new Set(STATE.pol || []);
+      const podSet = new Set(STATE.pod || []);
+      const aggOne = (snap) => {
+        if (!snap || !Array.isArray(snap.rows)) return 0;
         const I = (snap.rows_schema || []).reduce((m,k,i)=>(m[k]=i,m), {});
         const tw = (snap.current_week || 0) + 3;
         const gm = snap.shipper_grades || {}, pm = snap.shipper_profit || {};
-        const area = STATE.region || 'ALL';
-        const polSet = new Set(STATE.pol || []);
-        const podSet = new Set(STATE.pod || []);
         let total = 0;
         snap.rows.forEach(r => {
           if (r[I.sal] !== name) return;
@@ -2250,30 +2250,40 @@ const CHARTS = {
           if (STATE.profit && STATE.profit !== 'all' && pm[r[I.shpr]] !== STATE.profit) return;
           total += r[I.w3_fst] || 0;
         });
+        return total;
+      };
+      // 각 날짜별 w3_fst 절댓값 계산 후 전일 대비 Δ
+      const abs = snaps.map(s => aggOne(s.snap));
+      const labels = [], deltas = [], colors = [];
+      for (let i = 1; i < snaps.length; i++) {
+        const d = abs[i] - abs[i-1];
+        const date = snaps[i].date;
         labels.push(`${date.slice(4,6)}/${date.slice(6,8)}`);
-        values.push(Math.round(total));
-      });
+        deltas.push(Math.round(d));
+        colors.push(d > 0 ? '#ea4335cc' : (d < 0 ? '#1a73e8cc' : '#9aa0a6aa'));
+      }
       window._charts.salesDod = new Chart(ctx, {
-        type:'line',
+        type:'bar',
         data:{
           labels,
           datasets:[{
-            label:'-3W BKG TEU', data: values,
-            borderColor: C.blue, backgroundColor: C.blue + '22',
-            tension: 0.2, pointRadius: 4, pointBackgroundColor: C.blue,
-            borderWidth: 2, fill: true,
-            datalabels:{ display:true, anchor:'end', align:'top',
-                         color:C.text, font:{size:10, weight:'bold'},
-                         formatter: v => Math.round(v).toLocaleString() }
+            label:'Δ 전일 (TEU)', data: deltas,
+            backgroundColor: colors, borderRadius: 4, borderSkipped: false,
+            datalabels:{ display:true,
+                         anchor: ctx => (ctx.raw >= 0 ? 'end' : 'start'),
+                         align:  ctx => (ctx.raw >= 0 ? 'top' : 'bottom'),
+                         color: ctx => (ctx.raw > 0 ? '#ea4335' : (ctx.raw < 0 ? '#1a73e8' : '#9aa0a6')),
+                         font:{size:10, weight:'bold'},
+                         formatter: v => (v > 0 ? '+' : '') + Math.round(v).toLocaleString() }
           }]
         },
         options:{
           responsive:true, maintainAspectRatio:false,
-          layout:{padding:{top:16}},
+          layout:{padding:{top:18, bottom:18}},
           plugins:{legend:{display:false}},
           scales:{
             x:{ticks:{color:C.text}, grid:{color:C.grid}},
-            y:{ticks:{color:C.text}, grid:{color:C.grid}, beginAtZero:true}
+            y:{ticks:{color:C.text, callback: v => (v>0?'+':'') + v}, grid:{color:C.grid}, beginAtZero:true}
           }
         }
       });
