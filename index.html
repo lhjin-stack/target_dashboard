@@ -745,7 +745,7 @@ const I18N = {
   salesPerfDescBase:{ko:'타겟 — 현재 필터 기준 · Row 클릭 → 구간별 상세',
                     en:'target · current filters · click row for route detail'},
   trendTitle:      {ko:'주차별 BKG/실선적 추이 (5주)',          en:'Weekly BKG / Shipped Trend (5 weeks)'},
-  trendDesc:       {ko:'막대: 3주전 BKG · 실선적(Normal) · 선: BSA 대비 %', en:'Bars: -3W BKG · Shipped(Normal) · Lines: % vs BSA'},
+  trendDesc:       {ko:'막대: WOS-3 시점 BKG·실선적 · 선: 3주전 BKG/BSA · 최종 소석률(전 stage)', en:'Bars: WOS-3 BKG / Shipped · Lines: -3W BKG/BSA · Occupancy(all stages)'},
   podDistTitle:    {ko:'POD 국가별 -3W 부킹 분포',          en:'-3W Booking Distribution by POD Country'},
   podDescBase:     {ko:'기준 상위 도착지',                  en:'Top destinations'},
   scoringTitle:    {ko:'🎯 타겟 추출 기준 (Target Scoring)', en:'🎯 Target Scoring Criteria'},
@@ -825,8 +825,8 @@ const I18N = {
   kpiW3BkgTt:      {ko:'3주전 BKG = WOS-3 stage 까지의 부킹 FST_TEU 합\n• WOS-3 = 출항 3주 전 이상 리드타임 구간\n• 상태: Normal/Waiting/Confirm/Checking/Cancel 모두 포함\n• 선행지표 (아직 확정 전)',
                     en:'-3W BKG = FST_TEU collected by the WOS-3 stage\n• WOS-3 = bookings with ≥3-week lead time before ETD\n• All states included (Normal / Waiting / Confirm / Checking / Cancel)\n• Leading indicator (pre-finalization)'},
   kpiW3Ship:       {ko:'3주전 실선적',                       en:'W3 Shipped'},
-  kpiW3ShipTt:     {ko:'실선적 TEU = 전체 stage 에서 Normal(01) 로 선적된 LST_TEU 합\n• 차장 대시보드 정의와 동일 (lst_all)\n• WOS-3 이후 들어온 Normal 부킹도 포함\n• 최종 실적 지표',
-                    en:'Shipped TEU = LST_TEU loaded as Normal (01) across all stages\n• Matches HQ dashboard definition (lst_all)\n• Includes Normal bookings added after WOS-3\n• Final-outcome metric'},
+  kpiW3ShipTt:     {ko:'3주전 실선적 = WOS-3 stage 에서 Normal 로 선적된 LST_TEU 합 (w3_lst)\n• 3주전 BKG 중 실제 선적까지 이어진 분량\n• 반드시 "3주전 BKG" 보다 작거나 같음\n• 소석률/실선적률 카드의 분자(lst_all) 와 다른 기준',
+                    en:'-3W Shipped = Normal LST_TEU within WOS-3 stage (w3_lst)\n• Portion of -3W BKG that actually shipped\n• Always ≤ "-3W BKG"\n• Distinct from lst_all used in Occupancy / Fulfill Rate'},
   kpiBsa:          {ko:'BSA',                                en:'BSA'},
   kpiBsaTt:        {ko:'BSA = 해당 주차 · 현재 필터(POL/POD)의 선복 할당 TEU 합\n• 출처: DMSAE_101DS (OBT 팀)\n• 소석률·목표달성률의 분모',
                     en:'BSA = slot allocation TEU for the selected week × current POL/POD filters\n• Source: DMSAE_101DS (OBT team)\n• Denominator of Occupancy and Goal Achievement'},
@@ -1380,6 +1380,8 @@ const AGG = {
   _filter(state, opts = {}){
     const I = this.IDX;
     let rs = DATA.rows;
+    if (!opts.skipRegion && state.region && state.region !== 'ALL')
+      rs = rs.filter(r => r[I.area] === state.region);
     if (!opts.skipPol && state.pol && state.pol.length)
       rs = rs.filter(r => state.pol.includes(r[I.pol]));
     if (!opts.skipPod && state.pod && state.pod.length)
@@ -1491,25 +1493,30 @@ const AGG = {
     const cur = state.week || DATA.current_week || 16;
     const weeks = [];
     for (let i = cur - 4; i <= cur; i++) weeks.push(i);
-    // 주차별 (w3_fst, lst_all) 집계 — podRatios와 동일 기준
-    //   w3_fst  : WOS-3 stage 까지의 3주전 BKG TEU (전체 상태)
-    //   lst_all : 전체 stage Normal 실선적 TEU
+    // 주차별 집계 — 차장 prototype 과 정합:
+    //   w3_fst  : WOS-3 stage BKG FST (3주전 BKG, 선행)
+    //   w3_lst  : WOS-3 stage Normal LST (주차별 실선적 막대 — 차장 기준)
+    //   lst_all : 전체 stage Normal LST (소석률 분자 — POD 차트와 동일 기준)
     const g = {};
     this._filter(state, {skipWeek:true}).forEach(r => {
-      if (!g[r[I.wk]]) g[r[I.wk]] = {w3_fst:0, lst_all:0};
+      if (!g[r[I.wk]]) g[r[I.wk]] = {w3_fst:0, w3_lst:0, lst_all:0};
       g[r[I.wk]].w3_fst  += r[I.w3_fst]  || 0;
+      g[r[I.wk]].w3_lst  += r[I.w3_lst]  || 0;
       g[r[I.wk]].lst_all += r[I.lst_all] || 0;
     });
-    // BSA 주차별 집계 (state.pol/pod 필터 적용)
+    // BSA 주차별 집계 — region→POL 매핑 fallback 포함
     const bsaByWk = {};
     const bsa = DATA.bsa;
     if (bsa && Array.isArray(bsa.rows)) {
-      const polSet = new Set(state.pol || []);
+      let polSet = null;
+      if (state.pol && state.pol.length) polSet = new Set(state.pol);
+      else if (state.region && state.region !== 'ALL' && CONFIG.AREA_TO_POL[state.region])
+        polSet = new Set(CONFIG.AREA_TO_POL[state.region]);
       const podSet = new Set(state.pod || []);
       bsa.rows.forEach(r => {
         const w = r[2];
         if (!weeks.includes(w)) return;
-        if (polSet.size && !polSet.has(r[0])) return;
+        if (polSet && !polSet.has(r[0])) return;
         if (podSet.size && !podSet.has(r[1])) return;
         bsaByWk[w] = (bsaByWk[w] || 0) + r[3];
       });
@@ -1517,7 +1524,8 @@ const AGG = {
     return {
       labels: weeks.map(w => `W${String(w).padStart(2,'0')}`),
       w3Fst: weeks.map(w => +((g[w]||{w3_fst:0}).w3_fst).toFixed(1)),
-      lst:   weeks.map(w => +((g[w]||{lst_all:0}).lst_all).toFixed(1)),
+      w3Lst: weeks.map(w => +((g[w]||{w3_lst:0}).w3_lst).toFixed(1)),
+      lstAll: weeks.map(w => +((g[w]||{lst_all:0}).lst_all).toFixed(1)),
       bkgRatio: weeks.map(w => {
         const x = g[w] || {w3_fst:0};
         const b = bsaByWk[w] || 0;
@@ -1837,8 +1845,9 @@ const RENDER = {
 
     // 팀 공유 5개
     setTxt('kpi-w3-bkg',  fmt(d.w3_fst));
-    // 차장 대시보드와 정합성 맞춤 — lst_all (전체 stage Normal LST) 사용
-    setTxt('kpi-w3-ship', fmt(d.lst_all));
+    // '3주전' 접두어 KPI 는 모두 WOS-3 stage 기준 — 차장 prototype 과 정합
+    // (전체 stage Normal LST=lst_all 은 소석률·실선적률 분자로 사용)
+    setTxt('kpi-w3-ship', fmt(d.w3_lst));
     setTxt('kpi-bsa',     bsaTeu > 0 ? fmt(bsaTeu) : '—');
 
     const occ = bsaTeu > 0 ? (d.lst_all / bsaTeu * 100) : null;
@@ -2188,7 +2197,7 @@ const CHARTS = {
            borderRadius:3, order:4,
            categoryPercentage:0.75, barPercentage:0.95,
            datalabels: barLblInside('#334155')},
-          {label:'실선적 TEU (Normal)', data:d.lst,
+          {label:'3주전 실선적 TEU', data:d.w3Lst,
            backgroundColor:COL.lstBar, borderColor:COL.lstBarB, borderWidth:1,
            borderRadius:3, order:3,
            categoryPercentage:0.75, barPercentage:0.95,
@@ -2238,12 +2247,13 @@ const CHARTS = {
               afterBody:(items)=>{
                 const i = items[0].dataIndex;
                 const bsa = (d.bsa||[])[i] || 0;
-                const w3  = (d.w3Fst||[])[i] || 0;
-                const lst = (d.lst||[])[i] || 0;
-                const gap = w3 - lst;
+                const w3F = (d.w3Fst||[])[i] || 0;
+                const w3L = (d.w3Lst||[])[i] || 0;
+                const lstA= (d.lstAll||[])[i] || 0;
                 const lines = [];
                 if (bsa > 0) lines.push(`BSA: ${Math.round(bsa).toLocaleString()} TEU`);
-                if (w3 > 0 && lst > 0) lines.push(`BKG→실선적 갭: ${Math.round(gap).toLocaleString()} TEU`);
+                if (w3F > 0) lines.push(`BKG→실선적 갭: ${Math.round(w3F - w3L).toLocaleString()} TEU`);
+                if (lstA > w3L) lines.push(`최종 실선적(전 stage): ${Math.round(lstA).toLocaleString()} TEU`);
                 return lines;
               }
             }
