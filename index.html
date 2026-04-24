@@ -2534,7 +2534,6 @@ function openShipper(code, name){
         <span>POL-POD: ${pol}-${pod}</span>
         <span>${t('threeMAvg')}: <b>${Math.round(avg3m)}</b> ${t('perWeek')}</span>
         <span>${t('thisWeekW3Bkg')}: <b style="color:var(--${w3teu<avg3m*0.5?'red':'text'});">${Math.round(w3teu)}</b> TEU</span>
-        <span>Grade: <b>${grade || '-'}</b></span>
       </div>`;
     $('#shpJudgement').style.display = '';
   } else {
