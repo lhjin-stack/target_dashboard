@@ -103,7 +103,7 @@ button,select,input{font-family:inherit;}
 .snav-btn:hover:not(.active){color:var(--text2);}
 
 /* Content area */
-.content{padding:16px 20px;min-height:calc(100vh - 280px);}
+.content{padding:16px 20px;min-height:calc(100vh - 280px);overflow-x:auto;}
 .sub-panel{display:none;}
 .sub-panel.active{display:block;}
 
@@ -147,11 +147,14 @@ button,select,input{font-family:inherit;}
 .mini-stat-l{font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px;}
 .mini-stat-v{font-size:18px;font-weight:800;}
 
-/* Grid layouts */
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch;}
-.grid-2 > .card{display:flex;flex-direction:column;}
+/* Grid layouts — responsive: collapse to 1 col on narrow screens */
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:12px;align-items:stretch;}
+.grid-2 > .card{display:flex;flex-direction:column;min-width:0;}
 .grid-2 > .card > .tbl{flex:1;}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;}
+.grid-3 > .card{min-width:0;}
+/* Chart wrapper needs min-width:0 so it can shrink inside grid/flex */
+.chart-wrap, .chart-wrap-sm{min-width:0;}
 
 /* Footer */
 .footer{padding:12px 20px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text3);}
@@ -401,6 +404,7 @@ button,select,input{font-family:inherit;}
             <tr>
               <th>Sales</th>
               <th class="tbl-num">-3W BKG TEU</th>
+              <th class="tbl-num" data-i18n="colDodDelta" title="전일 스냅샷 대비 -3W BKG TEU 증감">Δ 전일</th>
               <th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th>
               <th class="tbl-num" data-i18n="colFulfillRate">실선적률</th>
             </tr>
@@ -855,6 +859,9 @@ const I18N = {
                     en:'-3W Performance by Route (current vs last week)'},
   colVsLastWk:     {ko:'전주 대비',                          en:'vs Last Week'},
   colShippedShort: {ko:'실선적 TEU',                         en:'Shipped TEU'},
+  colDodDelta:     {ko:'Δ 전일',                             en:'Δ vs prev day'},
+  profitHigh:      {ko:'고수익',                             en:'High-profit'},
+  profitLow:       {ko:'저수익',                             en:'Low-profit'},
 
   // ── Shipper modal ──
   shpModalSub:     {ko:'타겟 판정 근거 + 최근 6개월 이력',    en:'Classification basis + 6-month history'},
@@ -1207,6 +1214,12 @@ async function bootstrapData(dateOrLatest){
       DATA._prev = prev;
       if (typeof RENDER !== 'undefined' && RENDER.kpis) RENDER.kpis();
     });
+    // 전일 대비용 직전일 snapshot 로드
+    DATA._prevDay = null;
+    loadPrevDaySnapshot(s.generated_at).then(prev => {
+      DATA._prevDay = prev;
+      if (typeof RENDER !== 'undefined' && RENDER.salesTable) RENDER.salesTable();
+    });
     console.log(`[DATA] snapshot loaded (${url}, gen ${s.generated_at}, W${s.current_week})`);
     return true;
   } catch (e) {
@@ -1253,6 +1266,23 @@ async function loadPrevSnapshot(curGenIso){
     prev._date = pick.d;
     return prev;
   } catch (e) { console.warn('[WoW] prev load failed:', e.message); return null; }
+}
+
+// 직전일 snapshot 로드 → 전일대비 비교용 DATA._prevDay 저장
+async function loadPrevDaySnapshot(curGenIso){
+  try {
+    const idx = await fetchDriveJson('snapshots_index.json');
+    const dates = (idx.dates || []);
+    if (!dates.length) return null;
+    const curYmd = (curGenIso || '').slice(0,10).replace(/-/g,'');
+    if (!curYmd) return null;
+    const prior = dates.filter(d => d < curYmd).sort().reverse();
+    if (!prior.length) return null;
+    const pick = prior[0];
+    const prev = await fetchDriveJson(`3w_snapshot_${pick}.json`);
+    prev._date = pick;
+    return prev;
+  } catch (e) { console.warn('[DoD] prevDay load failed:', e.message); return null; }
 }
 
 async function changeSnapshotDate(value){
@@ -1565,8 +1595,34 @@ const AGG = {
         const mainArea = Object.entries(areaLst[name]).sort((a,b)=>b[1]-a[1])[0][0];
         const fulfill = v.fst > 0 ? +(v.lst/v.fst*100).toFixed(1) : 0;
         const cancel  = v.fst > 0 ? +(v.cancel_fst/v.fst*100).toFixed(1) : 0;
-        return [name, mainArea, Math.round(v.lst), fulfill, cancel, Math.round(fulfill - cancel)];
+        return [name, mainArea, Math.round(v.lst), fulfill, cancel, Math.round(fulfill - cancel), Math.round(v.fst)];
       });
+  },
+
+  // 전일 스냅샷(prev.rows)에서 현재 state 필터와 동일 조건으로 sal별 w3_fst 집계 (DoD 비교용)
+  salesFstPrev(state, prev){
+    if (!prev || !Array.isArray(prev.rows) || !prev.rows.length) return {};
+    const pI = (prev.rows_schema || []).reduce((m,k,i)=>(m[k]=i,m), {});
+    if (pI.sal == null || pI.w3_fst == null) return {};
+    const area = state.region || 'ALL';
+    const polSet  = new Set(state.pol || []);
+    const podSet  = new Set(state.pod || []);
+    const salSel  = state.sales;
+    const gm = prev.shipper_grades || {};
+    const pm = prev.shipper_profit || {};
+    const out = {};
+    prev.rows.forEach(r => {
+      if (area !== 'ALL' && r[pI.area] !== area) return;
+      if (polSet.size && !polSet.has(r[pI.pol])) return;
+      if (podSet.size && !podSet.has(r[pI.pod])) return;
+      if (salSel && salSel !== 'all' && r[pI.sal] !== salSel) return;
+      if (state.grade && state.grade !== 'all' && gm[r[pI.shpr]] !== state.grade) return;
+      if (state.profit && state.profit !== 'all' && pm[r[pI.shpr]] !== state.profit) return;
+      if (state.week != null && r[pI.wk] !== state.week) return;
+      const s = r[pI.sal]; if (!s || s === '-') return;
+      out[s] = (out[s] || 0) + (r[pI.w3_fst] || 0);
+    });
+    return out;
   },
 
   shipperHist(code){
@@ -1601,6 +1657,7 @@ const DATA_API = {
   regionKpis:  (state) => AGG.regionKpis(state),
   salesByArea: (state) => AGG.salesByArea(state),
   salesTable:  (state) => AGG.salesTable(state),
+  salesFstPrev:(state, prev) => AGG.salesFstPrev(state, prev),
   targets:     (state) => AGG.targets(state),
   salesRoutes: (name)  => AGG.salesRoutes(STATE, name),
   // Area 평균 실선적률 = LST_TEU / FST_TEU (TEU 가중, 전 영업사원·전 구간 통합)
@@ -1844,13 +1901,30 @@ const RENDER = {
       tbody.innerHTML = `<tr><td colspan="5" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
       return;
     }
+    const prevMap = DATA_API.salesFstPrev(STATE, DATA._prevDay || null);
+    const hasPrev = DATA._prevDay != null;
     tbody.innerHTML = rows.map(r=>{
-      const [name, area, lstTeu, fulfill /*, cancel, score */] = r;
-      const fstTeu = fulfill > 0 ? Math.round(lstTeu / (fulfill/100)) : lstTeu;
+      const [name, area, lstTeu, fulfill, _cancel, _score, fstTeu] = r;
       const fulCls = fulfill >= 85 ? 'text-good' : (fulfill < 70 ? 'text-danger' : '');
+      // DoD delta (현재 w3_fst - 직전일 w3_fst). prevMap 없으면 '—'
+      let dodHtml;
+      if (!hasPrev) {
+        dodHtml = '<span class="muted">—</span>';
+      } else {
+        const prev = prevMap[name] || 0;
+        const d = fstTeu - prev;
+        if (d === 0) dodHtml = '<span class="muted">0</span>';
+        else {
+          const mark = d > 0 ? '▲' : '▼';
+          const sign = d > 0 ? '+' : '';
+          const color = d > 0 ? '#ea4335' : '#1a73e8';
+          dodHtml = `<span style="color:${color};font-weight:700;">${mark} ${sign}${Math.round(d).toLocaleString()}</span>`;
+        }
+      }
       return `<tr class="clickable" onclick="openSales('${name}','${area}')">
         <td>${name} <span class="tag tag-${area.toLowerCase()}">${area}</span></td>
         <td class="tbl-num">${fstTeu.toLocaleString()}</td>
+        <td class="tbl-num">${dodHtml}</td>
         <td class="tbl-num">${Math.round(lstTeu).toLocaleString()}</td>
         <td class="tbl-num ${fulCls}">${fulfill}%</td>
       </tr>`;
