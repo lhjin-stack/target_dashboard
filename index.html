@@ -177,9 +177,20 @@ button,select,input{font-family:inherit;}
 
 /* Proto watermark */
 .proto-note{position:fixed;bottom:60px;right:16px;background:#f59e0b25;color:var(--amber);padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:1px solid #f59e0b55;z-index:300;}
+/* Loading indicator (snapshot date switch, bootstrap) */
+#loadingChip{position:fixed;top:16px;right:20px;z-index:9998;background:#1a73e8;color:#fff;padding:10px 18px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:13px;font-weight:600;display:none;align-items:center;gap:10px;pointer-events:none;}
+#loadingChip.show{display:flex;}
+.loading-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
+
+<!-- LOADING INDICATOR — shown during snapshot fetch -->
+<div id="loadingChip">
+  <span class="loading-spinner"></span>
+  <span data-i18n="loadingData">데이터 로딩 중...</span>
+</div>
 
 <!-- LOGIN OVERLAY — displayed until Google OAuth (@ekmtc.com) sign-in succeeds -->
 <div id="loginOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;z-index:99999;background:linear-gradient(135deg,#1a73e8,#34a853);display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font-family:Helvetica,Arial,sans-serif;padding:20px;box-sizing:border-box;overflow-y:auto;margin:0;">
@@ -862,6 +873,7 @@ const I18N = {
   colDodDelta:     {ko:'Δ 전일',                             en:'Δ vs prev day'},
   profitHigh:      {ko:'고수익',                             en:'High-profit'},
   profitLow:       {ko:'저수익',                             en:'Low-profit'},
+  loadingData:     {ko:'데이터 로딩 중...',                   en:'Loading data...'},
 
   // ── Shipper modal ──
   shpModalSub:     {ko:'타겟 판정 근거 + 최근 6개월 이력',    en:'Classification basis + 6-month history'},
@@ -1169,10 +1181,14 @@ async function _loadTargetsConfigStandalone(){
   } catch (e) { return null; }
 }
 
+function showLoading(){ const el=document.getElementById('loadingChip'); if(el) el.classList.add('show'); }
+function hideLoading(){ const el=document.getElementById('loadingChip'); if(el) el.classList.remove('show'); }
+
 async function bootstrapData(dateOrLatest){
   const filename = (dateOrLatest && dateOrLatest !== 'latest')
     ? `3w_snapshot_${dateOrLatest}.json`
     : '3w_snapshot.json';
+  showLoading();
   try {
     const s = await fetchDriveJson(filename);
     // 별도 파일의 targets_config 가 있으면 우선 사용 (매일 시트에서 재생성됨)
@@ -1225,6 +1241,8 @@ async function bootstrapData(dateOrLatest){
   } catch (e) {
     console.warn('[DATA] Drive fetch failed:', e.message, e);
     return false;
+  } finally {
+    hideLoading();
   }
 }
 
