@@ -826,19 +826,21 @@ const I18N = {
   scoringTitleNew: {ko:'타겟 판정 기준',                     en:'Target Classification Criteria'},
   scoringBodyNew:  {
     ko:`최근 12주 부킹 이력과 <span class="scoring-wk">선택 주차</span> 3주전 BKG 을 비교해 우선순위를 매김. 현재 필터(Area/POL/POD/Sales) 반영.
-        <br><b style="color:var(--text);">긴급리콜</b> — A+B 등급 화주 + 3M 평균 ≥ 20 TEU/주 + <span class="scoring-wk">선택 주차</span> 부킹 0
+        <br><b style="color:var(--text);">긴급리콜</b> — 고수익화주 + 3M 평균 ≥ 20 TEU/주 + <span class="scoring-wk">선택 주차</span> 부킹 0
         <br><b style="color:var(--text);">감소추세</b> — 최근 4주 중 2회 이상 감소, 첫주→끝주 총 -20% 초과
-        <br><b style="color:var(--text);">고수익갭</b> — A+B 등급 화주 + <span class="scoring-wk">선택 주차</span> 부킹이 3M 평균의 70% 미만
+        <br><b style="color:var(--text);">고수익갭</b> — 고수익화주 + <span class="scoring-wk">선택 주차</span> 부킹이 3M 평균의 70% 미만
         <br><b style="color:var(--text);">관리대상</b> — 위 조건 외 3M 평균 대비 부킹 갭 발생 화주
         <br>우선순위: 긴급리콜 > 감소추세 > 고수익갭 > 관리대상 · 영업사원 1인당 최대 5개
-        <br>점수: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">3M_Avg_TEU / (1 + Cancel_Rate)</code>`,
+        <br>점수: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">3M_Avg_TEU / (1 + Cancel_Rate)</code>
+        <br><span style="color:var(--text3);">※ Grade(A+B/C+D)는 정보 표시용이며 판정에 사용되지 않음.</span>`,
     en:`Priority is set by comparing last 12-week booking history with <span class="scoring-wk">selected week</span> W3 booking. Current filters (Area/POL/POD/Sales) applied.
-        <br><b style="color:var(--text);">Urgent Recall</b> — A+B grade shipper + 3M avg ≥ 20 TEU/wk + 0 booking in <span class="scoring-wk">selected week</span>
+        <br><b style="color:var(--text);">Urgent Recall</b> — High-profit shipper + 3M avg ≥ 20 TEU/wk + 0 booking in <span class="scoring-wk">selected week</span>
         <br><b style="color:var(--text);">Declining</b> — ≥2 weekly drops in last 4 weeks, total -20 % from first to last
-        <br><b style="color:var(--text);">Premium Gap</b> — A+B grade shipper + <span class="scoring-wk">selected week</span> booking below 70 % of 3M avg
+        <br><b style="color:var(--text);">Premium Gap</b> — High-profit shipper + <span class="scoring-wk">selected week</span> booking below 70 % of 3M avg
         <br><b style="color:var(--text);">Watchlist</b> — general gap vs 3M avg (other than above)
         <br>Priority order: Urgent Recall > Declining > Premium Gap > Watchlist · capped at 5 per sales rep
-        <br>Score: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">3M_Avg_TEU / (1 + Cancel_Rate)</code>`
+        <br>Score: <code style="background:var(--bg);padding:1px 6px;border-radius:3px;">3M_Avg_TEU / (1 + Cancel_Rate)</code>
+        <br><span style="color:var(--text3);">* Grade (A+B/C+D) is informational only; not used in classification.</span>`
   },
   targetTop30:     {ko:'타겟 화주 Top 30',                  en:'Top 30 Target Shippers'},
   targetListDescNew:{ko:'현재 필터 기준 · 화주 행 클릭 → 판정 근거 + 최근 6개월 이력',
@@ -850,12 +852,12 @@ const I18N = {
   catB:            {ko:'감소추세',                           en:'Declining'},
   catC:            {ko:'고수익갭',                           en:'Premium Gap'},
   catD:            {ko:'관리대상',                           en:'Watchlist'},
-  catATt:          {ko:'A+B 등급 + 3M 평균 ≥ 20 TEU + 이번주 부킹 0',
-                    en:'A+B grade + 3M avg ≥ 20 TEU + 0 booking this week'},
+  catATt:          {ko:'고수익화주 + 3M 평균 ≥ 20 TEU + 이번주 부킹 0',
+                    en:'High-profit + 3M avg ≥ 20 TEU + 0 booking this week'},
   catBTt:          {ko:'최근 4주 중 2회 이상 감소, 총 -20% 초과',
                     en:'≥2 drops in last 4 weeks, total -20%'},
-  catCTt:          {ko:'A+B 등급 + 이번주가 3M 평균의 70% 미만',
-                    en:'A+B grade + this-week booking below 70% of 3M avg'},
+  catCTt:          {ko:'고수익화주 + 이번주가 3M 평균의 70% 미만',
+                    en:'High-profit + this-week booking below 70% of 3M avg'},
   catDTt:          {ko:'평균 대비 부킹 갭 발생',             en:'General gap vs 3M average'},
 
   // ── POD 차트 ──
@@ -910,12 +912,12 @@ const I18N = {
   noData:          {ko:'데이터 없음',                        en:'No data'},
   footerLine:      {ko:'KMTC -3W Booking Dashboard · 매일 09:30 자동 갱신',
                     en:'KMTC -3W Booking Dashboard · daily 09:30 auto-refresh'},
-  catDescA:        {ko:'긴급리콜 — A+B 등급 + 3M 평균 ≥ 20 TEU + 이번주 부킹 0',
-                    en:'Urgent Recall — A+B grade + 3M avg ≥ 20 TEU + 0 booking this week'},
+  catDescA:        {ko:'긴급리콜 — 고수익화주 + 3M 평균 ≥ 20 TEU + 이번주 부킹 0',
+                    en:'Urgent Recall — High-profit + 3M avg ≥ 20 TEU + 0 booking this week'},
   catDescB:        {ko:'감소추세 — 최근 4주 중 2회 이상 감소, 총 -20% 초과',
                     en:'Declining — ≥2 drops in last 4 weeks, total -20%'},
-  catDescC:        {ko:'고수익갭 — A+B 등급 + 이번주가 3M 평균의 70% 미만',
-                    en:'Premium Gap — A+B grade + this-week booking below 70% of 3M avg'},
+  catDescC:        {ko:'고수익갭 — 고수익화주 + 이번주가 3M 평균의 70% 미만',
+                    en:'Premium Gap — High-profit + this-week booking below 70% of 3M avg'},
   catDescD:        {ko:'관리대상 — 평균 대비 부킹 갭 발생',  en:'Watchlist — gap vs 3M average'},
 };
 function t(key){ const e = I18N[key]; return e ? (e[STATE.lang] || e.ko || key) : key; }
