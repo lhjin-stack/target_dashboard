@@ -299,6 +299,22 @@ button,select,input{font-family:inherit;}
       <option value="all">ALL</option>
     </select>
   </div>
+  <div class="f-group">
+    <span class="f-lbl">Grade</span>
+    <select class="f-sel" id="gradeSel" onchange="applyFilters()">
+      <option value="all">ALL</option>
+      <option value="A+B">A+B</option>
+      <option value="C+D">C+D</option>
+    </select>
+  </div>
+  <div class="f-group">
+    <span class="f-lbl">Profit</span>
+    <select class="f-sel" id="profitSel" onchange="applyFilters()">
+      <option value="all">ALL</option>
+      <option value="H" data-i18n="profitHigh">고수익</option>
+      <option value="L" data-i18n="profitLow">저수익</option>
+    </select>
+  </div>
   <div class="week-info">
     <span data-i18n="today">오늘</span> <b id="todayLabel">—</b> → <span data-i18n="threeWTarget">선택 주차</span> <b id="targetWeekLabel">—</b>
   </div>
@@ -923,6 +939,8 @@ const STATE = {
   pol:    ['SHK','DCB','NNS','HUA','HKG'],
   pod:    ['JP','TW','TH','VN','MY','SG','ID','PH','IN','PK','BD','LK','AE','SA','KW','QA','OM','BH','JO','EG'],
   sales:  'all',
+  grade:  'all',
+  profit: 'all',
   region: 'ALL',
   sub:    'overview'
 };
@@ -1170,6 +1188,7 @@ async function bootstrapData(dateOrLatest){
       rows_schema:    s.rows_schema    || null,
       shipper_names:  s.shipper_names  || {},
       shipper_grades: s.shipper_grades || {},
+      shipper_profit: s.shipper_profit || {},
       current_week:   s.current_week   || null,
       bsa:            s.bsa            || {rows_schema:null, rows:[]}
     };
@@ -1291,6 +1310,14 @@ const AGG = {
       rs = rs.filter(r => state.pod.includes(r[I.pod]));
     if (!opts.skipSales && state.sales && state.sales !== 'all')
       rs = rs.filter(r => r[I.sal] === state.sales);
+    if (!opts.skipGrade && state.grade && state.grade !== 'all') {
+      const gm = DATA.shipper_grades || {};
+      rs = rs.filter(r => gm[r[I.shpr]] === state.grade);
+    }
+    if (!opts.skipProfit && state.profit && state.profit !== 'all') {
+      const pm = DATA.shipper_profit || {};
+      rs = rs.filter(r => pm[r[I.shpr]] === state.profit);
+    }
     if (!opts.skipWeek && state.week != null)
       rs = rs.filter(r => r[I.wk] === state.week);
     return rs;
@@ -2153,6 +2180,8 @@ function applyFilters(){
   STATE.pod   = [...document.querySelectorAll('#podMulti input:checked')].map(x=>x.value);
   STATE.week  = parseInt($('#weekSel').value, 10);
   STATE.sales = $('#salSel').value;
+  STATE.grade = $('#gradeSel') ? $('#gradeSel').value : 'all';
+  STATE.profit = $('#profitSel') ? $('#profitSel').value : 'all';
   RENDER.filterButtonLabels();
   RENDER.salesOptions();
   RENDER.all();
