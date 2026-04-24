@@ -1940,7 +1940,20 @@ const RENDER = {
       const color = d > 0 ? '#ea4335' : '#1a73e8';
       return `<span style="color:${color};font-weight:700;">${mark} ${sign}${Math.round(d).toLocaleString()}</span>`;
     };
-    tbody.innerHTML = rows.map(r=>{
+    // 총계
+    let tFst=0, tLst=0, tPrevDay=0, tPrevWeek=0;
+    rows.forEach(r => {
+      const [name,,lstTeu,,,,fstTeu] = r;
+      tFst += fstTeu || 0;
+      tLst += lstTeu || 0;
+      tPrevDay  += prevDayMap[name]  || 0;
+      tPrevWeek += prevWeekMap[name] || 0;
+    });
+    const tFul = tFst > 0 ? +(tLst/tFst*100).toFixed(1) : 0;
+    const tFulCls = tFul >= 85 ? 'text-good' : (tFul < 70 ? 'text-danger' : '');
+    const tDodHtml = deltaCell(tFst, tPrevDay,  hasPrevDay);
+    const tWowHtml = deltaCell(tFst, tPrevWeek, hasPrevWeek);
+    const dataRows = rows.map(r=>{
       const [name, area, lstTeu, fulfill, _cancel, _score, fstTeu] = r;
       const fulCls = fulfill >= 85 ? 'text-good' : (fulfill < 70 ? 'text-danger' : '');
       const dodHtml = deltaCell(fstTeu, prevDayMap[name] || 0, hasPrevDay);
@@ -1954,6 +1967,15 @@ const RENDER = {
         <td class="tbl-num ${fulCls}">${fulfill}%</td>
       </tr>`;
     }).join('');
+    const totalRow = `<tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border);">
+        <td data-i18n="totalLabel">총계 (${rows.length}명)</td>
+        <td class="tbl-num">${Math.round(tFst).toLocaleString()}</td>
+        <td class="tbl-num">${tDodHtml}</td>
+        <td class="tbl-num">${tWowHtml}</td>
+        <td class="tbl-num">${Math.round(tLst).toLocaleString()}</td>
+        <td class="tbl-num ${tFulCls}">${tFul}%</td>
+      </tr>`;
+    tbody.innerHTML = dataRows + totalRow;
   },
   targets(){
     const tbody = $('#targetBody');
