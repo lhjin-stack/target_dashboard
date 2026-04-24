@@ -142,7 +142,7 @@ button,select,input{font-family:inherit;}
 .modal-ttl{font-size:16px;font-weight:700;}
 .modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;}
 .modal-close:hover{color:var(--red);}
-.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.mini-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;}
 .mini-stat{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center;}
 .mini-stat-l{font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px;}
 .mini-stat-v{font-size:18px;font-weight:800;}
@@ -416,6 +416,7 @@ button,select,input{font-family:inherit;}
               <th>Sales</th>
               <th class="tbl-num">-3W BKG TEU</th>
               <th class="tbl-num" data-i18n="colDodDelta" title="전일 스냅샷 대비 -3W BKG TEU 증감">Δ 전일</th>
+              <th class="tbl-num" data-i18n="colWowDelta" title="전주 동시점 대비 -3W BKG TEU 증감">Δ 전주</th>
               <th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th>
               <th class="tbl-num" data-i18n="colFulfillRate">실선적률</th>
             </tr>
@@ -568,6 +569,8 @@ button,select,input{font-family:inherit;}
       <div class="mini-stat"><div class="mini-stat-l" data-i18n="salMiniCanc">Cancel 전환</div><div class="mini-stat-v" id="salMiniCanc" style="font-size:15px;">—</div></div>
       <div class="mini-stat"><div class="mini-stat-l" data-i18n="topRoute">Top Route</div><div class="mini-stat-v" id="salMiniTop" style="font-size:14px;">—</div></div>
     </div>
+    <div data-i18n="salDodTitle" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;margin-top:4px;">최근 7일 -3W BKG TEU 추이 (일별)</div>
+    <div class="chart-wrap-sm" style="margin-bottom:14px;"><canvas id="salesDodChart"></canvas></div>
     <div data-i18n="salRoutePerf" style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">구간별 -3W 실적 (현 시점 vs 전주 동시점)</div>
     <table class="tbl tbl-sm">
       <thead><tr><th>Route</th><th class="tbl-num">-3W BKG TEU</th><th class="tbl-num" data-i18n="colVsLastWk">전주 대비</th><th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th><th class="tbl-num" data-i18n="colFulfillRate">실선적률</th><th class="tbl-num" data-i18n="colCancel">취소율</th><th data-i18n="rating">평가</th></tr></thead>
@@ -871,6 +874,8 @@ const I18N = {
   colVsLastWk:     {ko:'전주 대비',                          en:'vs Last Week'},
   colShippedShort: {ko:'실선적 TEU',                         en:'Shipped TEU'},
   colDodDelta:     {ko:'Δ 전일',                             en:'Δ vs prev day'},
+  colWowDelta:     {ko:'Δ 전주',                             en:'Δ vs prev week'},
+  salDodTitle:     {ko:'최근 7일 -3W BKG TEU 추이 (일별)',    en:'Last 7 days -3W BKG TEU trend (daily)'},
   profitHigh:      {ko:'고수익',                             en:'High-profit'},
   profitLow:       {ko:'저수익',                             en:'Low-profit'},
   loadingData:     {ko:'데이터 로딩 중...',                   en:'Loading data...'},
@@ -1229,6 +1234,7 @@ async function bootstrapData(dateOrLatest){
     loadPrevSnapshot(s.generated_at).then(prev => {
       DATA._prev = prev;
       if (typeof RENDER !== 'undefined' && RENDER.kpis) RENDER.kpis();
+      if (typeof RENDER !== 'undefined' && RENDER.salesTable) RENDER.salesTable();
     });
     // 전일 대비용 직전일 snapshot 로드
     DATA._prevDay = null;
@@ -1914,35 +1920,36 @@ const RENDER = {
   salesTable(){
     const tbody = $('#salesPerfBody');
     if(!tbody) return;
-    const rows = DATA_API.salesTable(STATE);
+    // 0/0/0 노이즈 행 숨김 (다른 area에 잠깐 묻어 들어온 영업사원)
+    const rows = (DATA_API.salesTable(STATE) || [])
+      .filter(r => { const fstTeu = r[6] || 0; const lstTeu = r[2] || 0; return fstTeu > 0 || lstTeu > 0; });
     if(!rows || !rows.length){
-      tbody.innerHTML = `<tr><td colspan="5" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
       return;
     }
-    const prevMap = DATA_API.salesFstPrev(STATE, DATA._prevDay || null);
-    const hasPrev = DATA._prevDay != null;
+    const prevDayMap = DATA_API.salesFstPrev(STATE, DATA._prevDay || null);
+    const prevWeekMap = DATA_API.salesFstPrev(STATE, DATA._prev || null);
+    const hasPrevDay = DATA._prevDay != null;
+    const hasPrevWeek = DATA._prev != null;
+    const deltaCell = (curr, prev, has) => {
+      if (!has) return '<span class="muted">—</span>';
+      const d = curr - prev;
+      if (d === 0) return '<span class="muted">0</span>';
+      const mark = d > 0 ? '▲' : '▼';
+      const sign = d > 0 ? '+' : '';
+      const color = d > 0 ? '#ea4335' : '#1a73e8';
+      return `<span style="color:${color};font-weight:700;">${mark} ${sign}${Math.round(d).toLocaleString()}</span>`;
+    };
     tbody.innerHTML = rows.map(r=>{
       const [name, area, lstTeu, fulfill, _cancel, _score, fstTeu] = r;
       const fulCls = fulfill >= 85 ? 'text-good' : (fulfill < 70 ? 'text-danger' : '');
-      // DoD delta (현재 w3_fst - 직전일 w3_fst). prevMap 없으면 '—'
-      let dodHtml;
-      if (!hasPrev) {
-        dodHtml = '<span class="muted">—</span>';
-      } else {
-        const prev = prevMap[name] || 0;
-        const d = fstTeu - prev;
-        if (d === 0) dodHtml = '<span class="muted">0</span>';
-        else {
-          const mark = d > 0 ? '▲' : '▼';
-          const sign = d > 0 ? '+' : '';
-          const color = d > 0 ? '#ea4335' : '#1a73e8';
-          dodHtml = `<span style="color:${color};font-weight:700;">${mark} ${sign}${Math.round(d).toLocaleString()}</span>`;
-        }
-      }
+      const dodHtml = deltaCell(fstTeu, prevDayMap[name] || 0, hasPrevDay);
+      const wowHtml = deltaCell(fstTeu, prevWeekMap[name] || 0, hasPrevWeek);
       return `<tr class="clickable" onclick="openSales('${name}','${area}')">
         <td>${name} <span class="tag tag-${area.toLowerCase()}">${area}</span></td>
         <td class="tbl-num">${fstTeu.toLocaleString()}</td>
         <td class="tbl-num">${dodHtml}</td>
+        <td class="tbl-num">${wowHtml}</td>
         <td class="tbl-num">${Math.round(lstTeu).toLocaleString()}</td>
         <td class="tbl-num ${fulCls}">${fulfill}%</td>
       </tr>`;
@@ -2103,7 +2110,9 @@ const CHARTS = {
         plugins:{legend:{labels:{color:C.text, font:{size:11}}}},
         scales:{
           y:{ticks:{color:C.text}, grid:{color:C.grid}, beginAtZero:true},
-          y1:{position:'right', min:0, max:100, ticks:{color:C.amber, callback:v=>v+'%'}, grid:{drawOnChartArea:false}},
+          y1:{position:'right', min:0,
+              suggestedMax: Math.max(110, Math.ceil((Math.max(...(d.ratio||[0]))*1.15)/10)*10),
+              ticks:{color:C.amber, callback:v=>v+'%'}, grid:{drawOnChartArea:false}},
           x:{ticks:{color:C.text}, grid:{color:C.grid}}
         }
       }
@@ -2182,6 +2191,73 @@ const CHARTS = {
       }
     });
   },
+  // 영업사원 일별 -3W BKG TEU 추이 (최근 7일 archive에서 sal별 w3_fst 집계)
+  async salesDod(name){
+    const ctx = document.getElementById('salesDodChart'); if(!ctx) return;
+    const C = CONFIG.CHART_COLORS;
+    if(window._charts.salesDod) { window._charts.salesDod.destroy(); window._charts.salesDod = null; }
+    try {
+      const idx = await fetchDriveJson('snapshots_index.json');
+      const dates = (idx.dates || []).slice().sort().slice(-7); // 오래된→최신 7개
+      if (!dates.length) return;
+      if (!window._archiveCache) window._archiveCache = {};
+      const cache = window._archiveCache;
+      const snaps = await Promise.all(dates.map(async d => {
+        if (!cache[d]) cache[d] = await fetchDriveJson(`3w_snapshot_${d}.json`);
+        return {date: d, snap: cache[d]};
+      }));
+      const labels = [], values = [];
+      snaps.forEach(({date, snap}) => {
+        if (!snap || !Array.isArray(snap.rows)) { labels.push(date.slice(4)); values.push(0); return; }
+        const I = (snap.rows_schema || []).reduce((m,k,i)=>(m[k]=i,m), {});
+        const tw = (snap.current_week || 0) + 3;
+        const gm = snap.shipper_grades || {}, pm = snap.shipper_profit || {};
+        const area = STATE.region || 'ALL';
+        const polSet = new Set(STATE.pol || []);
+        const podSet = new Set(STATE.pod || []);
+        let total = 0;
+        snap.rows.forEach(r => {
+          if (r[I.sal] !== name) return;
+          if (r[I.wk] !== tw) return;
+          if (area !== 'ALL' && r[I.area] !== area) return;
+          if (polSet.size && !polSet.has(r[I.pol])) return;
+          if (podSet.size && !podSet.has(r[I.pod])) return;
+          if (STATE.grade && STATE.grade !== 'all' && gm[r[I.shpr]] !== STATE.grade) return;
+          if (STATE.profit && STATE.profit !== 'all' && pm[r[I.shpr]] !== STATE.profit) return;
+          total += r[I.w3_fst] || 0;
+        });
+        labels.push(`${date.slice(4,6)}/${date.slice(6,8)}`);
+        values.push(Math.round(total));
+      });
+      window._charts.salesDod = new Chart(ctx, {
+        type:'line',
+        data:{
+          labels,
+          datasets:[{
+            label:'-3W BKG TEU', data: values,
+            borderColor: C.blue, backgroundColor: C.blue + '22',
+            tension: 0.2, pointRadius: 4, pointBackgroundColor: C.blue,
+            borderWidth: 2, fill: true,
+            datalabels:{ display:true, anchor:'end', align:'top',
+                         color:C.text, font:{size:10, weight:'bold'},
+                         formatter: v => Math.round(v).toLocaleString() }
+          }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          layout:{padding:{top:16}},
+          plugins:{legend:{display:false}},
+          scales:{
+            x:{ticks:{color:C.text}, grid:{color:C.grid}},
+            y:{ticks:{color:C.text}, grid:{color:C.grid}, beginAtZero:true}
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('[DoD chart] failed:', e.message);
+    }
+  },
+
   salesRoute(name){
     const ctx = document.getElementById('salesRouteChart'); if(!ctx) return;
     const rows = DATA_API.salesRoutes(name);
@@ -2396,10 +2472,12 @@ function openSales(name, area){
   }).join('') || `<tr><td colspan="7" class="muted" style="text-align:center;">${t('noData')}</td></tr>`;
   $('#salesModal').classList.add('show');
   setTimeout(()=>CHARTS.salesRoute(name), 50);
+  setTimeout(()=>CHARTS.salesDod(name), 60);
 }
 function closeSales(){
   $('#salesModal').classList.remove('show');
   if(window._charts.salesRoute){window._charts.salesRoute.destroy(); window._charts.salesRoute=null;}
+  if(window._charts.salesDod){window._charts.salesDod.destroy(); window._charts.salesDod=null;}
 }
 function openShipper(code, name){
   $('#modal-ttl').textContent = `${name} (${code})`;
