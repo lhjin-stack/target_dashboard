@@ -91,6 +91,21 @@ button,select,input{font-family:inherit;}
 .kpi-s.down{color:var(--red);}
 .kpi-tt{position:absolute;top:6px;right:8px;color:var(--text3);font-size:11px;cursor:help;}
 .kpi-tt:hover{color:var(--blue);}
+.kpi-tt::after{
+  content: attr(data-tt);
+  position:absolute; right:-4px; top:20px;
+  min-width:220px; max-width:300px;
+  background:var(--surface2, #1a2030); color:var(--text, #e2e8f0);
+  border:1px solid var(--border); border-radius:6px;
+  padding:8px 10px; font-size:11px; line-height:1.55; font-weight:500;
+  letter-spacing:0; text-transform:none; text-align:left;
+  white-space:pre-line; word-break:keep-all;
+  opacity:0; pointer-events:none; transform:translateY(-4px);
+  transition:opacity .12s ease, transform .12s ease;
+  z-index:200; box-shadow:0 6px 20px rgba(0,0,0,.35);
+}
+.kpi-tt:hover::after{opacity:1; transform:translateY(0);}
+.kpi-tt[data-tt=""]::after{display:none;}
 .kpi-split{display:flex;gap:12px;}
 .kpi-split-item{flex:1;}
 .kpi-split-l{font-size:10px;color:var(--text3);text-transform:uppercase;}
@@ -798,29 +813,29 @@ const I18N = {
 
   // ── KPI 카드 (매니저 전용 3개 + 팀 공통 5개) ──
   kpiGoal:         {ko:'🎯 목표 달성률',                    en:'🎯 Goal Achievement'},
-  kpiGoalTt:       {ko:'3주전 BKG / (BSA × 시트 목표%). 관리자 시트에 Target_% 등록 시 계산',
-                    en:'W3 Booking ÷ (BSA × sheet target %). Calculated when Target_% is registered in the sheet.'},
+  kpiGoalTt:       {ko:'목표 달성률 = 3주전 BKG ÷ (BSA × 시트 목표%)\n• 분자: WOS-3 stage 까지 들어온 BKG (w3_fst)\n• 분모: BSA × 관리자 시트에 등록한 Target_%\n• Target_% 미등록 시 표시 안됨',
+                    en:'Goal = -3W BKG ÷ (BSA × sheet Target %)\n• Numerator: w3_fst (BKG collected by the WOS-3 stage)\n• Denominator: BSA × Target_% from admin sheet\n• Hidden when Target_% is not registered'},
   kpiWoW:          {ko:'📈 전주 동시점 대비',                en:'📈 vs Last Week'},
-  kpiWoWTt:        {ko:'이전 주 스냅샷의 동시점 W+3 3주전 BKG 와 비교. 영업 활동 모멘텀 지표',
-                    en:'Compared with prior week snapshot’s W+3 booking. Sales momentum indicator.'},
+  kpiWoWTt:        {ko:'전주 동시점 대비 = 이번주 W+3 BKG − 전주 W+3 BKG\n• 같은 시점(출항 3주 전)에서 비교하는 영업 활동 모멘텀\n• (+) 활동 강화, (−) 약화',
+                    en:'= This week W+3 BKG − last week W+3 BKG\n• Compared at the same -3W point (sales momentum)\n• (+) stronger activity, (−) weaker'},
   kpiCancel:       {ko:'⚠️ Cancel 전환',                    en:'⚠️ Cancel Shift'},
-  kpiCancelTt:     {ko:'WOS-3 범위 중 Cancel 상태로 전환된 FST TEU. 이탈 모니터링',
-                    en:'FST TEU that shifted to Cancel within WOS-3 scope. Churn monitor.'},
+  kpiCancelTt:     {ko:'Cancel 전환 = WOS-3 범위에서 Cancel 상태로 바뀐 FST TEU\n• 부킹 후 이탈 모니터링용\n• 비율 = Cancel FST ÷ 전체 FST',
+                    en:'Cancel Shift = FST TEU that moved to Cancel status within WOS-3\n• Post-booking churn monitor\n• Ratio = Cancel FST ÷ Total FST'},
   kpiW3Bkg:        {ko:'3주전 BKG',                          en:'W3 Booking'},
-  kpiW3BkgTt:      {ko:'WOS-3 단계(출항 3주 전 이상 리드타임) 부킹 FST_TEU 합',
-                    en:'Sum of FST_TEU for WOS-3 bookings (≥3-week lead time before ETD)'},
+  kpiW3BkgTt:      {ko:'3주전 BKG = WOS-3 stage 까지의 부킹 FST_TEU 합\n• WOS-3 = 출항 3주 전 이상 리드타임 구간\n• 상태: Normal/Waiting/Confirm/Checking/Cancel 모두 포함\n• 선행지표 (아직 확정 전)',
+                    en:'-3W BKG = FST_TEU collected by the WOS-3 stage\n• WOS-3 = bookings with ≥3-week lead time before ETD\n• All states included (Normal / Waiting / Confirm / Checking / Cancel)\n• Leading indicator (pre-finalization)'},
   kpiW3Ship:       {ko:'3주전 실선적',                       en:'W3 Shipped'},
-  kpiW3ShipTt:     {ko:'WOS-3 단계 부킹 중 Normal LST_TEU 합',
-                    en:'Sum of Normal LST_TEU within WOS-3 bookings'},
+  kpiW3ShipTt:     {ko:'실선적 TEU = 전체 stage 에서 Normal(01) 로 선적된 LST_TEU 합\n• 차장 대시보드 정의와 동일 (lst_all)\n• WOS-3 이후 들어온 Normal 부킹도 포함\n• 최종 실적 지표',
+                    en:'Shipped TEU = LST_TEU loaded as Normal (01) across all stages\n• Matches HQ dashboard definition (lst_all)\n• Includes Normal bookings added after WOS-3\n• Final-outcome metric'},
   kpiBsa:          {ko:'BSA',                                en:'BSA'},
-  kpiBsaTt:        {ko:'해당 주차·Area의 BSA TEU 합 (DMSAE_101DS, OBT 팀)',
-                    en:'Sum of BSA TEU for the selected week × Area (DMSAE_101DS, OBT team)'},
+  kpiBsaTt:        {ko:'BSA = 해당 주차 · 현재 필터(POL/POD)의 선복 할당 TEU 합\n• 출처: DMSAE_101DS (OBT 팀)\n• 소석률·목표달성률의 분모',
+                    en:'BSA = slot allocation TEU for the selected week × current POL/POD filters\n• Source: DMSAE_101DS (OBT team)\n• Denominator of Occupancy and Goal Achievement'},
   kpiOcc:          {ko:'소석률',                             en:'Occupancy'},
-  kpiOccTt:        {ko:'Normal LST_TEU / BSA — 120% 이하 녹색, 초과 주황',
-                    en:'Normal LST_TEU / BSA — green ≤120 %, orange if over.'},
+  kpiOccTt:        {ko:'소석률 = Normal LST_TEU ÷ BSA × 100\n• 실제 실린 물량이 선복을 얼마나 채웠는지\n• ≤120% 녹색 (정상), >120% 주황 (오버북)',
+                    en:'Occupancy = Normal LST_TEU ÷ BSA × 100\n• How much of the slot was actually loaded\n• ≤120 % green (OK), >120 % orange (overbook)'},
   kpiShipRate:     {ko:'실선적률',                            en:'Fulfill Rate'},
-  kpiShipRateTt:   {ko:'Normal LST_TEU / FST_TEU — 55% 이상 녹색',
-                    en:'Normal LST_TEU / FST_TEU — green when ≥55 %.'},
+  kpiShipRateTt:   {ko:'실선적률 = Normal LST_TEU ÷ 전체 BKG FST_TEU × 100\n• 들어온 부킹 중 실제 선적까지 간 비율 (취소·대기 제외)\n• ≥55% 녹색, 미만은 황색 (이탈↑)',
+                    en:'Fulfill Rate = Normal LST_TEU ÷ Total BKG FST_TEU × 100\n• Share of incoming bookings that actually shipped\n• ≥55 % green, below = amber (higher churn)'},
 
   // ── Target tab ──
   scoringTitleNew: {ko:'타겟 판정 기준',                     en:'Target Classification Criteria'},
@@ -933,7 +948,11 @@ function applyLang(){
   });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{
     const k = el.getAttribute('data-i18n-title');
-    if(I18N[k]) el.setAttribute('title', t(k));
+    if(I18N[k]){
+      const txt = t(k);
+      el.setAttribute('title', txt);       // 네이티브 fallback
+      el.setAttribute('data-tt', txt);     // 커스텀 ::after 툴팁
+    }
   });
   document.documentElement.setAttribute('lang', STATE.lang);
   const btn = document.getElementById('langBtn');
@@ -1818,7 +1837,8 @@ const RENDER = {
 
     // 팀 공유 5개
     setTxt('kpi-w3-bkg',  fmt(d.w3_fst));
-    setTxt('kpi-w3-ship', fmt(d.w3_lst));
+    // 차장 대시보드와 정합성 맞춤 — lst_all (전체 stage Normal LST) 사용
+    setTxt('kpi-w3-ship', fmt(d.lst_all));
     setTxt('kpi-bsa',     bsaTeu > 0 ? fmt(bsaTeu) : '—');
 
     const occ = bsaTeu > 0 ? (d.lst_all / bsaTeu * 100) : null;
@@ -2135,60 +2155,112 @@ const CHARTS = {
     const d = DATA_API.trend(STATE);
     const C = CONFIG.CHART_COLORS;
     if (window._charts.trend) window._charts.trend.destroy();
+    // 색상 팔레트 — 짝 구성 (BKG계=보라, 실선적계=청록)
+    //   BKG (bar=연보라, line=진보라) / 실선적 (bar=진청, line=초록)
+    const COL = {
+      bkgBar:  '#cbd5e1',   // slate-300 (중립, "예측/선행" 느낌)
+      bkgBarB: '#94a3b8',   // slate-400 border
+      lstBar:  '#2563eb',   // blue-600 (확정 실적)
+      lstBarB: '#1d4ed8',
+      bkgLine: '#f59e0b',   // amber-500 (BKG/BSA — 경고톤·선행지표)
+      lstLine: '#10b981'    // emerald-500 (소석률 — 실적과 동일 계열)
+    };
     const lineVals = [
       ...(d.bkgRatio||[]).filter(v=>v!=null),
       ...(d.occRatio||[]).filter(v=>v!=null),
       0
     ];
     const pctMax = Math.max(110, Math.ceil((Math.max(...lineVals) * 1.15) / 10) * 10);
-    const barLbl = {
-      display:true, anchor:'end', align:'top', color:C.text, font:{size:10, weight:'bold'},
+    // 막대 라벨 — 막대 내부 상단에 흰색으로 (선 라벨과 겹침 방지)
+    const barLblInside = (textColor) => ({
+      display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
+      anchor:'end', align:'start', offset:-2,
+      color:textColor, font:{size:10, weight:'bold'},
       formatter: v => Math.round(v).toLocaleString()
-    };
+    });
     window._charts.trend = new Chart(ctx,{
       type:'bar',
       data:{
         labels: d.labels,
         datasets:[
           {label:'3주전 BKG TEU', data:d.w3Fst,
-           backgroundColor:C.cyan+'cc', borderRadius:4, order:4, datalabels:barLbl},
+           backgroundColor:COL.bkgBar, borderColor:COL.bkgBarB, borderWidth:1,
+           borderRadius:3, order:4,
+           categoryPercentage:0.75, barPercentage:0.95,
+           datalabels: barLblInside('#334155')},
           {label:'실선적 TEU (Normal)', data:d.lst,
-           backgroundColor:C.blue+'cc', borderRadius:4, order:3, datalabels:barLbl},
+           backgroundColor:COL.lstBar, borderColor:COL.lstBarB, borderWidth:1,
+           borderRadius:3, order:3,
+           categoryPercentage:0.75, barPercentage:0.95,
+           datalabels: barLblInside('#ffffff')},
           {label:'3주전 BKG/BSA %', data:d.bkgRatio,
-           type:'line', borderColor:C.purple, backgroundColor:C.purple,
-           yAxisID:'y1', tension:0, pointRadius:4, borderWidth:2.5, order:1, spanGaps:true,
+           type:'line', borderColor:COL.bkgLine, backgroundColor:COL.bkgLine,
+           yAxisID:'y1', tension:0.25, pointRadius:5, pointHoverRadius:7,
+           pointBackgroundColor:'#fff', pointBorderWidth:2.5,
+           borderWidth:3, order:1, spanGaps:true, clip:false,
            datalabels:{
-             display:true, anchor:'end', align:'top', color:C.purple, font:{size:10, weight:'bold'},
+             display: (ctx) => ctx.dataset.data[ctx.dataIndex] != null,
+             anchor:'end', align:'top', offset:6,
+             color:COL.bkgLine, font:{size:11, weight:'bold'},
+             backgroundColor:'rgba(15,23,42,0.75)',
+             borderRadius:4, padding:{top:2,bottom:2,left:5,right:5},
              formatter: v => v==null ? '' : v.toFixed(1)+'%'
            }},
           {label:'소석률 (Normal/BSA) %', data:d.occRatio,
-           type:'line', borderColor:C.green, backgroundColor:C.green,
-           yAxisID:'y1', tension:0, pointRadius:4, borderWidth:2.5, order:2, spanGaps:true,
+           type:'line', borderColor:COL.lstLine, backgroundColor:COL.lstLine,
+           yAxisID:'y1', tension:0.25, pointRadius:5, pointHoverRadius:7,
+           pointBackgroundColor:'#fff', pointBorderWidth:2.5,
+           borderWidth:3, order:2, spanGaps:true, clip:false,
            datalabels:{
-             display:true, anchor:'end', align:'bottom', color:C.green, font:{size:10, weight:'bold'},
+             display: (ctx) => ctx.dataset.data[ctx.dataIndex] != null,
+             anchor:'end', align:'bottom', offset:6,
+             color:COL.lstLine, font:{size:11, weight:'bold'},
+             backgroundColor:'rgba(15,23,42,0.75)',
+             borderRadius:4, padding:{top:2,bottom:2,left:5,right:5},
              formatter: v => v==null ? '' : v.toFixed(1)+'%'
            }}
         ]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
-        layout:{padding:{top:18}},
+        layout:{padding:{top:24, bottom:6, left:4, right:8}},
+        interaction:{mode:'index', intersect:false},
         plugins:{
-          legend:{labels:{color:C.text, font:{size:11}}},
-          tooltip:{callbacks:{
-            afterBody:(items)=>{
-              const i = items[0].dataIndex;
-              const bsa = (d.bsa||[])[i] || 0;
-              return bsa > 0 ? `BSA: ${Math.round(bsa).toLocaleString()} TEU` : '';
+          legend:{
+            position:'top', align:'end',
+            labels:{color:C.text, font:{size:11, weight:'600'}, boxWidth:14, boxHeight:10, padding:12, usePointStyle:true}
+          },
+          tooltip:{
+            backgroundColor:'rgba(15,23,42,0.95)', borderColor:C.grid, borderWidth:1,
+            titleFont:{size:12, weight:'bold'}, bodyFont:{size:11}, padding:10,
+            callbacks:{
+              afterBody:(items)=>{
+                const i = items[0].dataIndex;
+                const bsa = (d.bsa||[])[i] || 0;
+                const w3  = (d.w3Fst||[])[i] || 0;
+                const lst = (d.lst||[])[i] || 0;
+                const gap = w3 - lst;
+                const lines = [];
+                if (bsa > 0) lines.push(`BSA: ${Math.round(bsa).toLocaleString()} TEU`);
+                if (w3 > 0 && lst > 0) lines.push(`BKG→실선적 갭: ${Math.round(gap).toLocaleString()} TEU`);
+                return lines;
+              }
             }
-          }}
+          }
         },
         scales:{
-          y:{ticks:{color:C.text}, grid:{color:C.grid}, beginAtZero:true},
-          y1:{position:'right', min:0,
-              suggestedMax: pctMax,
-              ticks:{color:C.text, callback:v=>v+'%'}, grid:{drawOnChartArea:false}},
-          x:{ticks:{color:C.text}, grid:{color:C.grid}}
+          y:{
+            ticks:{color:C.text, font:{size:11}, callback:v=>Math.round(v).toLocaleString()},
+            grid:{color:C.grid}, beginAtZero:true,
+            title:{display:true, text:'TEU', color:C.text, font:{size:10, weight:'600'}}
+          },
+          y1:{
+            position:'right', min:0, suggestedMax: pctMax,
+            ticks:{color:C.text, font:{size:11}, callback:v=>v+'%'},
+            grid:{drawOnChartArea:false},
+            title:{display:true, text:'% (BSA 대비)', color:C.text, font:{size:10, weight:'600'}}
+          },
+          x:{ticks:{color:C.text, font:{size:12, weight:'600'}}, grid:{color:C.grid}}
         }
       }
     });
