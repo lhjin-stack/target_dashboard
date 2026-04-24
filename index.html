@@ -1566,10 +1566,14 @@ const AGG = {
     const bsa = DATA.bsa;
     if (bsa && Array.isArray(bsa.rows)) {
       const wk = state.week;
-      const polSet = new Set(state.pol || []);
+      // region→POL 매핑 fallback: pol 선택 없어도 Area 선택됐으면 그 POL 로 한정
+      let polSet = null;
+      if (state.pol && state.pol.length) polSet = new Set(state.pol);
+      else if (state.region && state.region !== 'ALL' && CONFIG.AREA_TO_POL[state.region])
+        polSet = new Set(CONFIG.AREA_TO_POL[state.region]);
       bsa.rows.forEach(r => {
         if (wk != null && r[2] !== wk) return;
-        if (polSet.size && !polSet.has(r[0])) return;
+        if (polSet && !polSet.has(r[0])) return;
         if (!g[r[1]]) g[r[1]] = {w3:0, lst:0, bsa:0};
         g[r[1]].bsa += r[3];
       });
