@@ -1244,14 +1244,26 @@ async function fetchDriveJson(filename){
 }
 
 async function onLoginSuccess(){
+  // 데이터 로드 + 첫 렌더가 끝날 때까지 오버레이 유지 → W19 → W20 깜빡임 방지
   const overlay = document.getElementById('loginOverlay');
-  if (overlay) overlay.style.display = 'none';
+  const btn = document.getElementById('loginBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner" style="vertical-align:middle;margin-right:8px;"></span>'
+                  + (STATE.lang === 'ko' ? '데이터 로딩 중...' : 'Loading data...');
+  }
   await loadSnapshotIndex();
   const ok = await bootstrapData();
-  if (!ok) _showLoginError('Data load failed — check Drive folder access.');
+  if (!ok) {
+    _showLoginError('Data load failed — check Drive folder access.');
+    if (btn) { btn.disabled = false; btn.innerHTML = '🔐 Retry'; }
+    return;  // 오버레이는 그대로 — 사용자가 에러 보고 재시도 가능
+  }
   RENDER.all();
   RENDER.salesOptions();
   CHARTS.initAll();
+  // 모든 렌더 완료 후 오버레이 제거
+  if (overlay) overlay.style.display = 'none';
   console.log('[3W] ready (Drive auth, folder=' + DRIVE_FOLDER_ID + ')');
 }
 // ══════════════════════════════════════════════════════════════════════════
