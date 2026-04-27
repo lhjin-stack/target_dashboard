@@ -106,6 +106,26 @@ button,select,input{font-family:inherit;}
 }
 .kpi-tt:hover::after{opacity:1; transform:translateY(0);}
 .kpi-tt[data-tt=""]::after{display:none;}
+
+/* Table header inline tooltip (ⓘ next to column name) */
+.th-tt{display:inline-block;position:relative;margin-left:4px;color:var(--text3);
+       font-size:10px;cursor:help;font-weight:400;text-transform:none;letter-spacing:0;}
+.th-tt:hover{color:var(--blue);}
+.th-tt::after{
+  content: attr(data-tt);
+  position:absolute; right:-4px; top:18px;
+  min-width:220px; max-width:280px;
+  background:var(--surface2,#1a2030); color:var(--text,#e2e8f0);
+  border:1px solid var(--border); border-radius:6px;
+  padding:8px 10px; font-size:11px; line-height:1.55; font-weight:500;
+  letter-spacing:0; text-transform:none; text-align:left;
+  white-space:pre-line; word-break:keep-all;
+  opacity:0; pointer-events:none; transform:translateY(-4px);
+  transition:opacity .12s ease, transform .12s ease;
+  z-index:200; box-shadow:0 6px 20px rgba(0,0,0,.35);
+}
+.th-tt:hover::after{opacity:1; transform:translateY(0);}
+.th-tt[data-tt=""]::after{display:none;}
 .kpi-split{display:flex;gap:12px;}
 .kpi-split-item{flex:1;}
 .kpi-split-l{font-size:10px;color:var(--text3);text-transform:uppercase;}
@@ -494,9 +514,9 @@ button,select,input{font-family:inherit;}
             <th>Area</th>
             <th>POL</th>
             <th>POD</th>
-            <th class="tbl-num">-3W BKG TEU</th>
-            <th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th>
-            <th class="tbl-num" data-i18n="colFulfillRate">실선적률</th>
+            <th class="tbl-num"><span data-i18n="col3WBkg">-3W BKG TEU</span><span class="th-tt" data-i18n-title="col3WBkgTt" title="">ⓘ</span></th>
+            <th class="tbl-num"><span data-i18n="col3WNormal">-3W Normal TEU</span><span class="th-tt" data-i18n-title="col3WNormalTt" title="">ⓘ</span></th>
+            <th class="tbl-num"><span data-i18n="colFulfillRate">실선적률</span><span class="th-tt" data-i18n-title="colFulfillRateTt" title="">ⓘ</span></th>
           </tr>
         </thead>
         <tbody id="topShippersBody"></tbody>
@@ -921,6 +941,15 @@ const I18N = {
                     en:'Current filters · click a POD chart bar to drill down · click row for shipper detail'},
   topShippersChipLbl:{ko:'POD 필터',                         en:'POD filter'},
   topShippersEmpty:{ko:'표시할 화주가 없습니다',              en:'No shippers to display'},
+  // 컬럼 헤더용 — TOP30 화주 표 전용 (다른 표는 colShippedShort 유지)
+  col3WBkg:        {ko:'-3W BKG TEU',                        en:'-3W BKG TEU'},
+  col3WBkgTt:      {ko:'출항 3주 전(WOS-3) 시점까지 등록된 부킹 FST_TEU 합.\nLST_Status 무관 — Normal·Waiting·Confirm·Checking·Cancel 모두 포함.\n선행지표 (영업이 어디까지 부킹을 모았는지).',
+                    en:'Sum of FST_TEU registered by the WOS-3 stage.\nIncludes all statuses (Normal/Waiting/Confirm/Checking/Cancel).\nLeading indicator — total bookings collected.'},
+  col3WNormal:     {ko:'-3W Normal TEU',                     en:'-3W Normal TEU'},
+  col3WNormalTt:   {ko:'위 -3W BKG 중 LST_Status="Normal"(확정) 인 LST_TEU 합.\n• 출항 후 주차: 진짜 실선적량 (실제로 배에 실린 TEU)\n• 출항 전 주차: "확정 락된 부킹량" (Waiting/Confirm/Checking/Cancel 제외)\n반드시 -3W BKG TEU 보다 작거나 같음.',
+                    en:'Sum of LST_TEU where LST_Status="Normal" (confirmed).\n• After ETD: actual loaded TEU\n• Before ETD: "confirmed/locked-in" bookings only\nAlways ≤ -3W BKG TEU.'},
+  colFulfillRateTt:{ko:'-3W Normal ÷ -3W BKG × 100.\n• 출항 후 주차: 실선적률 (캔슬·노쇼 후 결과)\n• 출항 전 주차: 확정률 (낮을수록 캔슬·미확정 비중 ↑ → 영업 푸시 필요)\n100% 면 모든 -3W 부킹이 Normal 로 락됨.',
+                    en:'-3W Normal ÷ -3W BKG × 100.\n• After ETD: fulfillment rate\n• Before ETD: confirm rate (lower = more cancel/unconfirmed risk)\n100% = every -3W booking is locked-in Normal.'},
 
   // ── Sales modal ──
   targetSuffix:    {ko:'타겟',                               en:'Target'},
