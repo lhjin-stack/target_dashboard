@@ -470,6 +470,38 @@ button,select,input{font-family:inherit;}
         <div class="chart-wrap"><canvas id="podChartOcc"></canvas></div>
       </div>
     </div>
+
+    <div class="card mt-sm" id="shippersTop30Card">
+      <div class="card-hdr">
+        <div>
+          <div class="card-ttl">
+            <span data-i18n="topShippersTitle">3주전 부킹 물량 TOP 30 화주</span>
+            <span id="topShippersFilterChip" style="display:none;font-size:11px;background:var(--surface2);color:var(--text2);padding:3px 10px;border-radius:11px;margin-left:8px;vertical-align:middle;border:1px solid var(--border);">
+              <span data-i18n="topShippersChipLbl">POD 필터</span>: <b id="topShippersFilterValue" style="color:var(--blue);">—</b>
+              <button onclick="clearShipperPodFilter()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-weight:bold;margin-left:6px;padding:0;font-size:13px;line-height:1;">✕</button>
+            </span>
+          </div>
+          <div class="card-desc" data-i18n="topShippersDesc">현재 필터 기준 · POD 차트 막대 클릭 시 해당 POD 화주만 표시</div>
+        </div>
+      </div>
+      <table class="tbl tbl-sm">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Code</th>
+            <th data-i18n="colShipper">Shipper</th>
+            <th>Sales</th>
+            <th>Area</th>
+            <th>POL</th>
+            <th>POD</th>
+            <th class="tbl-num">-3W BKG TEU</th>
+            <th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th>
+            <th class="tbl-num" data-i18n="colFulfillRate">실선적률</th>
+          </tr>
+        </thead>
+        <tbody id="topShippersBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- TARGET EXTRACT -->
@@ -877,9 +909,18 @@ const I18N = {
 
   // ── POD 차트 ──
   podW3Title:      {ko:'3주전 BKG / BSA (POD별)',           en:'W3 Booking / BSA by POD'},
-  podW3Desc:       {ko:'출항 주차 · w3_fst ÷ BSA, %',        en:'Departure week · w3_fst ÷ BSA, %'},
+  podW3Desc:       {ko:'출항 주차 · w3_fst ÷ BSA, % · 막대 클릭 → 하단 TOP30 화주 필터',
+                    en:'Departure week · w3_fst ÷ BSA, % · Click bar to filter TOP30 shippers below'},
   podOccTitle:     {ko:'소석률 Normal/BSA (POD별)',         en:'Occupancy Normal/BSA by POD'},
-  podOccDesc:      {ko:'출항 주차 · Normal LST ÷ BSA, %',    en:'Departure week · Normal LST ÷ BSA, %'},
+  podOccDesc:      {ko:'출항 주차 · Normal LST ÷ BSA, % · 막대 클릭 → 하단 TOP30 화주 필터',
+                    en:'Departure week · Normal LST ÷ BSA, % · Click bar to filter TOP30 shippers below'},
+
+  // ── TOP30 shippers (overview 하단) ──
+  topShippersTitle:{ko:'3주전 부킹 물량 TOP 30 화주',         en:'Top 30 Shippers by W3 BKG'},
+  topShippersDesc: {ko:'현재 필터 기준 · POD 차트 막대 클릭 시 해당 POD 화주만 표시 · 행 클릭 → 화주 상세',
+                    en:'Current filters · click a POD chart bar to drill down · click row for shipper detail'},
+  topShippersChipLbl:{ko:'POD 필터',                         en:'POD filter'},
+  topShippersEmpty:{ko:'표시할 화주가 없습니다',              en:'No shippers to display'},
 
   // ── Sales modal ──
   targetSuffix:    {ko:'타겟',                               en:'Target'},
@@ -988,7 +1029,8 @@ const STATE = {
   grade:  'all',
   profit: 'all',
   region: 'ALL',
-  sub:    'overview'
+  sub:    'overview',
+  chartPod: null   // POD 차트 막대 클릭 시 하단 TOP30 화주 필터 (null=전체)
 };
 
 // ═════════════════════════════ 5. MOCK DATA ═══════════════════════════════
@@ -1709,6 +1751,48 @@ const AGG = {
     return out;
   },
 
+  // 화주별 -3W BKG TEU 상위 N — STATE 필터 + 선택적 POD override (차트 클릭 드릴다운).
+  // 한 화주가 복수 sales/area/pol/pod 에 걸쳐있으면 w3_fst 가 가장 큰 것을 대표값으로 표기.
+  shippersTop30(state, opts = {}){
+    if (!this._hasRows()) return [];
+    const I = this.IDX;
+    // chartPod override 시 기존 STATE.pod 필터는 무시 (단일 POD 로 강제)
+    let rs = this._filter(state, {skipPod: !!opts.pod});
+    if (opts.pod) rs = rs.filter(r => r[I.pod] === opts.pod);
+    const agg = {};
+    rs.forEach(r => {
+      const s = r[I.shpr]; if (!s) return;
+      let a = agg[s];
+      if (!a) a = agg[s] = {w3_fst:0, w3_lst:0, sal:{}, area:{}, pol:{}, pod:{}};
+      const w = r[I.w3_fst] || 0;
+      a.w3_fst += w;
+      a.w3_lst += r[I.w3_lst] || 0;
+      const sal = r[I.sal] || '-';
+      a.sal[sal]        = (a.sal[sal]        || 0) + w;
+      a.area[r[I.area]] = (a.area[r[I.area]] || 0) + w;
+      a.pol[r[I.pol]]   = (a.pol[r[I.pol]]   || 0) + w;
+      a.pod[r[I.pod]]   = (a.pod[r[I.pod]]   || 0) + w;
+    });
+    const top = m => {
+      const e = Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
+      return e ? e[0] : '-';
+    };
+    return Object.entries(agg)
+      .filter(([_,v]) => v.w3_fst > 0)
+      .sort((a,b) => b[1].w3_fst - a[1].w3_fst)
+      .slice(0, opts.limit || 30)
+      .map(([code, v]) => ({
+        code,
+        sales:  top(v.sal),
+        area:   top(v.area),
+        pol:    top(v.pol),
+        pod:    top(v.pod),
+        w3_fst: +v.w3_fst.toFixed(1),
+        w3_lst: +v.w3_lst.toFixed(1),
+        fulfill: v.w3_fst > 0 ? +(v.w3_lst/v.w3_fst*100).toFixed(1) : 0
+      }));
+  },
+
   shipperHist(code){
     if (!this._hasRows()) {
       const h = DATA.shipperHistory;
@@ -1778,7 +1862,8 @@ const DATA_API = {
   pod:         (state) => AGG.pod(state),
   podRatios:   (state) => AGG.podRatios(state),
   salesChart:  (state) => AGG.salesChart(state),
-  shipperHist: (code)  => AGG.shipperHist(code)
+  shipperHist: (code)  => AGG.shipperHist(code),
+  shippersTop30:(state, opts) => AGG.shippersTop30(state, opts || {})
 };
 
 // ═════════════════════════════ 7. RENDER ══════════════════════════════════
@@ -1792,6 +1877,7 @@ const RENDER = {
     this.regionTabBadges();
     this.perf();
     this.matrix();
+    this.shippersTop30();
   },
 
   weekLabels(){
@@ -2082,6 +2168,47 @@ const RENDER = {
     if([...sel.options].some(o=>o.value===current)) sel.value = current;
     STATE.sales = sel.value;
   },
+  shippersTop30(){
+    const tbody = $('#topShippersBody'); if (!tbody) return;
+    const chip = $('#topShippersFilterChip');
+    const chipVal = $('#topShippersFilterValue');
+    if (chip && chipVal) {
+      if (STATE.chartPod) {
+        chip.style.display = '';
+        chipVal.textContent = STATE.chartPod;
+      } else {
+        chip.style.display = 'none';
+      }
+    }
+    if (!AGG._hasRows()) {
+      tbody.innerHTML = '<tr><td colspan="10" class="muted" style="text-align:center;padding:16px;">데이터 로드 실패</td></tr>';
+      return;
+    }
+    const rows = DATA_API.shippersTop30(STATE, {pod: STATE.chartPod || null});
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="10" class="muted" style="text-align:center;padding:16px;">${t('topShippersEmpty')}</td></tr>`;
+      return;
+    }
+    const names = DATA.shipper_names || {};
+    tbody.innerHTML = rows.map((r, i) => {
+      const nm = names[r.code] || r.code;
+      const safeName = String(nm).replace(/'/g, "\\'");
+      const fulCls = r.fulfill >= 85 ? 'text-good' : (r.fulfill < 70 ? 'text-danger' : '');
+      return `<tr class="clickable" onclick="openShipper('${r.code}','${safeName}')">
+        <td class="tbl-num"><b>${i+1}</b></td>
+        <td>${r.code}</td>
+        <td><b>${nm}</b></td>
+        <td>${r.sales}</td>
+        <td>${tagArea(r.area)}</td>
+        <td>${r.pol}</td>
+        <td>${r.pod}</td>
+        <td class="tbl-num"><b>${Math.round(r.w3_fst).toLocaleString()}</b></td>
+        <td class="tbl-num">${Math.round(r.w3_lst).toLocaleString()}</td>
+        <td class="tbl-num ${fulCls}">${r.fulfill}%</td>
+      </tr>`;
+    }).join('');
+  },
+
   filterButtonLabels(){
     ['polMulti','podMulti'].forEach(id=>{
       const all  = document.querySelectorAll('#'+id+' input');
@@ -2282,27 +2409,50 @@ const CHARTS = {
   },
   pod(){
     // 두 개 POD 차트 동시 렌더링 (3주전 BKG/BSA + Normal/BSA)
+    // 막대 클릭 → STATE.chartPod 토글 → 하단 TOP30 화주 필터
     const C = CONFIG.CHART_COLORS;
     const d = DATA_API.podRatios(STATE);
-    const labelText = (arr, teuArr) => arr.map((v, i) =>
-      `${v.toFixed(1)}% (${Math.round(teuArr[i])} TEU)`);
+    const sel = STATE.chartPod;
+    const colorFor = (lbl, hex) => sel == null
+      ? hex + 'cc'
+      : (lbl === sel ? hex : hex + '33');
     const _mkChart = (ctxId, values, teuArr, barColor) => {
       const ctx = document.getElementById(ctxId); if (!ctx) return null;
+      const colors = d.labels.map(lbl => colorFor(lbl, barColor));
       return new Chart(ctx, {
         type:'bar',
         data:{
           labels: d.labels,
           datasets:[{
             label:'%', data: values,
-            backgroundColor: barColor + 'cc',
+            backgroundColor: colors,
             borderRadius:4
           }]
         },
         options:{
           indexAxis:'y', responsive:true, maintainAspectRatio:false,
+          onClick:(e, items) => {
+            if (!items.length) return;
+            const pod = d.labels[items[0].index];
+            if (!pod) return;
+            STATE.chartPod = (STATE.chartPod === pod) ? null : pod;
+            RENDER.shippersTop30();
+            // 두 POD 차트의 선택 강조 갱신
+            CHARTS.pod();
+            // 새로 필터된 경우 TOP30 카드로 부드럽게 스크롤
+            if (STATE.chartPod) {
+              const card = document.getElementById('shippersTop30Card');
+              if (card) card.scrollIntoView({behavior:'smooth', block:'start'});
+            }
+          },
           plugins:{
             legend:{display:false},
-            tooltip:{callbacks:{label:(ctx)=> `${ctx.parsed.x.toFixed(1)}% · ${Math.round(teuArr[ctx.dataIndex])} TEU`}},
+            tooltip:{callbacks:{
+              label:(ctx)=> `${ctx.parsed.x.toFixed(1)}% · ${Math.round(teuArr[ctx.dataIndex])} TEU`,
+              afterBody:()=> sel == null
+                ? [(STATE.lang==='ko'?'클릭 → 하단 TOP30 화주 필터':'Click → filter TOP30 shippers below')]
+                : [(STATE.lang==='ko'?'클릭 → 필터 해제':'Click → clear filter')]
+            }},
             datalabels:{
               display:true,
               anchor:'end', align:'right', color:C.text, font:{size:10},
@@ -2521,10 +2671,19 @@ function applyFilters(){
   STATE.sales = $('#salSel').value;
   STATE.grade = $('#gradeSel') ? $('#gradeSel').value : 'all';
   STATE.profit = $('#profitSel') ? $('#profitSel').value : 'all';
+  // 필터 변경 시 POD 차트 드릴다운은 리셋 (가용 POD 가 달라질 수 있음)
+  STATE.chartPod = null;
   RENDER.filterButtonLabels();
   RENDER.salesOptions();
   RENDER.all();
   if (typeof CHARTS !== 'undefined' && CHARTS.rebuild) CHARTS.rebuild();
+}
+
+// TOP30 화주 카드 chip 의 ✕ 버튼 — POD 드릴다운 해제
+function clearShipperPodFilter(){
+  STATE.chartPod = null;
+  RENDER.shippersTop30();
+  if (typeof CHARTS !== 'undefined' && CHARTS.pod) CHARTS.pod();
 }
 
 function applyArea(area){
