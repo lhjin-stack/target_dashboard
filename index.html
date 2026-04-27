@@ -364,6 +364,14 @@ button,select,input{font-family:inherit;}
       <option value="L" data-i18n="profitLow">저수익</option>
     </select>
   </div>
+  <div class="f-group">
+    <span class="f-lbl">Team</span>
+    <select class="f-sel" id="teamSel" onchange="applyFilters()" title="OBT=해외영업(수출) · IST=수입영업(KR향)">
+      <option value="OBT" selected data-i18n="teamOBT">OBT (수출)</option>
+      <option value="IST" data-i18n="teamIST">IST (수입·KR향)</option>
+      <option value="all" data-i18n="teamAll">OBT + IST</option>
+    </select>
+  </div>
   <div class="week-info">
     <span data-i18n="today">오늘</span> <b id="todayLabel">—</b> → <span data-i18n="threeWTarget">선택 주차</span> <b id="targetWeekLabel">—</b>
   </div>
@@ -966,6 +974,9 @@ const I18N = {
                     en:'Daily trend — DoD Δ in -3W BKG TEU (last 7 days)'},
   profitHigh:      {ko:'고수익',                             en:'High-profit'},
   profitLow:       {ko:'저수익',                             en:'Low-profit'},
+  teamOBT:         {ko:'OBT (수출)',                         en:'OBT (Export)'},
+  teamIST:         {ko:'IST (수입·KR향)',                    en:'IST (Import·KR-bound)'},
+  teamAll:         {ko:'OBT + IST',                          en:'OBT + IST'},
   loadingData:     {ko:'데이터 로딩 중...',                   en:'Loading data...'},
 
   // ── Shipper modal ──
@@ -1057,6 +1068,7 @@ const STATE = {
   sales:  'all',
   grade:  'all',
   profit: 'all',
+  team:   'OBT',   // 기본 OBT(수출). IST(수입·KR향) / all(둘 다) 선택 가능
   region: 'ALL',
   sub:    'overview',
   chartPod: null   // POD 차트 막대 클릭 시 하단 TOP30 화주 필터 (null=전체)
@@ -1455,10 +1467,10 @@ async function changeSnapshotDate(value){
  * 필터 없거나 rows 없으면 snapshot의 pre-aggregated 블록을 사용 (fallback).
  */
 const AGG = {
-  // 확장 스키마: 한 행에 all/w3 TEU + CM1 병렬 저장 (차장 weekly 스키마와 호환)
+  // 확장 스키마: 한 행에 all/w3 TEU + CM1 + team 병렬 저장 (차장 weekly 스키마와 호환)
   IDX: {
     shpr:0, sal:1, area:2, pol:3, pod:4, wk:5, mon:6,
-    fst_all:7, w3_fst:8, lst_all:9, w3_lst:10, fst_cancel:11, cm1:12,
+    fst_all:7, w3_fst:8, lst_all:9, w3_lst:10, fst_cancel:11, cm1:12, team:13,
     // 별칭 — 기존 코드가 WOS-3 값을 가리키도록 유지
     fst: 8,   // = w3_fst
     lst: 10,  // = w3_lst
@@ -1466,19 +1478,28 @@ const AGG = {
 
   _hasRows(){ return Array.isArray(DATA.rows) && DATA.rows.length > 0; },
 
-  /* BSA for (week, POLs, PODs) — DATA.bsa.rows schema [pol, pod, wk, bsa]. */
+  /* BSA schema: 신규 [pol, pod, wk, team, bsa] · 구 [pol, pod, wk, bsa] (backward-compat) */
+  _bsaIx(){
+    const sch = (DATA.bsa && DATA.bsa.rows_schema) || ['pol','pod','wk','bsa'];
+    return {pol: sch.indexOf('pol'), pod: sch.indexOf('pod'), wk: sch.indexOf('wk'),
+            team: sch.indexOf('team'), bsa: sch.indexOf('bsa')};
+  },
+  /* BSA for (week, POLs, PODs, team) */
   bsaForWeek(state){
     const bsa = DATA.bsa;
     if (!bsa || !Array.isArray(bsa.rows) || !bsa.rows.length) return 0;
+    const ix = this._bsaIx();
     const wk = state.week;
     const polSet = new Set(state.pol || []);
     const podSet = new Set(state.pod || []);
+    const teamSel = state.team;
     let teu = 0;
     bsa.rows.forEach(r => {
-      if (wk != null && r[2] !== wk) return;
-      if (polSet.size && !polSet.has(r[0])) return;
-      if (podSet.size && !podSet.has(r[1])) return;
-      teu += r[3];
+      if (wk != null && r[ix.wk] !== wk) return;
+      if (polSet.size && !polSet.has(r[ix.pol])) return;
+      if (podSet.size && !podSet.has(r[ix.pod])) return;
+      if (ix.team >= 0 && teamSel && teamSel !== 'all' && (r[ix.team] || 'OBT') !== teamSel) return;
+      teu += r[ix.bsa];
     });
     return teu;
   },
@@ -1502,6 +1523,9 @@ const AGG = {
       const pm = DATA.shipper_profit || {};
       rs = rs.filter(r => pm[r[I.shpr]] === state.profit);
     }
+    // team 필터 — 신규 스냅샷은 r[13] 에 'OBT'/'IST'. 구 스냅샷은 undefined → 'OBT' 로 간주
+    if (!opts.skipTeam && state.team && state.team !== 'all')
+      rs = rs.filter(r => (r[I.team] || 'OBT') === state.team);
     if (!opts.skipWeek && state.week != null)
       rs = rs.filter(r => r[I.wk] === state.week);
     return rs;
@@ -1614,17 +1638,20 @@ const AGG = {
     const bsaByWk = {};
     const bsa = DATA.bsa;
     if (bsa && Array.isArray(bsa.rows)) {
+      const ix = this._bsaIx();
       let polSet = null;
       if (state.pol && state.pol.length) polSet = new Set(state.pol);
       else if (state.region && state.region !== 'ALL' && CONFIG.AREA_TO_POL[state.region])
         polSet = new Set(CONFIG.AREA_TO_POL[state.region]);
       const podSet = new Set(state.pod || []);
+      const teamSel = state.team;
       bsa.rows.forEach(r => {
-        const w = r[2];
+        const w = r[ix.wk];
         if (!weeks.includes(w)) return;
-        if (polSet && !polSet.has(r[0])) return;
-        if (podSet.size && !podSet.has(r[1])) return;
-        bsaByWk[w] = (bsaByWk[w] || 0) + r[3];
+        if (polSet && !polSet.has(r[ix.pol])) return;
+        if (podSet.size && !podSet.has(r[ix.pod])) return;
+        if (ix.team >= 0 && teamSel && teamSel !== 'all' && (r[ix.team] || 'OBT') !== teamSel) return;
+        bsaByWk[w] = (bsaByWk[w] || 0) + r[ix.bsa];
       });
     }
     return {
@@ -1668,20 +1695,24 @@ const AGG = {
       g[p].w3  += r[I.w3_fst]  || 0;
       g[p].lst += r[I.lst_all] || 0;
     });
-    // BSA: DATA.bsa.rows [pol, pod, wk, bsa]
+    // BSA: 신규 [pol, pod, wk, team, bsa] / 구 [pol, pod, wk, bsa]
     const bsa = DATA.bsa;
     if (bsa && Array.isArray(bsa.rows)) {
+      const ix = this._bsaIx();
       const wk = state.week;
       // region→POL 매핑 fallback: pol 선택 없어도 Area 선택됐으면 그 POL 로 한정
       let polSet = null;
       if (state.pol && state.pol.length) polSet = new Set(state.pol);
       else if (state.region && state.region !== 'ALL' && CONFIG.AREA_TO_POL[state.region])
         polSet = new Set(CONFIG.AREA_TO_POL[state.region]);
+      const teamSel = state.team;
       bsa.rows.forEach(r => {
-        if (wk != null && r[2] !== wk) return;
-        if (polSet && !polSet.has(r[0])) return;
-        if (!g[r[1]]) g[r[1]] = {w3:0, lst:0, bsa:0};
-        g[r[1]].bsa += r[3];
+        if (wk != null && r[ix.wk] !== wk) return;
+        if (polSet && !polSet.has(r[ix.pol])) return;
+        if (ix.team >= 0 && teamSel && teamSel !== 'all' && (r[ix.team] || 'OBT') !== teamSel) return;
+        const pod = r[ix.pod];
+        if (!g[pod]) g[pod] = {w3:0, lst:0, bsa:0};
+        g[pod].bsa += r[ix.bsa];
       });
     }
     // 상위 10 POD (BSA 기준 — 해당 주차 선복 큰 순으로)
@@ -2083,11 +2114,32 @@ const RENDER = {
     if (cSub) cSub.textContent = `${t('ofTotalFst')} ${cancPct.toFixed(1)}%`;
   },
   regionTabBadges(){
+    // team 필터(default OBT) 가 반영되도록 rows 에서 동적 집계.
+    // rows 가 없으면 snapshot 의 pre-agg 또는 MOCK fallback.
     const pairs = [['ALL',0],['SZP',1],['CAN',2],['HKG',3]];
     const rtabs = document.querySelectorAll('.rtab .rtab-badge');
-    const src = (DATA.region && DATA.region.ALL) ? DATA.region : MOCK.region;
+    const sums = {ALL:0, SZP:0, CAN:0, HKG:0};
+    if (AGG._hasRows()) {
+      const I = AGG.IDX;
+      // region tab 표시는 모든 주차 합산 (필터 영향 받지 않는 누적치)
+      // team / pol / pod 만 적용
+      const polSet = new Set(STATE.pol || []);
+      const podSet = new Set(STATE.pod || []);
+      const teamSel = STATE.team;
+      DATA.rows.forEach(r => {
+        if (polSet.size && !polSet.has(r[I.pol])) return;
+        if (podSet.size && !podSet.has(r[I.pod])) return;
+        if (teamSel && teamSel !== 'all' && (r[I.team] || 'OBT') !== teamSel) return;
+        const v = r[I.w3_fst] || 0;
+        sums.ALL += v;
+        if (sums[r[I.area]] !== undefined) sums[r[I.area]] += v;
+      });
+    } else {
+      const src = (DATA.region && DATA.region.ALL) ? DATA.region : MOCK.region;
+      pairs.forEach(([k]) => { if (src[k]) sums[k] = src[k].fst || 0; });
+    }
     pairs.forEach(([key,i])=>{
-      if(rtabs[i] && src[key]) rtabs[i].textContent = Math.round(src[key].fst||0).toLocaleString() + ' TEU';
+      if (rtabs[i]) rtabs[i].textContent = Math.round(sums[key]).toLocaleString() + ' TEU';
     });
   },
   perf(){ /* 실적 관리 탭 KPI 3카드 제거됨 (2026-04-23) — no-op 유지 */ },
@@ -2735,6 +2787,7 @@ function applyFilters(){
   STATE.sales = $('#salSel').value;
   STATE.grade = $('#gradeSel') ? $('#gradeSel').value : 'all';
   STATE.profit = $('#profitSel') ? $('#profitSel').value : 'all';
+  STATE.team   = $('#teamSel')   ? $('#teamSel').value   : 'all';
   // 필터 변경 시 POD 차트 드릴다운은 리셋 (가용 POD 가 달라질 수 있음)
   STATE.chartPod = null;
   RENDER.filterButtonLabels();
