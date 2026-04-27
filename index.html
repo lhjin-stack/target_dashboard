@@ -1267,7 +1267,8 @@ async function onLoginSuccess(){
   await loadSnapshotIndex();
   const ok = await bootstrapData();
   if (!ok) {
-    _showLoginError('Data load failed — check Drive folder access.');
+    const detail = window._lastBootstrapError || 'unknown error';
+    _showLoginError('Data load failed — ' + detail);
     if (btn) { btn.disabled = false; btn.innerHTML = '🔐 Retry'; }
     return;  // 오버레이는 그대로 — 사용자가 에러 보고 재시도 가능
   }
@@ -1306,6 +1307,8 @@ async function _loadTargetsConfigStandalone(){
 function showLoading(){ const el=document.getElementById('loadingChip'); if(el) el.classList.add('show'); }
 function hideLoading(){ const el=document.getElementById('loadingChip'); if(el) el.classList.remove('show'); }
 
+// 실패 시 사용자에게 보여줄 마지막 에러 메시지 (debug 용)
+window._lastBootstrapError = null;
 async function bootstrapData(dateOrLatest){
   const filename = (dateOrLatest && dateOrLatest !== 'latest')
     ? `3w_snapshot_${dateOrLatest}.json`
@@ -1366,6 +1369,9 @@ async function bootstrapData(dateOrLatest){
     return true;
   } catch (e) {
     console.warn('[DATA] Drive fetch failed:', e.message, e);
+    // 실제 에러 (스택 일부) 를 사용자 메시지에 포함시키도록 보존
+    window._lastBootstrapError = (e && (e.message || e.toString())) || 'unknown';
+    if (e && e.stack) window._lastBootstrapError += '\n  ' + e.stack.split('\n').slice(0,3).join('\n  ');
     return false;
   } finally {
     hideLoading();
