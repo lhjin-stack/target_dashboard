@@ -1362,7 +1362,7 @@ async function bootstrapData(dateOrLatest){
       DATA._prevDay = prev;
       if (typeof RENDER !== 'undefined' && RENDER.salesTable) RENDER.salesTable();
     });
-    console.log(`[DATA] snapshot loaded (${url}, gen ${s.generated_at}, W${s.current_week})`);
+    console.log(`[DATA] snapshot loaded (${filename}, gen ${s.generated_at}, W${s.current_week})`);
     return true;
   } catch (e) {
     console.warn('[DATA] Drive fetch failed:', e.message, e);
