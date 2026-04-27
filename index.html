@@ -1284,7 +1284,10 @@ async function bootstrapData(dateOrLatest){
       current_week:   s.current_week   || null,
       bsa:            s.bsa            || {rows_schema:null, rows:[]}
     };
-    if (s.current_week) STATE.week = s.current_week + 3;
+    if (s.current_week) {
+      STATE.week = s.current_week + 3;
+      populateWeekFilter(s.current_week);
+    }
     // 헤더 "데이터: ..." 라벨을 snapshot generated_at 으로 갱신
     const dt = document.getElementById('dataTime');
     if (dt && s.generated_at) {
@@ -1314,6 +1317,26 @@ async function bootstrapData(dateOrLatest){
   } finally {
     hideLoading();
   }
+}
+
+// Week 드롭다운을 snapshot 의 current_week 기준으로 동적 구성
+// (current+3=타겟, current+2/+1, current=현재, current-1/-2). HTML 하드코딩은 fallback.
+function populateWeekFilter(currentWk){
+  const sel = document.getElementById('weekSel');
+  if (!sel || !currentWk) return;
+  const targetWk = currentWk + 3;
+  const ko = STATE.lang === 'ko';
+  const opts = [];
+  for (let dw = 3; dw >= -2; dw--) {
+    const w = currentWk + dw;
+    if (w < 1) continue;
+    const rng = weekRange(w);
+    let label = `W${String(w).padStart(2,'0')} (${rng})`;
+    if (dw === 3)      label += ko ? ' — -3W 타겟' : ' — -3W Target';
+    else if (dw === 0) label += ko ? ' — 현재'     : ' — Current';
+    opts.push(`<option value="${w}"${w === targetWk ? ' selected' : ''}>${label}</option>`);
+  }
+  sel.innerHTML = opts.join('');
 }
 
 function populatePodFilter(){
