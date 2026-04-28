@@ -159,7 +159,7 @@ button,select,input{font-family:inherit;}
 .tbl td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);}
 .tbl tr:hover td{background:var(--surface2);}
 .tbl tr.clickable{cursor:pointer;}
-.tbl-num{text-align:right;font-variant-numeric:tabular-nums;}
+.tbl-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .tbl-sm{font-size:12px;}
 .tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;}
 .tag-szp{background:#06b6d420;color:var(--cyan);}
@@ -458,6 +458,7 @@ button,select,input{font-family:inherit;}
             <tr>
               <th>Sales</th>
               <th class="tbl-num">-3W BKG TEU</th>
+              <th class="tbl-num" data-i18n="colShare" title="현재 필터(Area·Route 등) 기준 -3W BKG TEU 합계 대비 영업사원별 비율">기여도</th>
               <th class="tbl-num" data-i18n="colDodDelta" title="전일 스냅샷 대비 -3W BKG TEU 증감">Δ 전일</th>
               <th class="tbl-num" data-i18n="colWowDelta" title="전주 동시점 대비 -3W BKG TEU 증감">Δ 전주</th>
               <th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th>
@@ -968,6 +969,7 @@ const I18N = {
                     en:'-3W Performance by Route (current vs last week)'},
   colVsLastWk:     {ko:'전주 대비',                          en:'vs Last Week'},
   colShippedShort: {ko:'실선적 TEU',                         en:'Shipped TEU'},
+  colShare:        {ko:'기여도',                             en:'Share'},
   colDodDelta:     {ko:'Δ 전일',                             en:'Δ vs prev day'},
   colWowDelta:     {ko:'Δ 전주',                             en:'Δ vs prev week'},
   salDodTitle:     {ko:'일간 추이 — 전일대비 -3W BKG TEU 증감 (최근 7일)',
@@ -1826,7 +1828,8 @@ const AGG = {
       });
   },
 
-  // 전일 스냅샷(prev.rows)에서 현재 state 필터와 동일 조건으로 sal별 w3_fst 집계 (DoD 비교용)
+  // prev snapshot 에서 현재 state 필터와 동일 조건으로 sal별 w3_fst 집계 (DoD/WoW 비교용).
+  // 비교 주차는 prev 시점의 동일 -NW stage 로 보정 (예: 오늘 cw=16, prev cw=15 → state.week=W19 → prev 의 W18).
   salesFstPrev(state, prev){
     if (!prev || !Array.isArray(prev.rows) || !prev.rows.length) return {};
     const pI = (prev.rows_schema || []).reduce((m,k,i)=>(m[k]=i,m), {});
@@ -1837,6 +1840,10 @@ const AGG = {
     const salSel  = state.sales;
     const gm = prev.shipper_grades || {};
     const pm = prev.shipper_profit || {};
+    const curCw  = DATA.current_week || null;
+    const prevCw = prev.current_week || null;
+    const offset = (curCw != null && prevCw != null) ? (curCw - prevCw) : 0;
+    const targetWk = state.week != null ? state.week - offset : null;
     const out = {};
     prev.rows.forEach(r => {
       if (area !== 'ALL' && r[pI.area] !== area) return;
@@ -1845,7 +1852,8 @@ const AGG = {
       if (salSel && salSel !== 'all' && r[pI.sal] !== salSel) return;
       if (state.grade && state.grade !== 'all' && gm[r[pI.shpr]] !== state.grade) return;
       if (state.profit && state.profit !== 'all' && pm[r[pI.shpr]] !== state.profit) return;
-      if (state.week != null && r[pI.wk] !== state.week) return;
+      if (state.team && state.team !== 'all' && pI.team != null && (r[pI.team] || 'OBT') !== state.team) return;
+      if (targetWk != null && r[pI.wk] !== targetWk) return;
       const s = r[pI.sal]; if (!s || s === '-') return;
       out[s] = (out[s] || 0) + (r[pI.w3_fst] || 0);
     });
@@ -2194,7 +2202,7 @@ const RENDER = {
     const rows = (DATA_API.salesTable(STATE) || [])
       .filter(r => { const fstTeu = r[6] || 0; const lstTeu = r[2] || 0; return fstTeu > 0 || lstTeu > 0; });
     if(!rows || !rows.length){
-      tbody.innerHTML = `<tr><td colspan="6" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
       return;
     }
     const prevDayMap = DATA_API.salesFstPrev(STATE, DATA._prevDay || null);
@@ -2228,9 +2236,12 @@ const RENDER = {
       const fulCls = fulfill >= 85 ? 'text-good' : (fulfill < 70 ? 'text-danger' : '');
       const dodHtml = deltaCell(fstTeu, prevDayMap[name] || 0, hasPrevDay);
       const wowHtml = deltaCell(fstTeu, prevWeekMap[name] || 0, hasPrevWeek);
+      const share = tFst > 0 ? (fstTeu / tFst * 100) : 0;
+      const shareTxt = share >= 10 ? share.toFixed(0) : share.toFixed(1);
       return `<tr class="clickable" onclick="openSales('${name}','${area}')">
         <td>${name} <span class="tag tag-${area.toLowerCase()}">${area}</span></td>
         <td class="tbl-num">${fstTeu.toLocaleString()}</td>
+        <td class="tbl-num">${shareTxt}%</td>
         <td class="tbl-num">${dodHtml}</td>
         <td class="tbl-num">${wowHtml}</td>
         <td class="tbl-num">${Math.round(lstTeu).toLocaleString()}</td>
@@ -2240,6 +2251,7 @@ const RENDER = {
     const totalRow = `<tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border);">
         <td data-i18n="totalLabel">총계 (${rows.length}명)</td>
         <td class="tbl-num">${Math.round(tFst).toLocaleString()}</td>
+        <td class="tbl-num">100%</td>
         <td class="tbl-num">${tDodHtml}</td>
         <td class="tbl-num">${tWowHtml}</td>
         <td class="tbl-num">${Math.round(tLst).toLocaleString()}</td>
