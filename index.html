@@ -161,6 +161,9 @@ button,select,input{font-family:inherit;}
 .tbl tr.clickable{cursor:pointer;}
 .tbl-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .tbl-sm{font-size:12px;}
+/* 영업사원 실적 표 — 헤더/값 모두 가운데 정렬, 컬럼 너비 통일 */
+.tbl-perf{table-layout:fixed;}
+.tbl-perf th,.tbl-perf td{text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;padding:8px 6px;overflow:hidden;text-overflow:ellipsis;}
 .tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;}
 .tag-szp{background:#06b6d420;color:var(--cyan);}
 .tag-can{background:#8b5cf620;color:var(--purple);}
@@ -453,16 +456,27 @@ button,select,input{font-family:inherit;}
             <div class="card-desc"><span id="salesPerfDescWeek">—</span> <span data-i18n="salesPerfDescBase">— 현재 필터 기준 · Row 클릭 → 구간별 상세</span></div>
           </div>
         </div>
-        <table class="tbl tbl-sm">
+        <table class="tbl tbl-sm tbl-perf">
+          <colgroup>
+            <col style="width:16%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:12%">
+          </colgroup>
           <thead>
             <tr>
               <th>Sales</th>
-              <th class="tbl-num">-3W BKG TEU</th>
-              <th class="tbl-num" data-i18n="colShare" title="현재 필터(Area·Route 등) 기준 -3W BKG TEU 합계 대비 영업사원별 비율">기여도</th>
-              <th class="tbl-num" data-i18n="colDodDelta" title="전일 스냅샷 대비 -3W BKG TEU 증감">Δ 전일</th>
-              <th class="tbl-num" data-i18n="colWowDelta" title="전주 동시점 대비 -3W BKG TEU 증감">Δ 전주</th>
-              <th class="tbl-num" data-i18n="colShippedShort">실선적 TEU</th>
-              <th class="tbl-num" data-i18n="colFulfillRate">실선적률</th>
+              <th>-3W BKG TEU</th>
+              <th data-i18n="colShare" title="현재 필터(Area·Route 등) 기준 -3W BKG TEU 합계 대비 영업사원별 비율">기여도</th>
+              <th data-i18n="colW3Bsa" title="-3W BKG TEU ÷ 현재 필터의 BSA 합계 × 100. 영업사원의 선복 채움 기여도(절대 척도)">3주전 BKG/BSA</th>
+              <th data-i18n="colDodDelta" title="전일 스냅샷 대비 -3W BKG TEU 증감">전일 대비</th>
+              <th data-i18n="colWowDelta" title="전주 동시점(동일 -NW stage) 대비 -3W BKG TEU 증감">전주 동기 대비</th>
+              <th data-i18n="colShippedShort">실선적 TEU</th>
+              <th data-i18n="colFulfillRate">실선적률</th>
             </tr>
           </thead>
           <tbody id="salesPerfBody"></tbody>
@@ -970,8 +984,9 @@ const I18N = {
   colVsLastWk:     {ko:'전주 대비',                          en:'vs Last Week'},
   colShippedShort: {ko:'실선적 TEU',                         en:'Shipped TEU'},
   colShare:        {ko:'기여도',                             en:'Share'},
-  colDodDelta:     {ko:'Δ 전일',                             en:'Δ vs prev day'},
-  colWowDelta:     {ko:'Δ 전주',                             en:'Δ vs prev week'},
+  colW3Bsa:        {ko:'3주전 BKG/BSA',                      en:'-3W BKG/BSA'},
+  colDodDelta:     {ko:'전일 대비',                          en:'vs prev day'},
+  colWowDelta:     {ko:'전주 동기 대비',                      en:'vs same WoW stage'},
   salDodTitle:     {ko:'일간 추이 — 전일대비 -3W BKG TEU 증감 (최근 7일)',
                     en:'Daily trend — DoD Δ in -3W BKG TEU (last 7 days)'},
   profitHigh:      {ko:'고수익',                             en:'High-profit'},
@@ -2202,11 +2217,16 @@ const RENDER = {
     const rows = (DATA_API.salesTable(STATE) || [])
       .filter(r => { const fstTeu = r[6] || 0; const lstTeu = r[2] || 0; return fstTeu > 0 || lstTeu > 0; });
     if(!rows || !rows.length){
-      tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
       return;
     }
     const prevDayMap = DATA_API.salesFstPrev(STATE, DATA._prevDay || null);
     const prevWeekMap = DATA_API.salesFstPrev(STATE, DATA._prev || null);
+    // BSA 분모 — region 선택 시 매핑된 POL 그룹으로 보정 (kpis 와 동일 규칙)
+    const _bsaPol = (STATE.region && STATE.region !== 'ALL')
+      ? (CONFIG.AREA_TO_POL[STATE.region] || STATE.pol)
+      : STATE.pol;
+    const totalBsa = AGG.bsaForWeek({...STATE, pol: _bsaPol}) || 0;
     const hasPrevDay = DATA._prevDay != null;
     const hasPrevWeek = DATA._prev != null;
     const deltaCell = (curr, prev, has) => {
@@ -2231,31 +2251,37 @@ const RENDER = {
     const tFulCls = tFul >= 85 ? 'text-good' : (tFul < 70 ? 'text-danger' : '');
     const tDodHtml = deltaCell(tFst, tPrevDay,  hasPrevDay);
     const tWowHtml = deltaCell(tFst, tPrevWeek, hasPrevWeek);
+    const fmtPct = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
     const dataRows = rows.map(r=>{
       const [name, area, lstTeu, fulfill, _cancel, _score, fstTeu] = r;
       const fulCls = fulfill >= 85 ? 'text-good' : (fulfill < 70 ? 'text-danger' : '');
       const dodHtml = deltaCell(fstTeu, prevDayMap[name] || 0, hasPrevDay);
       const wowHtml = deltaCell(fstTeu, prevWeekMap[name] || 0, hasPrevWeek);
       const share = tFst > 0 ? (fstTeu / tFst * 100) : 0;
-      const shareTxt = share >= 10 ? share.toFixed(0) : share.toFixed(1);
+      const bsaPct = totalBsa > 0 ? (fstTeu / totalBsa * 100) : null;
+      const bsaTxt = bsaPct == null ? '<span class="muted">—</span>' : `${fmtPct(bsaPct)}%`;
       return `<tr class="clickable" onclick="openSales('${name}','${area}')">
         <td>${name} <span class="tag tag-${area.toLowerCase()}">${area}</span></td>
-        <td class="tbl-num">${fstTeu.toLocaleString()}</td>
-        <td class="tbl-num">${shareTxt}%</td>
-        <td class="tbl-num">${dodHtml}</td>
-        <td class="tbl-num">${wowHtml}</td>
-        <td class="tbl-num">${Math.round(lstTeu).toLocaleString()}</td>
-        <td class="tbl-num ${fulCls}">${fulfill}%</td>
+        <td>${fstTeu.toLocaleString()}</td>
+        <td>${fmtPct(share)}%</td>
+        <td>${bsaTxt}</td>
+        <td>${dodHtml}</td>
+        <td>${wowHtml}</td>
+        <td>${Math.round(lstTeu).toLocaleString()}</td>
+        <td class="${fulCls}">${fulfill}%</td>
       </tr>`;
     }).join('');
+    const tBsaPct = totalBsa > 0 ? (tFst / totalBsa * 100) : null;
+    const tBsaTxt = tBsaPct == null ? '<span class="muted">—</span>' : `${fmtPct(tBsaPct)}%`;
     const totalRow = `<tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border);">
         <td data-i18n="totalLabel">총계 (${rows.length}명)</td>
-        <td class="tbl-num">${Math.round(tFst).toLocaleString()}</td>
-        <td class="tbl-num">100%</td>
-        <td class="tbl-num">${tDodHtml}</td>
-        <td class="tbl-num">${tWowHtml}</td>
-        <td class="tbl-num">${Math.round(tLst).toLocaleString()}</td>
-        <td class="tbl-num ${tFulCls}">${tFul}%</td>
+        <td>${Math.round(tFst).toLocaleString()}</td>
+        <td>100%</td>
+        <td>${tBsaTxt}</td>
+        <td>${tDodHtml}</td>
+        <td>${tWowHtml}</td>
+        <td>${Math.round(tLst).toLocaleString()}</td>
+        <td class="${tFulCls}">${tFul}%</td>
       </tr>`;
     tbody.innerHTML = dataRows + totalRow;
   },
