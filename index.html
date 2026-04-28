@@ -459,24 +459,22 @@ button,select,input{font-family:inherit;}
         <table class="tbl tbl-sm tbl-perf">
           <colgroup>
             <col style="width:16%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:12%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:14%">
           </colgroup>
           <thead>
             <tr>
               <th>Sales</th>
               <th>-3W BKG TEU</th>
-              <th data-i18n="colShare" title="현재 필터(Area·Route 등) 기준 -3W BKG TEU 합계 대비 영업사원별 비율">기여도</th>
-              <th data-i18n="colW3Bsa" title="-3W BKG TEU ÷ 현재 필터의 BSA 합계 × 100. 영업사원의 선복 채움 기여도(절대 척도)">3주전 BKG/BSA</th>
               <th data-i18n="colDodDelta" title="전일 스냅샷 대비 -3W BKG TEU 증감">전일 대비</th>
               <th data-i18n="colWowDelta" title="전주 동시점(동일 -NW stage) 대비 -3W BKG TEU 증감">전주 동기 대비</th>
               <th data-i18n="colShippedShort">실선적 TEU</th>
               <th data-i18n="colFulfillRate">실선적률</th>
+              <th data-i18n="colShare" title="현재 필터(Area·Route 등) 기준 -3W BKG TEU 합계 대비 영업사원별 비율">기여도</th>
             </tr>
           </thead>
           <tbody id="salesPerfBody"></tbody>
@@ -984,7 +982,6 @@ const I18N = {
   colVsLastWk:     {ko:'전주 대비',                          en:'vs Last Week'},
   colShippedShort: {ko:'실선적 TEU',                         en:'Shipped TEU'},
   colShare:        {ko:'기여도',                             en:'Share'},
-  colW3Bsa:        {ko:'3주전 BKG/BSA',                      en:'-3W BKG/BSA'},
   colDodDelta:     {ko:'전일 대비',                          en:'vs prev day'},
   colWowDelta:     {ko:'전주 동기 대비',                      en:'vs same WoW stage'},
   salDodTitle:     {ko:'일간 추이 — 전일대비 -3W BKG TEU 증감 (최근 7일)',
@@ -2217,16 +2214,11 @@ const RENDER = {
     const rows = (DATA_API.salesTable(STATE) || [])
       .filter(r => { const fstTeu = r[6] || 0; const lstTeu = r[2] || 0; return fstTeu > 0 || lstTeu > 0; });
     if(!rows || !rows.length){
-      tbody.innerHTML = `<tr><td colspan="8" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
       return;
     }
     const prevDayMap = DATA_API.salesFstPrev(STATE, DATA._prevDay || null);
     const prevWeekMap = DATA_API.salesFstPrev(STATE, DATA._prev || null);
-    // BSA 분모 — region 선택 시 매핑된 POL 그룹으로 보정 (kpis 와 동일 규칙)
-    const _bsaPol = (STATE.region && STATE.region !== 'ALL')
-      ? (CONFIG.AREA_TO_POL[STATE.region] || STATE.pol)
-      : STATE.pol;
-    const totalBsa = AGG.bsaForWeek({...STATE, pol: _bsaPol}) || 0;
     const hasPrevDay = DATA._prevDay != null;
     const hasPrevWeek = DATA._prev != null;
     const deltaCell = (curr, prev, has) => {
@@ -2258,30 +2250,24 @@ const RENDER = {
       const dodHtml = deltaCell(fstTeu, prevDayMap[name] || 0, hasPrevDay);
       const wowHtml = deltaCell(fstTeu, prevWeekMap[name] || 0, hasPrevWeek);
       const share = tFst > 0 ? (fstTeu / tFst * 100) : 0;
-      const bsaPct = totalBsa > 0 ? (fstTeu / totalBsa * 100) : null;
-      const bsaTxt = bsaPct == null ? '<span class="muted">—</span>' : `${fmtPct(bsaPct)}%`;
       return `<tr class="clickable" onclick="openSales('${name}','${area}')">
         <td>${name} <span class="tag tag-${area.toLowerCase()}">${area}</span></td>
         <td>${fstTeu.toLocaleString()}</td>
-        <td>${fmtPct(share)}%</td>
-        <td>${bsaTxt}</td>
         <td>${dodHtml}</td>
         <td>${wowHtml}</td>
         <td>${Math.round(lstTeu).toLocaleString()}</td>
         <td class="${fulCls}">${fulfill}%</td>
+        <td>${fmtPct(share)}%</td>
       </tr>`;
     }).join('');
-    const tBsaPct = totalBsa > 0 ? (tFst / totalBsa * 100) : null;
-    const tBsaTxt = tBsaPct == null ? '<span class="muted">—</span>' : `${fmtPct(tBsaPct)}%`;
     const totalRow = `<tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border);">
         <td data-i18n="totalLabel">총계 (${rows.length}명)</td>
         <td>${Math.round(tFst).toLocaleString()}</td>
-        <td>100%</td>
-        <td>${tBsaTxt}</td>
         <td>${tDodHtml}</td>
         <td>${tWowHtml}</td>
         <td>${Math.round(tLst).toLocaleString()}</td>
         <td class="${tFulCls}">${tFul}%</td>
+        <td>100%</td>
       </tr>`;
     tbody.innerHTML = dataRows + totalRow;
   },
