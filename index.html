@@ -1522,11 +1522,10 @@ function setViewMode(mode){
   const moG = document.getElementById('monthGroup');
   if (wkG) wkG.style.display = mode === 'week'  ? '' : 'none';
   if (moG) moG.style.display = mode === 'month' ? '' : 'none';
-  // 월간 모드 진입 시 month 동기화 (없으면 현재 주차 → 월)
+  // 월간 모드 진입 시 month 동기화 — default 는 -3W 타겟이 속한 월 (weekly 와 동일 기준)
   if (mode === 'month') {
-    if (!STATE.month) {
-      STATE.month = STATE.week ? weekToMonth(STATE.week)
-                  : (DATA.current_week ? weekToMonth(DATA.current_week) : null);
+    if (!STATE.month && DATA.current_week) {
+      STATE.month = weekToMonth(DATA.current_week + 3);
     }
     const ms = document.getElementById('monthSel');
     if (ms && STATE.month) ms.value = String(STATE.month);
@@ -1557,23 +1556,26 @@ function toggleWeeklyOnlySections(showWeekly){
   }
 }
 
-// Month 셀렉터 채우기 — current_week 가 속한 월 ±3개월 (총 7개월)
+// Month 셀렉터 채우기 — default 는 -3W 타겟이 속한 월 (weekly 셀렉터의 default 와 일관성).
+// 옵션 범위는 그 타겟월 ±3개월 (총 7개월).
 function populateMonthFilter(currentWk){
   const sel = document.getElementById('monthSel');
   if (!sel || !currentWk) return;
-  const curMonth = weekToMonth(currentWk);
+  const targetMonth = weekToMonth(currentWk + 3);
+  const curMonth    = weekToMonth(currentWk);
   const ko = STATE.lang === 'ko';
   const monNames = ko
     ? ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
     : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const opts = [];
-  for (let m = Math.max(1, curMonth - 3); m <= Math.min(12, curMonth + 3); m++) {
+  for (let m = Math.max(1, targetMonth - 3); m <= Math.min(12, targetMonth + 3); m++) {
     let lbl = monNames[m - 1];
-    if (m === curMonth) lbl += ko ? ' — 현재' : ' — Current';
-    opts.push(`<option value="${m}"${m === curMonth ? ' selected' : ''}>${lbl}</option>`);
+    if (m === targetMonth)  lbl += ko ? ' — -3W 타겟' : ' — -3W Target';
+    else if (m === curMonth) lbl += ko ? ' — 현재'    : ' — Current';
+    opts.push(`<option value="${m}"${m === targetMonth ? ' selected' : ''}>${lbl}</option>`);
   }
   sel.innerHTML = opts.join('');
-  if (!STATE.month) STATE.month = curMonth;
+  if (!STATE.month) STATE.month = targetMonth;
 }
 
 // Week 드롭다운을 snapshot 의 current_week 기준으로 동적 구성
