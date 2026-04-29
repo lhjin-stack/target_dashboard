@@ -2123,6 +2123,20 @@ const AGG = {
   },
 
   // ───────────────────────── Monthly aggregations ────────────────────────
+  // row.mon 은 'YYYY-MM' string (예: '2026-04') 또는 number(1~12) 형태로 들어옴.
+  // 여기서는 모두 number 1~12 로 통일해 비교한다.
+  _monNum(v){
+    if (v == null) return null;
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string') {
+      const m = v.match(/-(\d{1,2})$/);
+      if (m) return parseInt(m[1], 10);
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  },
+
   // _filter() 와 동일한 필터 정책이지만 wk → mon 으로 치환. 월간 모드는 한 달의 모든 주차를 합산.
   _filterMonth(state, opts = {}){
     const I = this.IDX;
@@ -2145,8 +2159,10 @@ const AGG = {
     }
     if (!opts.skipTeam && state.team && state.team !== 'all')
       rs = rs.filter(r => (r[I.team] || 'OBT') === state.team);
-    if (!opts.skipMonth && state.month != null)
-      rs = rs.filter(r => r[I.mon] === state.month);
+    if (!opts.skipMonth && state.month != null) {
+      const m = state.month;
+      rs = rs.filter(r => this._monNum(r[I.mon]) === m);
+    }
     return rs;
   },
 
@@ -2203,7 +2219,8 @@ const AGG = {
     // rows: month-bucket 합산
     const g = {};
     this._filterMonth(state, {skipMonth:true}).forEach(r => {
-      const m = r[I.mon];
+      const m = this._monNum(r[I.mon]);
+      if (m == null) return;
       if (!g[m]) g[m] = {w3_fst:0, w3_lst:0, lst_all:0};
       g[m].w3_fst  += r[I.w3_fst]  || 0;
       g[m].w3_lst  += r[I.w3_lst]  || 0;
@@ -2250,14 +2267,16 @@ const AGG = {
     const I = this.IDX;
     const mon = state.month;
     if (mon == null) return {labels:[], cumBkg:[], target:null};
-    // 해당 월에 속한 주차들 — 445 캘린더의 weekToMonth 와 일치하는 주차만
-    const weeks = [];
-    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === mon) weeks.push(w);
+    // 해당 월에 속한 주차들 — row.mon 기준 unique wk
     const byWk = {};
+    const wkSet = new Set();
     this._filterMonth(state).forEach(r => {
       const w = r[I.wk];
+      wkSet.add(w);
       byWk[w] = (byWk[w] || 0) + (r[I.w3_fst] || 0);
     });
+    const weeks = [...wkSet].sort((a,b) => a - b);
+    if (!weeks.length) return {labels:[], cumBkg:[], target:null};
     let acc = 0;
     const cum = weeks.map(w => { acc += (byWk[w] || 0); return +acc.toFixed(1); });
     // 목표 라인 — 월 BSA × 목표% (lookupTarget 사용 시 weekly 우선이라 monthly 만 직접 조회)
@@ -2290,16 +2309,17 @@ const AGG = {
     const mon = state.month;
     const cw = DATA.current_week || null;
     if (mon == null || cw == null) return null;
-    // 해당 월에 속한 주차들
-    const monWeeks = [];
-    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === mon) monWeeks.push(w);
-    if (!monWeeks.length) return null;
+    // 해당 월에 속한 주차들 — row.mon 기준 unique wk
     const byWkBkg = {}, byWkLst = {};
+    const wkSet = new Set();
     this._filterMonth(state).forEach(r => {
       const w = r[I.wk];
+      wkSet.add(w);
       byWkBkg[w] = (byWkBkg[w] || 0) + (r[I.w3_fst] || 0);
       byWkLst[w] = (byWkLst[w] || 0) + (r[I.lst_all] || 0);
     });
+    const monWeeks = [...wkSet].sort((a,b) => a - b);
+    if (!monWeeks.length) return null;
     // 최근 4주 BKG 평균 (해당 월 외 — 현재주~3주전, skipMonth=true 로 전체에서 추출)
     const recentBkg = {};
     this._filterMonth(state, {skipMonth:true}).forEach(r => {
@@ -2333,8 +2353,8 @@ const AGG = {
     const cell = {};   // 'mon|pod' -> teu
     const podTot = {}; // pod -> total teu (랭킹용)
     this._filterMonth(state, {skipMonth:true, skipPod:true}).forEach(r => {
-      const m = r[I.mon];
-      if (!months.includes(m)) return;
+      const m = this._monNum(r[I.mon]);
+      if (m == null || !months.includes(m)) return;
       const p = r[I.pod] || '-';
       const v = r[I.w3_fst] || 0;
       cell[m+'|'+p] = (cell[m+'|'+p] || 0) + v;
@@ -2395,6 +2415,14 @@ const AGG = {
       });
   },
 
+  // row.mon 으로 월별 unique 주차 추출 (필터 적용)
+  _weeksOfMonth(state, mon){
+    const I = this.IDX;
+    const ws = new Set();
+    this._filterMonth({...state, month: mon}).forEach(r => ws.add(r[I.wk]));
+    return [...ws].sort((a,b) => a - b);
+  },
+
   // 영업사원별 전월 동기 누적 BKG — 월간 Sales Perf 표 MoM 비교용
   prevMonthSalesMtd(state){
     if (!this._hasRows()) return {};
@@ -2402,44 +2430,37 @@ const AGG = {
     const cw  = DATA.current_week || null;
     if (mon == null || mon <= 1 || cw == null) return {};
     const I = this.IDX;
-    const thisMonWeeks = [];
-    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === mon) thisMonWeeks.push(w);
+    const thisMonWeeks = this._weeksOfMonth(state, mon);
     const elapsed = thisMonWeeks.filter(w => w <= cw).length;
     if (elapsed <= 0) return {};
-    const prevMonWeeks = [];
-    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === (mon - 1)) prevMonWeeks.push(w);
-    const window = new Set(prevMonWeeks.slice(0, elapsed));
-    const prevState = {...state, month: mon - 1};
+    const prevMonWeeks = this._weeksOfMonth(state, mon - 1);
+    if (!prevMonWeeks.length) return {};
+    const win = new Set(prevMonWeeks.slice(0, elapsed));
     const out = {};
-    this._filterMonth(prevState).forEach(r => {
-      if (!window.has(r[I.wk])) return;
+    this._filterMonth({...state, month: mon - 1}).forEach(r => {
+      if (!win.has(r[I.wk])) return;
       const s = r[I.sal]; if (!s || s === '-') return;
       out[s] = (out[s] || 0) + (r[I.w3_fst] || 0);
     });
     return out;
   },
 
-  // 전월의 동일 일자(month-day) 누적 BKG — 단순 비교용
-  // 데이터가 주차 단위라 "이번 달 시작~현재주차" / "전월 시작~현재주차-4(또는 -5)" 의 누적을 비교
+  // 전월 동시점 누적 BKG — 단순 비교용 (이번 달 진행 주차 수만큼 전월 누적)
   prevMonthMtd(state){
     if (!this._hasRows()) return null;
     const mon = state.month;
     const cw  = DATA.current_week || null;
     if (mon == null || mon <= 1 || cw == null) return null;
     const I = this.IDX;
-    // 전월의 같은 "월 내 진행도" — 이번달 진행 주차 수 만큼
-    const thisMonWeeks = [];
-    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === mon) thisMonWeeks.push(w);
+    const thisMonWeeks = this._weeksOfMonth(state, mon);
     const elapsed = thisMonWeeks.filter(w => w <= cw).length;
     if (elapsed <= 0) return null;
-    const prevMonWeeks = [];
-    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === (mon - 1)) prevMonWeeks.push(w);
-    const prevWindow = prevMonWeeks.slice(0, elapsed);
-    if (!prevWindow.length) return null;
-    const prevState = {...state, month: mon - 1};
+    const prevMonWeeks = this._weeksOfMonth(state, mon - 1);
+    if (!prevMonWeeks.length) return null;
+    const prevWindow = new Set(prevMonWeeks.slice(0, elapsed));
     let prevTeu = 0;
-    this._filterMonth(prevState, {skipMonth:false}).forEach(r => {
-      if (prevWindow.includes(r[I.wk])) prevTeu += r[I.w3_fst] || 0;
+    this._filterMonth({...state, month: mon - 1}).forEach(r => {
+      if (prevWindow.has(r[I.wk])) prevTeu += r[I.w3_fst] || 0;
     });
     return +prevTeu.toFixed(1);
   }
@@ -3026,7 +3047,7 @@ const RENDER = {
       const podSet = new Set(STATE.pod || []);
       const teamSel = STATE.team;
       DATA.rows.forEach(r => {
-        if (r[I.mon] !== STATE.month) return;
+        if (AGG._monNum(r[I.mon]) !== STATE.month) return;
         if (polSet.size && !polSet.has(r[I.pol])) return;
         if (podSet.size && !podSet.has(r[I.pod])) return;
         if (teamSel && teamSel !== 'all' && (r[I.team] || 'OBT') !== teamSel) return;
