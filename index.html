@@ -69,6 +69,11 @@ button,select,input{font-family:inherit;}
 .f-multi-ctrl{display:flex;gap:4px;padding:0 4px 6px;border-bottom:1px solid var(--border);margin-bottom:4px;}
 .f-multi-mini{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer;font-weight:600;}
 .f-multi-mini:hover{border-color:var(--blue);color:var(--blue);}
+.view-toggle{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+.vt-btn{background:none;border:none;color:var(--text2);padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;border-right:1px solid var(--border);}
+.vt-btn:last-child{border-right:none;}
+.vt-btn:hover{color:var(--blue);}
+.vt-btn.active{background:var(--blue);color:#fff;}
 .week-info{margin-left:auto;font-size:12px;color:var(--text2);}
 .week-info b{color:var(--amber);}
 
@@ -271,12 +276,19 @@ button,select,input{font-family:inherit;}
 <!-- GLOBAL FILTER BAR -->
 <div class="filter-bar">
   <div class="f-group">
+    <span class="f-lbl" data-i18n="viewLbl">View</span>
+    <div class="view-toggle">
+      <button class="vt-btn active" data-mode="week" onclick="setViewMode('week')" data-i18n="viewWeek">주간</button>
+      <button class="vt-btn" data-mode="month" onclick="setViewMode('month')" data-i18n="viewMonth">월간</button>
+    </div>
+  </div>
+  <div class="f-group">
     <span class="f-lbl">Snapshot</span>
     <select class="f-sel" id="dateSel" onchange="changeSnapshotDate(this.value)">
       <option value="latest" selected data-i18n="latest">최신</option>
     </select>
   </div>
-  <div class="f-group">
+  <div class="f-group" id="weekGroup">
     <span class="f-lbl">Week</span>
     <select class="f-sel" id="weekSel" onchange="applyFilters()">
       <option value="19" selected data-i18n="wk19">W19 (5/10~5/16) — -3W Target</option>
@@ -285,6 +297,12 @@ button,select,input{font-family:inherit;}
       <option value="16" data-i18n="wk16">W16 (4/19~4/25) — Current</option>
       <option value="15">W15 (4/12~4/18)</option>
       <option value="14">W14 (4/05~4/11)</option>
+    </select>
+  </div>
+  <div class="f-group" id="monthGroup" style="display:none;">
+    <span class="f-lbl">Month</span>
+    <select class="f-sel" id="monthSel" onchange="applyFilters()">
+      <!-- populated by populateMonthFilter() -->
     </select>
   </div>
   <div class="f-group">
@@ -388,7 +406,7 @@ button,select,input{font-family:inherit;}
   <button class="rtab" onclick="switchRegion('HKG', this)">HKG <span class="rtab-badge">192 TEU</span></button>
 </nav>
 
-<!-- KPI CARDS: 매니저 전용 3개 (앞) + 팀 공통 5개 -->
+<!-- KPI CARDS — 주간 모드 (매니저 전용 3개 앞 + 팀 공통 5개) -->
 <div class="kpis" id="kpiCards">
   <div class="kpi" style="border-left:3px solid #f9ab00;">
     <div class="kpi-l" data-i18n="kpiGoal">🎯 목표 달성률</div>
@@ -435,12 +453,39 @@ button,select,input{font-family:inherit;}
   </div>
 </div>
 
+<!-- KPI CARDS — 월간 모드 (4개) -->
+<div class="kpis" id="kpiCardsMonth" style="display:none;">
+  <div class="kpi" style="border-left:3px solid #f9ab00;">
+    <div class="kpi-l" data-i18n="kpiMonAch">🎯 월 달성률</div>
+    <div class="kpi-v" id="kpi-mon-ach">—</div>
+    <div class="kpi-s" id="kpi-mon-ach-sub" style="color:var(--muted);font-size:11px;">—</div>
+    <span class="kpi-tt" data-i18n-title="kpiMonAchTt" title="">ⓘ</span>
+  </div>
+  <div class="kpi">
+    <div class="kpi-l" data-i18n="kpiMonBkg">월 누적 BKG</div>
+    <div class="kpi-v" id="kpi-mon-bkg" style="color:#6c5ce7;">—</div>
+    <div class="kpi-s" id="kpi-mon-bkg-sub" style="color:var(--muted);font-size:11px;">—</div>
+    <span class="kpi-tt" data-i18n-title="kpiMonBkgTt" title="">ⓘ</span>
+  </div>
+  <div class="kpi" style="border-left:3px solid #1d4ed8;">
+    <div class="kpi-l" data-i18n="kpiMonForecast">📊 월말 예상</div>
+    <div class="kpi-v" id="kpi-mon-forecast">—</div>
+    <div class="kpi-s" id="kpi-mon-forecast-sub" style="color:var(--muted);font-size:11px;">—</div>
+    <span class="kpi-tt" data-i18n-title="kpiMonForecastTt" title="">ⓘ</span>
+  </div>
+  <div class="kpi" style="border-left:3px solid #00b894;">
+    <div class="kpi-l" data-i18n="kpiMonMoM">📈 전월 동시점 대비</div>
+    <div class="kpi-v" id="kpi-mon-mom">—</div>
+    <div class="kpi-s" id="kpi-mon-mom-sub" style="color:var(--muted);font-size:11px;">—</div>
+    <span class="kpi-tt" data-i18n-title="kpiMonMoMTt" title="">ⓘ</span>
+  </div>
+</div>
+
 <!-- SUB NAV -->
 <nav class="sub-nav">
   <button class="snav-btn active" onclick="switchSub('overview', this)">📊 <span data-i18n="tabOverview">Overview</span></button>
   <button class="snav-btn" onclick="switchSub('target', this)">🎯 <span data-i18n="tabTarget">타겟 추출</span></button>
   <button class="snav-btn" onclick="switchSub('perf', this)">📈 <span data-i18n="tabPerf">실적 관리</span></button>
-  <button class="snav-btn" onclick="switchSub('raw', this)">📋 <span data-i18n="tabRaw">Raw</span></button>
 </nav>
 
 <!-- CONTENT -->
@@ -448,7 +493,8 @@ button,select,input{font-family:inherit;}
 
   <!-- OVERVIEW -->
   <div class="sub-panel active" id="sub-overview">
-    <div class="grid-2">
+    <!-- 주간 모드: Sales Perf + 5주 추이 -->
+    <div class="grid-2" id="weeklyOverviewTop">
       <div class="card">
         <div class="card-hdr">
           <div>
@@ -489,6 +535,62 @@ button,select,input{font-family:inherit;}
         </div>
         <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
       </div>
+    </div>
+
+    <!-- 월간 모드: 월별 BKG 추이 + 월간 누적 곡선 -->
+    <div class="grid-2" id="monthlyOverviewTop" style="display:none;">
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-ttl" data-i18n="monthlyTrendTitle">월별 BKG 추이 (6개월)</div>
+            <div class="card-desc" data-i18n="monthlyTrendDesc">-3W BKG TEU · 월간 BSA 대비 비중</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="monthlyTrendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-ttl" data-i18n="monCumTitle">월간 누적 — 일자별 진척</div>
+            <div class="card-desc" data-i18n="monCumDesc">주차별 누적 BKG vs 월간 목표 라인</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="monthlyCumChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 월간 모드: POD별 월별 추이 -->
+    <div class="card mt-sm" id="monthlyPodTrendCard" style="display:none;">
+      <div class="card-hdr">
+        <div>
+          <div class="card-ttl" data-i18n="monPodTrendTitle">POD별 월별 BKG 추이 (6개월)</div>
+          <div class="card-desc" data-i18n="monPodTrendDesc">-3W BKG TEU · 상위 POD stack · 그 외 = 기타</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="monthlyPodTrendChart"></canvas></div>
+    </div>
+
+    <!-- 월간 모드: Sales Performance (월누적) -->
+    <div class="card mt-sm" id="monthlySalesPerfCard" style="display:none;">
+      <div class="card-hdr">
+        <div>
+          <div class="card-ttl" data-i18n="salesPerfMon">Sales Performance (월 누적)</div>
+          <div class="card-desc"><span id="salesPerfMonDescMonth">—</span> <span data-i18n="salesPerfDescBase">— 현재 필터 기준</span></div>
+        </div>
+      </div>
+      <table class="tbl tbl-sm tbl-perf">
+        <thead>
+          <tr>
+            <th>Sales</th>
+            <th data-i18n="colMtdBkg">월누적 BKG TEU</th>
+            <th data-i18n="colMomDelta">전월 동기 대비</th>
+            <th data-i18n="colMtdShipped">월누적 실선적</th>
+            <th data-i18n="colFulfillRate">실선적률</th>
+            <th data-i18n="colShare">기여도</th>
+          </tr>
+        </thead>
+        <tbody id="salesPerfMonBody"></tbody>
+      </table>
     </div>
 
     <div class="grid-2 mt-sm">
@@ -612,32 +714,6 @@ button,select,input{font-family:inherit;}
     </div>
   </div>
 
-  <!-- RAW -->
-  <div class="sub-panel" id="sub-raw">
-    <div class="card">
-      <div class="card-hdr">
-        <div>
-          <div class="card-ttl" data-i18n="rawTitle">Raw Booking Data</div>
-          <div class="card-desc" data-i18n="rawDesc">현재 필터 반영 · Excel 다운로드</div>
-        </div>
-        <div class="card-actions">
-          <button class="btn-sm btn-primary">📥 Excel</button>
-        </div>
-      </div>
-      <div class="card-desc" id="rawSummary" style="margin-bottom:8px;color:var(--muted);font-size:12px;">—</div>
-      <table class="tbl tbl-sm">
-        <thead>
-          <tr>
-            <th>Shipper</th><th>Sales</th><th>Area</th><th>POL</th><th>POD</th>
-            <th class="tbl-num">Week</th><th>Month</th>
-            <th class="tbl-num">-3W BKG TEU</th><th class="tbl-num" data-i18n="colShippedTeu">실선적 BKG TEU</th>
-            <th class="tbl-num" data-i18n="colFulfillRate">실선적률</th>
-          </tr>
-        </thead>
-        <tbody id="rawBody"></tbody>
-      </table>
-    </div>
-  </div>
 
 </div>
 
@@ -1030,6 +1106,37 @@ const I18N = {
   catDescC:        {ko:'고수익갭 — 고수익화주 + 이번주가 3M 평균의 70% 미만',
                     en:'Premium Gap — High-profit + this-week booking below 70% of 3M avg'},
   catDescD:        {ko:'관리대상 — 평균 대비 부킹 갭 발생',  en:'Watchlist — gap vs 3M average'},
+
+  // ── Monthly view ──
+  viewLbl:         {ko:'View',                               en:'View'},
+  viewWeek:        {ko:'주간',                               en:'Weekly'},
+  viewMonth:       {ko:'월간',                               en:'Monthly'},
+  monLabel:        {ko:'월 누적',                            en:'Month-to-date'},
+  monthCurrent:    {ko:'현재',                               en:'Current'},
+  kpiMonAch:       {ko:'🎯 월 달성률',                       en:'🎯 Monthly Goal Rate'},
+  kpiMonBkg:       {ko:'월 누적 BKG',                        en:'MTD BKG TEU'},
+  kpiMonForecast:  {ko:'📊 월말 예상',                       en:'📊 EoM Forecast'},
+  kpiMonMoM:       {ko:'📈 전월 동시점 대비',                en:'📈 vs Last Month MTD'},
+  kpiMonAchTt:     {ko:'월 누적 -3W BKG ÷ (월간 BSA × 목표%) × 100. 영역별 목표 미설정 시 BSA 대비 비중 표시',
+                    en:'MTD -3W BKG ÷ (Monthly BSA × Target%) × 100. Falls back to BKG/BSA share when target not set.'},
+  kpiMonBkgTt:     {ko:'선택 월의 -3W BKG TEU 합계 (모든 주차 합산, 현재 필터 기준)',
+                    en:'Sum of -3W BKG TEU for the selected month under current filters'},
+  kpiMonForecastTt:{ko:'확정(과거 주차 LST_TEU) + 진행중(현재 주차 -3W BKG) + 잔여 주차 × 최근 4주 평균 BKG',
+                    en:'Confirmed (past-week LST) + In-progress (current-week -3W BKG) + remaining weeks × last-4-week average BKG'},
+  kpiMonMoMTt:     {ko:'전월의 동일 일자(month-day) 누적 BKG 대비 증감. 단순 비교용',
+                    en:'Delta vs prior-month MTD at same day-of-month. Simple comparison.'},
+  monthlyTrendTitle:{ko:'월별 BKG 추이 (6개월)',             en:'Monthly BKG Trend (6 months)'},
+  monthlyTrendDesc:{ko:'-3W BKG TEU · 월간 BSA 대비 비중',   en:'-3W BKG TEU · share of monthly BSA'},
+  monCumTitle:     {ko:'월간 누적 — 일자별 진척',            en:'Month-to-Date Cumulative'},
+  monCumDesc:      {ko:'주차별 누적 BKG vs 월간 목표 라인',  en:'Weekly cumulative BKG vs monthly target line'},
+  monPodTrendTitle:{ko:'POD별 월별 BKG 추이 (6개월)',         en:'Monthly BKG Trend by POD (6 months)'},
+  monPodTrendDesc: {ko:'-3W BKG TEU · 상위 POD stack · 그 외 = 기타',
+                    en:'-3W BKG TEU · top PODs stacked · rest grouped as Other'},
+  salesPerfMon:    {ko:'Sales Performance (월 누적)',        en:'Sales Performance (MTD)'},
+  colMtdBkg:       {ko:'월누적 BKG TEU',                     en:'MTD BKG TEU'},
+  colMomDelta:     {ko:'전월 동기 대비',                     en:'vs Last Month MTD'},
+  colMtdShipped:   {ko:'월누적 실선적',                      en:'MTD Shipped'},
+  monAvgWk:        {ko:'주평균',                             en:'wk avg'},
 };
 function t(key){ const e = I18N[key]; return e ? (e[STATE.lang] || e.ko || key) : key; }
 function applyLang(){
@@ -1057,6 +1164,15 @@ function toggleLang(){
   STATE.lang = (STATE.lang === 'ko') ? 'en' : 'ko';
   localStorage.setItem('kmtc3w_lang', STATE.lang);
   applyLang();
+  // 동적 셀렉터 라벨도 새 언어로 재구성
+  if (DATA && DATA.current_week) {
+    populateWeekFilter(DATA.current_week);
+    populateMonthFilter(DATA.current_week);
+    const wsel = document.getElementById('weekSel');
+    if (wsel && STATE.week != null) wsel.value = String(STATE.week);
+    const msel = document.getElementById('monthSel');
+    if (msel && STATE.month != null) msel.value = String(STATE.month);
+  }
   RENDER.all();      // rerender dynamic content with new labels
   CHARTS.rebuild();  // chart labels are baked at creation; rebuild to relabel
 }
@@ -1074,18 +1190,20 @@ function toggleTheme(){
  *  All event handlers MUST mutate STATE (not DOM directly) and then call RENDER.all().
  */
 const STATE = {
-  lang:   localStorage.getItem('kmtc3w_lang') || 'ko',
-  week:   19,
-  area:   'ALL',
-  pol:    ['SHK','DCB','NNS','HUA','HKG'],
-  pod:    ['JP','TW','TH','VN','MY','SG','ID','PH','IN','PK','BD','LK','AE','SA','KW','QA','OM','BH','JO','EG'],
-  sales:  'all',
-  grade:  'all',
-  profit: 'all',
-  team:   'OBT',   // 기본 OBT(수출). IST(수입·KR향) / all(둘 다) 선택 가능
-  region: 'ALL',
-  sub:    'overview',
-  chartPod: null   // POD 차트 막대 클릭 시 하단 TOP30 화주 필터 (null=전체)
+  lang:     localStorage.getItem('kmtc3w_lang') || 'ko',
+  viewMode: 'week',   // 'week' | 'month' — 월간 토글 시 화면 전체가 월 단위로 재집계
+  week:     19,
+  month:    null,     // 1~12 — viewMode='month' 일 때 사용. populateMonthFilter 에서 세팅
+  area:     'ALL',
+  pol:      ['SHK','DCB','NNS','HUA','HKG'],
+  pod:      ['JP','TW','TH','VN','MY','SG','ID','PH','IN','PK','BD','LK','AE','SA','KW','QA','OM','BH','JO','EG'],
+  sales:    'all',
+  grade:    'all',
+  profit:   'all',
+  team:     'OBT',    // 기본 OBT(수출). IST(수입·KR향) / all(둘 다) 선택 가능
+  region:   'ALL',
+  sub:      'overview',
+  chartPod: null      // POD 차트 막대 클릭 시 하단 TOP30 화주 필터 (null=전체)
 };
 
 // ═════════════════════════════ 5. MOCK DATA ═══════════════════════════════
@@ -1357,6 +1475,7 @@ async function bootstrapData(dateOrLatest){
     if (s.current_week) {
       STATE.week = s.current_week + 3;
       populateWeekFilter(s.current_week);
+      populateMonthFilter(s.current_week);
     }
     // 헤더 "데이터: ..." 라벨을 snapshot generated_at 으로 갱신
     const dt = document.getElementById('dataTime');
@@ -1392,15 +1511,80 @@ async function bootstrapData(dateOrLatest){
   }
 }
 
+// View 토글 — 'week' (주간 단일 주차 뷰) ↔ 'month' (월 누적 뷰).
+// 월간 모드는 화면 전체를 월 단위로 재집계 — 화주 타겟·POD 점유율 등 주간 전용 카드는 숨김.
+function setViewMode(mode){
+  if (mode !== 'week' && mode !== 'month') return;
+  STATE.viewMode = mode;
+  document.querySelectorAll('.vt-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode));
+  const wkG = document.getElementById('weekGroup');
+  const moG = document.getElementById('monthGroup');
+  if (wkG) wkG.style.display = mode === 'week'  ? '' : 'none';
+  if (moG) moG.style.display = mode === 'month' ? '' : 'none';
+  // 월간 모드 진입 시 month 동기화 (없으면 현재 주차 → 월)
+  if (mode === 'month') {
+    if (!STATE.month) {
+      STATE.month = STATE.week ? weekToMonth(STATE.week)
+                  : (DATA.current_week ? weekToMonth(DATA.current_week) : null);
+    }
+    const ms = document.getElementById('monthSel');
+    if (ms && STATE.month) ms.value = String(STATE.month);
+  }
+  toggleWeeklyOnlySections(mode === 'week');
+  applyFilters();
+}
+
+// 주간 전용 섹션 표시/숨김 (월간 모드 진입 시 숨김 처리)
+//  - TOP30 화주 카드, POD 점유율 차트 페어, 타겟 추출 탭
+function toggleWeeklyOnlySections(showWeekly){
+  const disp = showWeekly ? '' : 'none';
+  const top30 = document.getElementById('shippersTop30Card');
+  if (top30) top30.style.display = disp;
+  // POD 차트 페어가 들어있는 grid-2 컨테이너
+  const podW3 = document.getElementById('podChartW3');
+  if (podW3) {
+    const podGrid = podW3.closest('.grid-2');
+    if (podGrid) podGrid.style.display = disp;
+  }
+  // 타겟 추출 sub-nav 탭 (월간 모드에서는 의미 없음)
+  const tgtBtn = document.querySelector('.snav-btn[onclick*="\'target\'"]');
+  if (tgtBtn) tgtBtn.style.display = disp;
+  // 월간 모드인데 타겟 탭에 있으면 overview 로 강제 전환
+  if (!showWeekly && STATE.sub === 'target') {
+    const ovBtn = document.querySelector('.snav-btn[onclick*="\'overview\'"]');
+    if (ovBtn) switchSub('overview', ovBtn);
+  }
+}
+
+// Month 셀렉터 채우기 — current_week 가 속한 월 ±3개월 (총 7개월)
+function populateMonthFilter(currentWk){
+  const sel = document.getElementById('monthSel');
+  if (!sel || !currentWk) return;
+  const curMonth = weekToMonth(currentWk);
+  const ko = STATE.lang === 'ko';
+  const monNames = ko
+    ? ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
+    : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const opts = [];
+  for (let m = Math.max(1, curMonth - 3); m <= Math.min(12, curMonth + 3); m++) {
+    let lbl = monNames[m - 1];
+    if (m === curMonth) lbl += ko ? ' — 현재' : ' — Current';
+    opts.push(`<option value="${m}"${m === curMonth ? ' selected' : ''}>${lbl}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  if (!STATE.month) STATE.month = curMonth;
+}
+
 // Week 드롭다운을 snapshot 의 current_week 기준으로 동적 구성
-// (current+3=타겟, current+2/+1, current=현재, current-1/-2). HTML 하드코딩은 fallback.
+// 범위: current+5 ~ current-2 (W21/W22 같은 더 먼 미래 주차도 포함). HTML 하드코딩은 fallback.
 function populateWeekFilter(currentWk){
   const sel = document.getElementById('weekSel');
   if (!sel || !currentWk) return;
   const targetWk = currentWk + 3;
   const ko = STATE.lang === 'ko';
   const opts = [];
-  for (let dw = 3; dw >= -2; dw--) {
+  for (let dw = 5; dw >= -2; dw--) {
     const w = currentWk + dw;
     if (w < 1) continue;
     const rng = weekRange(w);
@@ -1936,6 +2120,328 @@ const AGG = {
       fst: labels.map(k => +m[k].fst.toFixed(1)),
       lst: labels.map(k => +m[k].lst.toFixed(1))
     };
+  },
+
+  // ───────────────────────── Monthly aggregations ────────────────────────
+  // _filter() 와 동일한 필터 정책이지만 wk → mon 으로 치환. 월간 모드는 한 달의 모든 주차를 합산.
+  _filterMonth(state, opts = {}){
+    const I = this.IDX;
+    let rs = DATA.rows;
+    if (!opts.skipRegion && state.region && state.region !== 'ALL')
+      rs = rs.filter(r => r[I.area] === state.region);
+    if (!opts.skipPol && state.pol && state.pol.length)
+      rs = rs.filter(r => state.pol.includes(r[I.pol]));
+    if (!opts.skipPod && state.pod && state.pod.length)
+      rs = rs.filter(r => state.pod.includes(r[I.pod]));
+    if (!opts.skipSales && state.sales && state.sales !== 'all')
+      rs = rs.filter(r => r[I.sal] === state.sales);
+    if (!opts.skipGrade && state.grade && state.grade !== 'all') {
+      const gm = DATA.shipper_grades || {};
+      rs = rs.filter(r => gm[r[I.shpr]] === state.grade);
+    }
+    if (!opts.skipProfit && state.profit && state.profit !== 'all') {
+      const pm = DATA.shipper_profit || {};
+      rs = rs.filter(r => pm[r[I.shpr]] === state.profit);
+    }
+    if (!opts.skipTeam && state.team && state.team !== 'all')
+      rs = rs.filter(r => (r[I.team] || 'OBT') === state.team);
+    if (!opts.skipMonth && state.month != null)
+      rs = rs.filter(r => r[I.mon] === state.month);
+    return rs;
+  },
+
+  // BSA 합 (선택 월의 모든 주차) — wk → month 변환 후 집계
+  bsaForMonth(state){
+    const bsa = DATA.bsa;
+    if (!bsa || !Array.isArray(bsa.rows) || !bsa.rows.length) return 0;
+    const ix = this._bsaIx();
+    const mon = state.month;
+    const polSet = new Set(state.pol || []);
+    const podSet = new Set(state.pod || []);
+    const teamSel = state.team;
+    let teu = 0;
+    bsa.rows.forEach(r => {
+      if (mon != null && weekToMonth(r[ix.wk]) !== mon) return;
+      if (polSet.size && !polSet.has(r[ix.pol])) return;
+      if (podSet.size && !podSet.has(r[ix.pod])) return;
+      if (ix.team >= 0 && teamSel && teamSel !== 'all' && (r[ix.team] || 'OBT') !== teamSel) return;
+      teu += r[ix.bsa];
+    });
+    return teu;
+  },
+
+  // 월간 KPI — 선택 월 누적 BKG/실선적/Cancel
+  regionKpisMonth(state){
+    if (!this._hasRows()) return DATA.region[state.region] || DATA.region.ALL;
+    const area = state.region || 'ALL';
+    const I = this.IDX;
+    const rs = this._filterMonth(state).filter(r => area === 'ALL' || r[I.area] === area);
+    let fst_all=0, lst_all=0, w3_fst=0, w3_lst=0, cancel_fst=0;
+    rs.forEach(r => {
+      fst_all    += r[I.fst_all]    || 0;
+      w3_fst     += r[I.w3_fst]     || 0;
+      lst_all    += r[I.lst_all]    || 0;
+      w3_lst     += r[I.w3_lst]     || 0;
+      cancel_fst += r[I.fst_cancel] || 0;
+    });
+    return {
+      fst_all:    +fst_all.toFixed(1),
+      lst_all:    +lst_all.toFixed(1),
+      w3_fst:     +w3_fst.toFixed(1),
+      w3_lst:     +w3_lst.toFixed(1),
+      cancel_fst: +cancel_fst.toFixed(1),
+    };
+  },
+
+  // 월별 BKG/실선적 추이 (6M) — 막대 + BSA 비중 라인
+  monthlyTrend(state){
+    if (!this._hasRows()) return {labels:[], w3Fst:[], lstAll:[], bkgRatio:[], bsa:[]};
+    const I = this.IDX;
+    const cur = state.month || (DATA.current_week ? weekToMonth(DATA.current_week) : 4);
+    const months = [];
+    for (let i = cur - 5; i <= cur; i++) if (i >= 1 && i <= 12) months.push(i);
+    // rows: month-bucket 합산
+    const g = {};
+    this._filterMonth(state, {skipMonth:true}).forEach(r => {
+      const m = r[I.mon];
+      if (!g[m]) g[m] = {w3_fst:0, w3_lst:0, lst_all:0};
+      g[m].w3_fst  += r[I.w3_fst]  || 0;
+      g[m].w3_lst  += r[I.w3_lst]  || 0;
+      g[m].lst_all += r[I.lst_all] || 0;
+    });
+    // BSA: wk → month 변환 후 합산
+    const bsaByM = {};
+    const bsa = DATA.bsa;
+    if (bsa && Array.isArray(bsa.rows)) {
+      const ix = this._bsaIx();
+      let polSet = null;
+      if (state.pol && state.pol.length) polSet = new Set(state.pol);
+      else if (state.region && state.region !== 'ALL' && CONFIG.AREA_TO_POL[state.region])
+        polSet = new Set(CONFIG.AREA_TO_POL[state.region]);
+      const podSet = new Set(state.pod || []);
+      const teamSel = state.team;
+      bsa.rows.forEach(r => {
+        const m = weekToMonth(r[ix.wk]);
+        if (!months.includes(m)) return;
+        if (polSet && !polSet.has(r[ix.pol])) return;
+        if (podSet.size && !podSet.has(r[ix.pod])) return;
+        if (ix.team >= 0 && teamSel && teamSel !== 'all' && (r[ix.team] || 'OBT') !== teamSel) return;
+        bsaByM[m] = (bsaByM[m] || 0) + r[ix.bsa];
+      });
+    }
+    return {
+      labels:   months.map(m => `M${String(m).padStart(2,'0')}`),
+      w3Fst:    months.map(m => +((g[m]||{w3_fst:0}).w3_fst).toFixed(1)),
+      w3Lst:    months.map(m => +((g[m]||{w3_lst:0}).w3_lst).toFixed(1)),
+      lstAll:   months.map(m => +((g[m]||{lst_all:0}).lst_all).toFixed(1)),
+      bsa:      months.map(m => +((bsaByM[m]||0)).toFixed(1)),
+      bkgRatio: months.map(m => {
+        const x = g[m] || {w3_fst:0};
+        const b = bsaByM[m] || 0;
+        return b > 0 ? +(x.w3_fst/b*100).toFixed(1) : null;
+      })
+    };
+  },
+
+  // 선택 월의 주차별 누적 BKG (라인) — 월간 BSA × 목표% 가 있으면 목표 라인 동시 반환
+  // 데이터 단위가 주차이므로 일자 단위 대신 주차 단위 누적으로 표현
+  monthlyCumulative(state){
+    if (!this._hasRows()) return {labels:[], cumBkg:[], target:null};
+    const I = this.IDX;
+    const mon = state.month;
+    if (mon == null) return {labels:[], cumBkg:[], target:null};
+    // 해당 월에 속한 주차들 — 445 캘린더의 weekToMonth 와 일치하는 주차만
+    const weeks = [];
+    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === mon) weeks.push(w);
+    const byWk = {};
+    this._filterMonth(state).forEach(r => {
+      const w = r[I.wk];
+      byWk[w] = (byWk[w] || 0) + (r[I.w3_fst] || 0);
+    });
+    let acc = 0;
+    const cum = weeks.map(w => { acc += (byWk[w] || 0); return +acc.toFixed(1); });
+    // 목표 라인 — 월 BSA × 목표% (lookupTarget 사용 시 weekly 우선이라 monthly 만 직접 조회)
+    const cfg = DATA.targets_config;
+    const yr = String(new Date().getFullYear());
+    const moKey = `${yr}-${String(mon).padStart(2,'0')}`;
+    const area = state.region || 'ALL';
+    let targetTeu = null;
+    if (cfg && cfg.monthly && cfg.monthly[moKey] && cfg.monthly[moKey][area]) {
+      const podSel = state.pod || [];
+      const podKey = (podSel.length === 1) ? podSel[0] : 'ALL';
+      const entry = cfg.monthly[moKey][area];
+      const pct = entry[podKey] != null ? entry[podKey] : entry['ALL'];
+      if (pct != null) {
+        const monBsa = this.bsaForMonth(state);
+        if (monBsa > 0) targetTeu = monBsa * pct / 100;
+      }
+    }
+    return {
+      labels: weeks.map(w => `W${String(w).padStart(2,'0')}`),
+      cumBkg: cum,
+      target: targetTeu != null ? +targetTeu.toFixed(1) : null
+    };
+  },
+
+  // 월말 예상 BKG: 확정(과거 주차 LST_TEU) + 진행중(현재 주차 -3W BKG) + 잔여 주차 × 최근 4주 BKG 평균
+  forecastMonthEnd(state){
+    if (!this._hasRows()) return null;
+    const I = this.IDX;
+    const mon = state.month;
+    const cw = DATA.current_week || null;
+    if (mon == null || cw == null) return null;
+    // 해당 월에 속한 주차들
+    const monWeeks = [];
+    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === mon) monWeeks.push(w);
+    if (!monWeeks.length) return null;
+    const byWkBkg = {}, byWkLst = {};
+    this._filterMonth(state).forEach(r => {
+      const w = r[I.wk];
+      byWkBkg[w] = (byWkBkg[w] || 0) + (r[I.w3_fst] || 0);
+      byWkLst[w] = (byWkLst[w] || 0) + (r[I.lst_all] || 0);
+    });
+    // 최근 4주 BKG 평균 (해당 월 외 — 현재주~3주전, skipMonth=true 로 전체에서 추출)
+    const recentBkg = {};
+    this._filterMonth(state, {skipMonth:true}).forEach(r => {
+      const w = r[I.wk];
+      if (w >= cw - 3 && w <= cw) {
+        recentBkg[w] = (recentBkg[w] || 0) + (r[I.w3_fst] || 0);
+      }
+    });
+    const recentVals = Object.values(recentBkg);
+    const recentAvg = recentVals.length ? recentVals.reduce((a,b)=>a+b,0) / recentVals.length : 0;
+    // 합산: 과거주차는 LST 확정, 현재주차는 BKG, 미래주차는 잔여×평균
+    let est = 0;
+    monWeeks.forEach(w => {
+      if (w < cw)       est += (byWkLst[w] || 0);  // 과거 — 실선적 확정
+      else if (w === cw) est += (byWkBkg[w] || 0); // 현재 — -3W BKG
+      else              est += recentAvg;          // 미래 — 추정
+    });
+    return +est.toFixed(1);
+  },
+
+  // POD별 6개월 월별 BKG 추이 — stacked bar 용 데이터셋
+  //  windows: 선택 월 기준 -5 ~ 0 (총 6개월)
+  //  Top N(=8) POD 만 별도 dataset, 나머지는 '기타'로 합산
+  monthlyPodTrend(state, topN = 8){
+    if (!this._hasRows()) return {labels:[], pods:[], datasets:[]};
+    const I = this.IDX;
+    const cur = state.month || (DATA.current_week ? weekToMonth(DATA.current_week) : 4);
+    const months = [];
+    for (let i = cur - 5; i <= cur; i++) if (i >= 1 && i <= 12) months.push(i);
+    // grouping: month × pod → bkg TEU (skipMonth + skipPod 로 윈도우 내 모든 POD 모음)
+    const cell = {};   // 'mon|pod' -> teu
+    const podTot = {}; // pod -> total teu (랭킹용)
+    this._filterMonth(state, {skipMonth:true, skipPod:true}).forEach(r => {
+      const m = r[I.mon];
+      if (!months.includes(m)) return;
+      const p = r[I.pod] || '-';
+      const v = r[I.w3_fst] || 0;
+      cell[m+'|'+p] = (cell[m+'|'+p] || 0) + v;
+      podTot[p] = (podTot[p] || 0) + v;
+    });
+    const podRank = Object.entries(podTot).sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+    const topPods = podRank.slice(0, topN);
+    const otherPods = new Set(podRank.slice(topN));
+    // dataset 구성: Top POD 별 + '기타'
+    const palette = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#64748b'];
+    const datasets = topPods.map((p, i) => ({
+      label: p,
+      data: months.map(m => +(cell[m+'|'+p] || 0).toFixed(1)),
+      backgroundColor: palette[i % palette.length],
+      stack: 'pods'
+    }));
+    if (otherPods.size) {
+      datasets.push({
+        label: '기타',
+        data: months.map(m => {
+          let s = 0;
+          otherPods.forEach(p => { s += cell[m+'|'+p] || 0; });
+          return +s.toFixed(1);
+        }),
+        backgroundColor: '#cbd5e1',
+        stack: 'pods'
+      });
+    }
+    return {
+      labels: months.map(m => `M${String(m).padStart(2,'0')}`),
+      pods: topPods,
+      datasets
+    };
+  },
+
+  // 영업사원별 월누적 — [name, area, mtdLst, fulfill%, cancel%, score, mtdFst]
+  salesTableMonth(state){
+    if (!this._hasRows()) return DATA.salesTable;
+    const I = this.IDX;
+    const rs = this._filterMonth(state);
+    const agg = {}, areaLst = {};
+    rs.forEach(r => {
+      const s = r[I.sal]; if (!s || s === '-') return;
+      if (!agg[s]) agg[s] = {fst:0, lst:0, cancel_fst:0};
+      agg[s].fst += r[I.fst]; agg[s].lst += r[I.lst];
+      agg[s].cancel_fst += r[I.fst_cancel] || 0;
+      if (!areaLst[s]) areaLst[s] = {};
+      areaLst[s][r[I.area]] = (areaLst[s][r[I.area]] || 0) + r[I.lst];
+    });
+    return Object.entries(agg)
+      .sort((a,b) => b[1].lst - a[1].lst)
+      .map(([name, v]) => {
+        const mainArea = Object.entries(areaLst[name]).sort((a,b)=>b[1]-a[1])[0][0];
+        const fulfill = v.fst > 0 ? +(v.lst/v.fst*100).toFixed(1) : 0;
+        const cancel  = v.fst > 0 ? +(v.cancel_fst/v.fst*100).toFixed(1) : 0;
+        return [name, mainArea, Math.round(v.lst), fulfill, cancel,
+                Math.round(fulfill - cancel), Math.round(v.fst)];
+      });
+  },
+
+  // 영업사원별 전월 동기 누적 BKG — 월간 Sales Perf 표 MoM 비교용
+  prevMonthSalesMtd(state){
+    if (!this._hasRows()) return {};
+    const mon = state.month;
+    const cw  = DATA.current_week || null;
+    if (mon == null || mon <= 1 || cw == null) return {};
+    const I = this.IDX;
+    const thisMonWeeks = [];
+    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === mon) thisMonWeeks.push(w);
+    const elapsed = thisMonWeeks.filter(w => w <= cw).length;
+    if (elapsed <= 0) return {};
+    const prevMonWeeks = [];
+    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === (mon - 1)) prevMonWeeks.push(w);
+    const window = new Set(prevMonWeeks.slice(0, elapsed));
+    const prevState = {...state, month: mon - 1};
+    const out = {};
+    this._filterMonth(prevState).forEach(r => {
+      if (!window.has(r[I.wk])) return;
+      const s = r[I.sal]; if (!s || s === '-') return;
+      out[s] = (out[s] || 0) + (r[I.w3_fst] || 0);
+    });
+    return out;
+  },
+
+  // 전월의 동일 일자(month-day) 누적 BKG — 단순 비교용
+  // 데이터가 주차 단위라 "이번 달 시작~현재주차" / "전월 시작~현재주차-4(또는 -5)" 의 누적을 비교
+  prevMonthMtd(state){
+    if (!this._hasRows()) return null;
+    const mon = state.month;
+    const cw  = DATA.current_week || null;
+    if (mon == null || mon <= 1 || cw == null) return null;
+    const I = this.IDX;
+    // 전월의 같은 "월 내 진행도" — 이번달 진행 주차 수 만큼
+    const thisMonWeeks = [];
+    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === mon) thisMonWeeks.push(w);
+    const elapsed = thisMonWeeks.filter(w => w <= cw).length;
+    if (elapsed <= 0) return null;
+    const prevMonWeeks = [];
+    for (let w = 1; w <= 53; w++) if (weekToMonth(w) === (mon - 1)) prevMonWeeks.push(w);
+    const prevWindow = prevMonWeeks.slice(0, elapsed);
+    if (!prevWindow.length) return null;
+    const prevState = {...state, month: mon - 1};
+    let prevTeu = 0;
+    this._filterMonth(prevState, {skipMonth:false}).forEach(r => {
+      if (prevWindow.includes(r[I.wk])) prevTeu += r[I.w3_fst] || 0;
+    });
+    return +prevTeu.toFixed(1);
   }
 };
 
@@ -1984,31 +2490,68 @@ const DATA_API = {
   podRatios:   (state) => AGG.podRatios(state),
   salesChart:  (state) => AGG.salesChart(state),
   shipperHist: (code)  => AGG.shipperHist(code),
-  shippersTop30:(state, opts) => AGG.shippersTop30(state, opts || {})
+  shippersTop30:(state, opts) => AGG.shippersTop30(state, opts || {}),
+  // ── Monthly ──
+  regionKpisMonth:  (state) => AGG.regionKpisMonth(state),
+  bsaForMonth:      (state) => AGG.bsaForMonth(state),
+  monthlyTrend:     (state) => AGG.monthlyTrend(state),
+  monthlyPodTrend:  (state) => AGG.monthlyPodTrend(state),
+  monthlyCumulative:(state) => AGG.monthlyCumulative(state),
+  forecastMonthEnd: (state) => AGG.forecastMonthEnd(state),
+  salesTableMonth:  (state) => AGG.salesTableMonth(state),
+  prevMonthMtd:     (state) => AGG.prevMonthMtd(state)
 };
 
 // ═════════════════════════════ 7. RENDER ══════════════════════════════════
 const RENDER = {
   all(){
     this.weekLabels();
-    this.kpis();
-    this.salesTable();
-    this.targets();
-    this.raw();
-    this.regionTabBadges();
-    this.perf();
-    this.matrix();
-    this.shippersTop30();
+    this.kpiCardsVisibility();
+    if (STATE.viewMode === 'month') {
+      this.kpisMonth();
+      this.salesTableMonth();
+      this.regionTabBadgesMonth();
+    } else {
+      this.kpis();
+      this.salesTable();
+      this.targets();
+      this.regionTabBadges();
+      this.perf();
+      this.matrix();
+      this.shippersTop30();
+    }
+  },
+
+  // viewMode 에 따라 KPI 카드 컨테이너 / Overview 상단 차트·표 토글
+  kpiCardsVisibility(){
+    const isMonth = STATE.viewMode === 'month';
+    const setDisp = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+    setDisp('kpiCards',            !isMonth);
+    setDisp('kpiCardsMonth',        isMonth);
+    setDisp('weeklyOverviewTop',   !isMonth);
+    setDisp('monthlyOverviewTop',   isMonth);
+    setDisp('monthlyPodTrendCard',  isMonth);
+    setDisp('monthlySalesPerfCard', isMonth);
   },
 
   weekLabels(){
-    const wk = STATE.week;
-    const wkTag = wk ? `W${String(wk).padStart(2,'0')}` : '—';
-    const range = weekRange(wk);
     const today = pd_today();
     const curW  = currentWeek();
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    setTxt('todayLabel',         `${today} (W${String(curW).padStart(2,'0')})`);
+    setTxt('todayLabel', `${today} (W${String(curW).padStart(2,'0')})`);
+    if (STATE.viewMode === 'month') {
+      const ko = STATE.lang === 'ko';
+      const monNames = ko
+        ? ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
+        : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const moTag = STATE.month ? monNames[STATE.month - 1] : '—';
+      setTxt('targetWeekLabel',    moTag);
+      setTxt('salesPerfMonDescMonth', `${moTag} ${t('monLabel')}`);
+      return;
+    }
+    const wk = STATE.week;
+    const wkTag = wk ? `W${String(wk).padStart(2,'0')}` : '—';
+    const range = weekRange(wk);
     setTxt('targetWeekLabel',    range ? `${wkTag} (${range})` : wkTag);
     setTxt('salesPerfDescWeek',  `${wkTag} ${t('targetSuffix')}`);
     setTxt('podDescWeek',        `${wkTag}`);
@@ -2017,34 +2560,6 @@ const RENDER = {
     document.querySelectorAll('.scoring-wk').forEach(el => el.textContent = wkTag);
   },
 
-  raw(){
-    const tbody = $('#rawBody'); if (!tbody) return;
-    if (!AGG._hasRows()) {
-      tbody.innerHTML = `<tr><td colspan="10" class="muted" style="text-align:center;padding:16px;">데이터 로드 실패 — 로컬 HTTP 서버로 열어주세요</td></tr>`;
-      $('#rawSummary').textContent = '';
-      return;
-    }
-    const rs = AGG._filter(STATE);
-    const max = 500;
-    const slice = rs.slice(0, max);
-    const names = DATA.shipper_names || {};
-    tbody.innerHTML = slice.map(r => {
-      // Raw 탭은 WOS-3 기준 (w3_fst/w3_lst) — 인덱스 8, 10
-      const shpr=r[0], sal=r[1]||'-', area=r[2]||'-', pol=r[3]||'-', pod=r[4]||'-',
-            wk=r[5], mon=r[6]||'-', fst=r[8]||0, lst=r[10]||0;
-      const ful = fst>0 ? (lst/fst*100).toFixed(1) : '0.0';
-      const nm  = names[shpr] || shpr;
-      return `<tr>
-        <td>${shpr} <span style="color:var(--muted);font-size:11px;">${nm}</span></td>
-        <td>${sal}</td><td>${tagArea(area)}</td><td>${pol}</td><td>${pod}</td>
-        <td class="tbl-num">W${String(wk).padStart(2,'0')}</td><td>${mon}</td>
-        <td class="tbl-num">${fst.toFixed(1)}</td>
-        <td class="tbl-num">${lst.toFixed(1)}</td>
-        <td class="tbl-num">${ful}%</td>
-      </tr>`;
-    }).join('');
-    $('#rawSummary').textContent = `현재 필터 적용 결과: ${rs.length.toLocaleString()} rows (상위 ${Math.min(rs.length,max)} 표시) · 집계 단위: 화주×영업×POL×POD×주차`;
-  },
   kpis(){
     const d = DATA_API.regionKpis(STATE);
     const fmt = n => Math.round(n||0).toLocaleString();
@@ -2365,6 +2880,164 @@ const RENDER = {
       else if(chks.length<=3)           btn.textContent = [...chks].map(c=>c.value).join(',');
       else                              btn.textContent = chks.length + ' selected';
     });
+  },
+
+  // ───────────────────────── Monthly RENDER ─────────────────────────
+  kpisMonth(){
+    const fmt = n => Math.round(n||0).toLocaleString();
+    const setTxt = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
+    const setColor = (id, c) => { const el = $('#' + id); if (el) el.style.color = c || ''; };
+    const d = DATA_API.regionKpisMonth(STATE);
+    const pol = (STATE.region && STATE.region !== 'ALL')
+      ? (CONFIG.AREA_TO_POL[STATE.region] || STATE.pol)
+      : STATE.pol;
+    const monBsa = DATA_API.bsaForMonth({...STATE, pol});
+
+    // ① 월 누적 BKG
+    setTxt('kpi-mon-bkg', fmt(d.w3_fst));
+    setTxt('kpi-mon-bkg-sub', monBsa > 0
+      ? `${t('kpiBsa')} ${fmt(monBsa)} TEU · ${(d.w3_fst/monBsa*100).toFixed(1)}%`
+      : '—');
+
+    // ② 월 달성률 — 월간 목표 우선, 없으면 BSA 대비 비중으로 폴백
+    const cfg = DATA.targets_config;
+    const yr = String(new Date().getFullYear());
+    const moKey = STATE.month ? `${yr}-${String(STATE.month).padStart(2,'0')}` : null;
+    const area = STATE.region || 'ALL';
+    let targetTeu = null, targetPct = null;
+    if (cfg && moKey && cfg.monthly && cfg.monthly[moKey] && cfg.monthly[moKey][area]) {
+      const podSel = STATE.pod || [];
+      const podKey = (podSel.length === 1) ? podSel[0] : 'ALL';
+      const entry = cfg.monthly[moKey][area];
+      const pct = entry[podKey] != null ? entry[podKey] : entry['ALL'];
+      if (pct != null && monBsa > 0) {
+        targetPct = pct;
+        targetTeu = monBsa * pct / 100;
+      }
+    }
+    const achEl = $('#kpi-mon-ach'), achSub = $('#kpi-mon-ach-sub');
+    if (targetTeu != null) {
+      const ach = (d.w3_fst / targetTeu * 100);
+      if (achEl) {
+        achEl.textContent = ach.toFixed(0) + '%';
+        achEl.style.color = ach >= 100 ? '#34a853' : (ach >= 80 ? '#f9ab00' : '#ea4335');
+      }
+      if (achSub) achSub.textContent = `${t('monthlyTarget')} ${fmt(targetTeu)} TEU (${targetPct}%)`;
+    } else if (monBsa > 0) {
+      const share = (d.w3_fst / monBsa * 100);
+      if (achEl) { achEl.textContent = share.toFixed(0) + '%'; achEl.style.color = ''; }
+      if (achSub) achSub.textContent = `${t('kpiBsa')} 대비 비중`;
+    } else {
+      if (achEl) { achEl.textContent = '—'; achEl.style.color = ''; }
+      if (achSub) achSub.textContent = (area === 'ALL') ? t('selectAreaTab') : t('noTargetSheet');
+    }
+
+    // ③ 월말 예상
+    const fc = DATA_API.forecastMonthEnd(STATE);
+    setTxt('kpi-mon-forecast', fc != null ? fmt(fc) : '—');
+    if (fc != null && targetTeu != null) {
+      const gap = fc - targetTeu;
+      const sign = gap >= 0 ? '+' : '';
+      const color = gap >= 0 ? '#34a853' : '#ea4335';
+      setTxt('kpi-mon-forecast-sub',
+        `${t('monthlyTarget')} ${sign}${fmt(gap)} TEU`);
+      setColor('kpi-mon-forecast-sub', color);
+    } else if (fc != null) {
+      setTxt('kpi-mon-forecast-sub', `${t('kpiBsa')} ${monBsa>0 ? fmt(monBsa) : '—'} TEU`);
+      setColor('kpi-mon-forecast-sub', '');
+    } else {
+      setTxt('kpi-mon-forecast-sub', '—');
+      setColor('kpi-mon-forecast-sub', '');
+    }
+
+    // ④ 전월 동시점 대비
+    const prevMtd = DATA_API.prevMonthMtd(STATE);
+    const momEl = $('#kpi-mon-mom'), momSub = $('#kpi-mon-mom-sub');
+    if (prevMtd != null) {
+      const delta = d.w3_fst - prevMtd;
+      const mark = delta > 0 ? '▲' : (delta < 0 ? '▼' : '—');
+      const sign = delta > 0 ? '+' : '';
+      if (momEl) {
+        momEl.textContent = `${mark} ${sign}${fmt(delta)}`;
+        momEl.style.color = delta > 0 ? '#ea4335' : (delta < 0 ? '#1a73e8' : '');
+      }
+      if (momSub) momSub.textContent = `M-1 = ${fmt(prevMtd)} TEU`;
+    } else {
+      if (momEl) { momEl.textContent = '—'; momEl.style.color = ''; }
+      if (momSub) momSub.textContent = '—';
+    }
+  },
+
+  salesTableMonth(){
+    const tbody = $('#salesPerfMonBody'); if (!tbody) return;
+    const rows = (DATA_API.salesTableMonth(STATE) || [])
+      .filter(r => { const fst = r[6] || 0; const lst = r[2] || 0; return fst > 0 || lst > 0; });
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted" style="text-align:center;padding:16px;">No data</td></tr>`;
+      return;
+    }
+    // MoM 비교용 — 전월 동기간 sales별 누적
+    const prev = AGG.prevMonthSalesMtd ? AGG.prevMonthSalesMtd(STATE) : {};
+    let tFst = 0, tLst = 0, tPrev = 0;
+    rows.forEach(r => { tFst += r[6] || 0; tLst += r[2] || 0; tPrev += prev[r[0]] || 0; });
+    const tFul = tFst > 0 ? +(tLst/tFst*100).toFixed(1) : 0;
+    const tFulCls = tFul >= 85 ? 'text-good' : (tFul < 70 ? 'text-danger' : '');
+    const deltaCell = (curr, prv) => {
+      const d = curr - prv;
+      if (d === 0) return '<span class="muted">0</span>';
+      const mark = d > 0 ? '▲' : '▼';
+      const sign = d > 0 ? '+' : '';
+      const color = d > 0 ? '#ea4335' : '#1a73e8';
+      return `<span style="color:${color};font-weight:700;">${mark} ${sign}${Math.round(d).toLocaleString()}</span>`;
+    };
+    const fmtPct = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
+    const dataRows = rows.map(r => {
+      const [name, area, lstTeu, fulfill, , , fstTeu] = r;
+      const fulCls = fulfill >= 85 ? 'text-good' : (fulfill < 70 ? 'text-danger' : '');
+      const share = tFst > 0 ? (fstTeu / tFst * 100) : 0;
+      return `<tr>
+        <td>${name} <span class="tag tag-${(area||'').toLowerCase()}">${area}</span></td>
+        <td>${Math.round(fstTeu).toLocaleString()}</td>
+        <td>${deltaCell(fstTeu, prev[name] || 0)}</td>
+        <td>${Math.round(lstTeu).toLocaleString()}</td>
+        <td class="${fulCls}">${fulfill}%</td>
+        <td>${fmtPct(share)}%</td>
+      </tr>`;
+    }).join('');
+    const totalRow = `<tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border);">
+        <td>총계 (${rows.length}명)</td>
+        <td>${Math.round(tFst).toLocaleString()}</td>
+        <td>${deltaCell(tFst, tPrev)}</td>
+        <td>${Math.round(tLst).toLocaleString()}</td>
+        <td class="${tFulCls}">${tFul}%</td>
+        <td>100%</td>
+      </tr>`;
+    tbody.innerHTML = dataRows + totalRow;
+  },
+
+  // 월간 모드용 region tab 배지 — 선택 월의 누적 BKG TEU
+  regionTabBadgesMonth(){
+    const pairs = [['ALL',0],['SZP',1],['CAN',2],['HKG',3]];
+    const rtabs = document.querySelectorAll('.rtab .rtab-badge');
+    const sums = {ALL:0, SZP:0, CAN:0, HKG:0};
+    if (AGG._hasRows() && STATE.month != null) {
+      const I = AGG.IDX;
+      const polSet = new Set(STATE.pol || []);
+      const podSet = new Set(STATE.pod || []);
+      const teamSel = STATE.team;
+      DATA.rows.forEach(r => {
+        if (r[I.mon] !== STATE.month) return;
+        if (polSet.size && !polSet.has(r[I.pol])) return;
+        if (podSet.size && !podSet.has(r[I.pod])) return;
+        if (teamSel && teamSel !== 'all' && (r[I.team] || 'OBT') !== teamSel) return;
+        const v = r[I.w3_fst] || 0;
+        sums.ALL += v;
+        if (sums[r[I.area]] !== undefined) sums[r[I.area]] += v;
+      });
+    }
+    pairs.forEach(([key,i])=>{
+      if (rtabs[i]) rtabs[i].textContent = Math.round(sums[key]).toLocaleString() + ' TEU';
+    });
   }
 };
 
@@ -2426,9 +3099,15 @@ function updateSalesOptions(){ RENDER.salesOptions(); }
 window._charts = {};
 const CHARTS = {
   initAll(){
-    this.trend();
-    this.pod();
-    this.salesBar();
+    if (STATE.viewMode === 'month') {
+      this.monthlyTrend();
+      this.monthlyCum();
+      this.monthlyPodTrend();
+    } else {
+      this.trend();
+      this.pod();
+      this.salesBar();
+    }
   },
   rebuild(){
     Object.keys(window._charts).forEach(k=>{
@@ -2617,6 +3296,157 @@ const CHARTS = {
     window._charts.podW3  = _mkChart('podChartW3',  d.w3Ratio, d.w3Teu,  C.purple);
     window._charts.podOcc = _mkChart('podChartOcc', d.occ,     d.lstTeu, C.green);
   },
+  // ─────── Monthly charts ───────
+  monthlyTrend(){
+    const ctx = document.getElementById('monthlyTrendChart'); if (!ctx) return;
+    const d = DATA_API.monthlyTrend(STATE);
+    const C = CONFIG.CHART_COLORS;
+    if (window._charts.monthlyTrend) window._charts.monthlyTrend.destroy();
+    const lineVals = (d.bkgRatio||[]).filter(v => v != null);
+    const pctMax = lineVals.length ? Math.max(110, Math.ceil((Math.max(...lineVals) * 1.15)/10)*10) : 110;
+    window._charts.monthlyTrend = new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels: d.labels,
+        datasets:[
+          {label:'-3W BKG TEU', data:d.w3Fst,
+           backgroundColor:'#cbd5e1', borderColor:'#94a3b8', borderWidth:1,
+           borderRadius:3, order:3,
+           datalabels:{display:(c)=>c.dataset.data[c.dataIndex] > 0,
+             anchor:'end', align:'start', offset:-2, color:'#334155',
+             font:{size:10, weight:'bold'},
+             formatter: v => Math.round(v).toLocaleString()}},
+          {label:'-3W 실선적 TEU', data:d.w3Lst,
+           backgroundColor:'#2563eb', borderColor:'#1d4ed8', borderWidth:1,
+           borderRadius:3, order:2,
+           datalabels:{display:(c)=>c.dataset.data[c.dataIndex] > 0,
+             anchor:'end', align:'start', offset:-2, color:'#ffffff',
+             font:{size:10, weight:'bold'},
+             formatter: v => Math.round(v).toLocaleString()}},
+          {label:'-3W BKG / 월간 BSA %', data:d.bkgRatio,
+           type:'line', borderColor:'#f59e0b', backgroundColor:'#f59e0b',
+           yAxisID:'y1', tension:0.25, pointRadius:5, pointHoverRadius:7,
+           pointBackgroundColor:'#fff', pointBorderWidth:2.5,
+           borderWidth:3, order:1, spanGaps:true, clip:false,
+           datalabels:{
+             display:(c)=>c.dataset.data[c.dataIndex] != null,
+             anchor:'end', align:'top', offset:8, color:'#f59e0b',
+             font:{size:11, weight:700},
+             textStrokeColor:'rgba(255,255,255,0.85)', textStrokeWidth:3,
+             formatter: v => v == null ? '' : v.toFixed(1)+'%'
+           }}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:24, bottom:6, left:4, right:8}},
+        interaction:{mode:'index', intersect:false},
+        plugins:{
+          legend:{position:'top', align:'end',
+            labels:{color:C.text, font:{size:11, weight:'600'}, boxWidth:14, boxHeight:10, padding:12, usePointStyle:true}},
+          tooltip:{
+            backgroundColor:'rgba(15,23,42,0.95)', borderColor:C.grid, borderWidth:1,
+            callbacks:{
+              afterBody:(items)=>{
+                const i = items[0].dataIndex;
+                const bsa = (d.bsa||[])[i] || 0;
+                return bsa > 0 ? [`월간 BSA: ${Math.round(bsa).toLocaleString()} TEU`] : [];
+              }
+            }
+          }
+        },
+        scales:{
+          y:{ticks:{color:C.text, callback:v=>Math.round(v).toLocaleString()}, grid:{color:C.grid}, beginAtZero:true,
+             title:{display:true, text:'TEU', color:C.text, font:{size:10}}},
+          y1:{position:'right', min:0, suggestedMax:pctMax,
+              ticks:{color:C.text, callback:v=>v+'%'}, grid:{drawOnChartArea:false},
+              title:{display:true, text:'% (BSA 대비)', color:C.text, font:{size:10}}},
+          x:{ticks:{color:C.text, font:{size:12, weight:'600'}}, grid:{color:C.grid}}
+        }
+      }
+    });
+  },
+
+  monthlyPodTrend(){
+    const ctx = document.getElementById('monthlyPodTrendChart'); if (!ctx) return;
+    const d = DATA_API.monthlyPodTrend(STATE);
+    const C = CONFIG.CHART_COLORS;
+    if (window._charts.monthlyPodTrend) window._charts.monthlyPodTrend.destroy();
+    window._charts.monthlyPodTrend = new Chart(ctx, {
+      type:'bar',
+      data:{labels:d.labels, datasets:d.datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:12, bottom:6, left:4, right:8}},
+        plugins:{
+          legend:{position:'top', align:'end',
+            labels:{color:C.text, font:{size:11, weight:'600'}, boxWidth:12, boxHeight:10, padding:10, usePointStyle:true}},
+          tooltip:{
+            backgroundColor:'rgba(15,23,42,0.95)', borderColor:C.grid, borderWidth:1,
+            callbacks:{
+              label: (ctx) => `${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString()} TEU`,
+              footer: (items) => {
+                const total = items.reduce((s,x)=>s+x.parsed.y, 0);
+                return `합계: ${Math.round(total).toLocaleString()} TEU`;
+              }
+            }
+          }
+        },
+        scales:{
+          x:{stacked:true, ticks:{color:C.text, font:{size:12, weight:'600'}}, grid:{color:C.grid}},
+          y:{stacked:true, beginAtZero:true,
+             ticks:{color:C.text, callback:v=>Math.round(v).toLocaleString()}, grid:{color:C.grid},
+             title:{display:true, text:'TEU', color:C.text, font:{size:10}}}
+        }
+      }
+    });
+  },
+
+  monthlyCum(){
+    const ctx = document.getElementById('monthlyCumChart'); if (!ctx) return;
+    const d = DATA_API.monthlyCumulative(STATE);
+    const C = CONFIG.CHART_COLORS;
+    if (window._charts.monthlyCum) window._charts.monthlyCum.destroy();
+    const datasets = [
+      {label:'주차별 누적 BKG', data:d.cumBkg,
+       borderColor:'#2563eb', backgroundColor:'#2563eb22',
+       fill:true, tension:0.25,
+       pointRadius:5, pointHoverRadius:7,
+       pointBackgroundColor:'#fff', pointBorderColor:'#2563eb', pointBorderWidth:2.5,
+       borderWidth:3,
+       datalabels:{display:true, anchor:'end', align:'top', offset:6,
+         color:'#2563eb', font:{size:11, weight:700},
+         textStrokeColor:'rgba(255,255,255,0.85)', textStrokeWidth:3,
+         formatter: v => Math.round(v).toLocaleString()}}
+    ];
+    if (d.target != null) {
+      datasets.push({
+        label:`목표 (${Math.round(d.target).toLocaleString()} TEU)`, data: d.labels.map(()=>d.target),
+        borderColor:'#ea4335', borderDash:[6,4], borderWidth:2,
+        pointRadius:0, fill:false, tension:0,
+        datalabels:{display:false}
+      });
+    }
+    window._charts.monthlyCum = new Chart(ctx, {
+      type:'line',
+      data:{labels:d.labels, datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:24, bottom:6, left:4, right:8}},
+        plugins:{
+          legend:{position:'top', align:'end',
+            labels:{color:C.text, font:{size:11, weight:'600'}, boxWidth:14, boxHeight:10, padding:12, usePointStyle:true}}
+        },
+        scales:{
+          y:{ticks:{color:C.text, callback:v=>Math.round(v).toLocaleString()}, grid:{color:C.grid},
+             beginAtZero:true,
+             title:{display:true, text:'TEU (누적)', color:C.text, font:{size:10}}},
+          x:{ticks:{color:C.text, font:{size:12, weight:'600'}}, grid:{color:C.grid}}
+        }
+      }
+    });
+  },
+
   salesBar(){
     const ctx = document.getElementById('salesChart'); if(!ctx) return;
     const d = DATA_API.salesChart(STATE);
@@ -2813,7 +3643,10 @@ function selectAll(id, checked){
 function applyFilters(){
   STATE.pol   = [...document.querySelectorAll('#polMulti input:checked')].map(x=>x.value);
   STATE.pod   = [...document.querySelectorAll('#podMulti input:checked')].map(x=>x.value);
-  STATE.week  = parseInt($('#weekSel').value, 10);
+  const wkEl  = $('#weekSel');
+  const moEl  = $('#monthSel');
+  if (wkEl && wkEl.value) STATE.week  = parseInt(wkEl.value, 10);
+  if (moEl && moEl.value) STATE.month = parseInt(moEl.value, 10);
   STATE.sales = $('#salSel').value;
   STATE.grade = $('#gradeSel') ? $('#gradeSel').value : 'all';
   STATE.profit = $('#profitSel') ? $('#profitSel').value : 'all';
