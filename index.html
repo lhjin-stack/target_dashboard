@@ -766,6 +766,11 @@ button,select,input{font-family:inherit;}
       <div class="mini-stat"><div class="mini-stat-l" data-i18n="shpLead">평균 리드타임</div><div class="mini-stat-v" id="shpLead">—</div></div>
     </div>
 
+    <div id="shpDestsRow" style="display:none;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">주요 선적 목적국</div>
+      <div id="shpDestsTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
     <div class="chart-wrap-sm" style="margin-bottom:14px;"><canvas id="shipperChart"></canvas></div>
 
     <div style="margin-bottom:12px;">
@@ -3850,6 +3855,19 @@ function openShipper(code, name){
     cancEl.textContent = ((h.cancel_rate||0)*100).toFixed(1) + '%';
     cancEl.className = 'mini-stat-v' + ((h.cancel_rate||0) >= 0.1 ? ' text-danger' : '');
     $('#shpLead').textContent = h.avg_lead_days != null ? h.avg_lead_days.toFixed(0) + (STATE.lang==='ko'?'일':'d') : '—';
+    // 주요 선적 목적국
+    const dests = Object.entries(h.top_destinations || {}).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const destRow = $('#shpDestsRow');
+    if (dests.length) {
+      const destTotal = dests.reduce((s,[,v])=>s+v, 0);
+      $('#shpDestsTags').innerHTML = dests.map(([k,v]) => {
+        const pct = destTotal > 0 ? Math.round(v / destTotal * 100) : 0;
+        return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:600;">${k}<span style="font-weight:400;color:var(--muted);">${pct}%</span></span>`;
+      }).join('');
+      if (destRow) destRow.style.display = '';
+    } else {
+      if (destRow) destRow.style.display = 'none';
+    }
     // Top Routes
     const routes = Object.entries(h.routes || {}).sort((a,b)=>b[1]-a[1]).slice(0,8);
     const routeTotal = Object.values(h.routes || {}).reduce((a,b)=>a+b,0);
@@ -3873,6 +3891,7 @@ function openShipper(code, name){
     $('#shpTot6m').textContent = '—';
     $('#shpCancel').textContent = '—';
     $('#shpLead').textContent = '—';
+    const _dr = $('#shpDestsRow'); if (_dr) _dr.style.display = 'none';
     $('#shpRoutesBody').innerHTML = '<tr><td colspan="3" class="muted" style="text-align:center;">6M 이력 미수집 (상위 600 화주만 포함)</td></tr>';
     $('#shpBkgsBody').innerHTML = '';
   }
