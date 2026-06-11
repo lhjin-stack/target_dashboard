@@ -378,11 +378,11 @@ button,select,input{font-family:inherit;}
     </select>
   </div>
   <div class="f-group">
-    <span class="f-lbl">Profit</span>
+    <span class="f-lbl">구간수익</span>
     <select class="f-sel" id="profitSel" onchange="applyFilters()">
       <option value="all">ALL</option>
-      <option value="H" data-i18n="profitHigh">고수익</option>
-      <option value="L" data-i18n="profitLow">저수익</option>
+      <option value="H" data-i18n="profitHigh">구간고수익</option>
+      <option value="L" data-i18n="profitLow">구간저수익</option>
     </select>
   </div>
   <div class="f-group">
@@ -1067,8 +1067,8 @@ const I18N = {
   colWowDelta:     {ko:'전주 동기 대비',                      en:'vs same WoW stage'},
   salDodTitle:     {ko:'일간 추이 — 전일대비 -3W BKG TEU 증감 (최근 7일)',
                     en:'Daily trend — DoD Δ in -3W BKG TEU (last 7 days)'},
-  profitHigh:      {ko:'고수익',                             en:'High-profit'},
-  profitLow:       {ko:'저수익',                             en:'Low-profit'},
+  profitHigh:      {ko:'구간고수익',                         en:'Route-Hi'},
+  profitLow:       {ko:'구간저수익',                         en:'Route-Lo'},
   teamOBT:         {ko:'OBT (수출)',                         en:'OBT (Export)'},
   teamIST:         {ko:'IST (수입·KR향)',                    en:'IST (Import·KR-bound)'},
   teamAll:         {ko:'OBT + IST',                          en:'OBT + IST'},
@@ -1715,6 +1715,35 @@ const AGG = {
     return teu;
   },
 
+  // 구간대비 고수익/저수익 (jkpark '구간별고수익' 정의와 동일). profit='H'면 각 행의
+  // route-hi(자기 구간 대비 고수익) 분으로, 'L'이면 (전체-고수익)=저수익 분으로 TEU/CM1 을
+  // 치환한 새 행 배열 반환. route-hi 컬럼 없는 구버전 스냅샷은 화주 단위(shipper_profit) 필터로 폴백.
+  _profitRows(rs, profit){
+    const I = this.IDX;
+    const sc = (typeof DATA !== 'undefined' && DATA.rows_schema) || [];
+    const map = {
+      fst_all:    sc.indexOf('fst_rhi'),
+      w3_fst:     sc.indexOf('w3_fst_rhi'),
+      lst_all:    sc.indexOf('lst_rhi'),
+      w3_lst:     sc.indexOf('w3_lst_rhi'),
+      fst_cancel: sc.indexOf('cancel_rhi'),
+      cm1:        sc.indexOf('cm1_rhi'),
+    };
+    if (map.w3_fst < 0) {                 // 구버전 스냅샷 — 화주 단위 폴백
+      const pm = DATA.shipper_profit || {};
+      return rs.filter(r => pm[r[I.shpr]] === profit);
+    }
+    const hi = profit === 'H';
+    return rs.map(r => {
+      const c = r.slice();
+      for (const k in map){
+        const base = r[I[k]] || 0, h = r[map[k]] || 0;
+        c[I[k]] = hi ? h : base - h;
+      }
+      return c;
+    });
+  },
+
   _filter(state, opts = {}){
     const I = this.IDX;
     let rs = DATA.rows;
@@ -1731,8 +1760,7 @@ const AGG = {
       rs = rs.filter(r => gm[r[I.shpr]] === state.grade);
     }
     if (!opts.skipProfit && state.profit && state.profit !== 'all') {
-      const pm = DATA.shipper_profit || {};
-      rs = rs.filter(r => pm[r[I.shpr]] === state.profit);
+      rs = this._profitRows(rs, state.profit);
     }
     // team 필터 — 신규 스냅샷은 r[13] 에 'OBT'/'IST'. 구 스냅샷은 undefined → 'OBT' 로 간주
     if (!opts.skipTeam && state.team && state.team !== 'all')
@@ -2037,6 +2065,7 @@ const AGG = {
     if (!prev || !Array.isArray(prev.rows) || !prev.rows.length) return {};
     const pI = (prev.rows_schema || []).reduce((m,k,i)=>(m[k]=i,m), {});
     if (pI.sal == null || pI.w3_fst == null) return {};
+    const pRhiW3 = (prev.rows_schema || []).indexOf('w3_fst_rhi');  // 구간대비 고수익(route-hi) w3
     const area = state.region || 'ALL';
     const polSet  = new Set(state.pol || []);
     const podSet  = new Set(state.pod || []);
@@ -2054,11 +2083,15 @@ const AGG = {
       if (podSet.size && !podSet.has(r[pI.pod])) return;
       if (salSel && salSel !== 'all' && r[pI.sal] !== salSel) return;
       if (state.grade && state.grade !== 'all' && gm[r[pI.shpr]] !== state.grade) return;
-      if (state.profit && state.profit !== 'all' && pm[r[pI.shpr]] !== state.profit) return;
       if (state.team && state.team !== 'all' && pI.team != null && (r[pI.team] || 'OBT') !== state.team) return;
       if (targetWk != null && r[pI.wk] !== targetWk) return;
       const s = r[pI.sal]; if (!s || s === '-') return;
-      out[s] = (out[s] || 0) + (r[pI.w3_fst] || 0);
+      let _v = r[pI.w3_fst] || 0;
+      if (state.profit && state.profit !== 'all') {           // 구간대비 고/저수익
+        if (pRhiW3 >= 0) { const _h = r[pRhiW3] || 0; _v = state.profit === 'H' ? _h : _v - _h; }
+        else if (pm[r[pI.shpr]] !== state.profit) return;     // 구버전 폴백
+      }
+      out[s] = (out[s] || 0) + _v;
     });
     return out;
   },
@@ -2161,8 +2194,7 @@ const AGG = {
       rs = rs.filter(r => gm[r[I.shpr]] === state.grade);
     }
     if (!opts.skipProfit && state.profit && state.profit !== 'all') {
-      const pm = DATA.shipper_profit || {};
-      rs = rs.filter(r => pm[r[I.shpr]] === state.profit);
+      rs = this._profitRows(rs, state.profit);
     }
     if (!opts.skipTeam && state.team && state.team !== 'all')
       rs = rs.filter(r => (r[I.team] || 'OBT') === state.team);
@@ -3530,6 +3562,7 @@ const CHARTS = {
         const I = (snap.rows_schema || []).reduce((m,k,i)=>(m[k]=i,m), {});
         const tw = (snap.current_week || 0) + 3;
         const gm = snap.shipper_grades || {}, pm = snap.shipper_profit || {};
+        const rhW3 = (snap.rows_schema || []).indexOf('w3_fst_rhi');  // 구간대비 고수익(route-hi) w3
         let total = 0;
         snap.rows.forEach(r => {
           if (r[I.sal] !== name) return;
@@ -3538,8 +3571,12 @@ const CHARTS = {
           if (polSet.size && !polSet.has(r[I.pol])) return;
           if (podSet.size && !podSet.has(r[I.pod])) return;
           if (STATE.grade && STATE.grade !== 'all' && gm[r[I.shpr]] !== STATE.grade) return;
-          if (STATE.profit && STATE.profit !== 'all' && pm[r[I.shpr]] !== STATE.profit) return;
-          total += r[I.w3_fst] || 0;
+          let _v = r[I.w3_fst] || 0;
+          if (STATE.profit && STATE.profit !== 'all') {          // 구간대비 고/저수익
+            if (rhW3 >= 0) { const _h = r[rhW3] || 0; _v = STATE.profit === 'H' ? _h : _v - _h; }
+            else if (pm[r[I.shpr]] !== STATE.profit) return;     // 구버전 폴백
+          }
+          total += _v;
         });
         return total;
       };
