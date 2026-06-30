@@ -75,12 +75,21 @@ const _driveFileCache={};
 function _gapiInit(){ gapi.load('client', async()=>{ await gapi.client.init({});
   await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
   _gapiReady=true; _maybeEnableLogin(); }); }
+// 토큰 임시보관(브라우저). 만료(약1h) 전엔 재방문·새로고침 시 클릭 없이 자동로드.
+const TOK_KEY='lb_tok';
+function _saveTok(r){ try{ localStorage.setItem(TOK_KEY, JSON.stringify({t:r.access_token, exp:Date.now()+((r.expires_in||3500)*1000)})); }catch(e){} }
+function _loadTok(){ try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); if(o&&o.t&&o.exp>Date.now()+60000) return o.t; }catch(e){} return null; }
+function _clearTok(){ try{ localStorage.removeItem(TOK_KEY); }catch(e){} }
 function _gisInit(){ _tokenClient=google.accounts.oauth2.initTokenClient({
   client_id:OAUTH_CLIENT_ID, scope:OAUTH_SCOPE, hd:OAUTH_HD,
-  callback:async(resp)=>{ if(resp.error){_showLoginError('로그인 실패: '+(resp.error_description||resp.error));return;} await onLoginSuccess(); }
+  callback:async(resp)=>{ if(resp.error){_showLoginError('로그인 실패: '+(resp.error_description||resp.error));return;} _saveTok(resp); await onLoginSuccess(); }
 }); _gisReady=true; _maybeEnableLogin(); }
-function _maybeEnableLogin(){ if(_gapiReady&&_gisReady){ const b=document.getElementById('loginBtn');
-  if(b){ b.disabled=false; document.getElementById('gstat').textContent=''; } } }
+function _maybeEnableLogin(){ if(!(_gapiReady&&_gisReady))return;
+  const b=document.getElementById('loginBtn'); if(b){ b.disabled=false; document.getElementById('gstat').textContent=''; }
+  // 저장된 토큰이 살아있으면 버튼 클릭 없이 자동 로드(실패 시 조용히 버튼으로 폴백)
+  const t=_loadTok();
+  if(t){ try{ gapi.client.setToken({access_token:t}); document.getElementById('gstat').textContent='자동 로그인 중…'; onLoginSuccess(); }
+         catch(e){ _clearTok(); } } }
 function _showLoginError(m){ const e=document.getElementById('gerr'); if(e)e.textContent=m||''; }
 function requestSignIn(){ if(!_tokenClient){_showLoginError('구글 SDK 로딩 중 — 잠시 후 다시 시도하세요.');return;}
   _showLoginError(''); document.getElementById('gstat').textContent='데이터 불러오는 중…';
@@ -100,10 +109,10 @@ async function onLoginSuccess(){
     document.getElementById('appbody').style.display='block';
     document.getElementById('genlab').textContent='· Loadable Space (UISCBS114) · 생성 '+(data.gen_at||'');
     boot(data.rows||[], data.routes||[]);
-  }catch(e){ _showLoginError('데이터 로드 실패 — '+(e.message||e)+' (접근 권한 또는 파일 확인)');
+  }catch(e){ _clearTok(); _showLoginError('데이터 로드 실패 — '+(e.message||e)+' (접근 권한 또는 파일 확인)');
     document.getElementById('gstat').textContent=''; }
 }
-function logout(){ try{ const t=gapi.client.getToken&&gapi.client.getToken();
+function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.getToken();
   if(t&&t.access_token)google.accounts.oauth2.revoke(t.access_token); }catch(e){} location.reload(); }
 </script>
 </head><body>
