@@ -1,0 +1,282 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>선복 적재현황 보드</title>
+<style>
+:root{--bd:#dcdfe5;--bg:#f7f8fa;--ink:#1d2433;--mut:#6b7280;--orange:#d97706;--red:#dc2626;--blue:#1d4ed8;}
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 -apple-system,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;color:var(--ink);background:var(--bg)}
+header{padding:12px 18px;background:#fff;border-bottom:1px solid var(--bd)}h1{margin:0;font-size:17px}
+.sub{color:var(--mut);font-size:12px;margin-top:3px}
+.bar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding:9px 18px;background:#fff;border-bottom:1px solid var(--bd)}
+.flab{font-size:11.5px;color:var(--mut);margin-right:1px}
+input[type=text]{padding:5px 7px;border:1px solid var(--bd);border-radius:6px;width:46px;font-size:13px;text-align:center}
+button{padding:5px 11px;border:1px solid var(--bd);border-radius:6px;background:#fff;cursor:pointer;font-size:12px}
+button:hover{background:#f3f5f9}
+.sep{width:1px;height:20px;background:var(--bd);margin:0 5px}
+.dd{position:relative;display:inline-block}
+.dd-btn{display:inline-flex;align-items:center;gap:6px}
+.dd-btn .v{font-weight:600;color:var(--ink)} .dd-btn .ar{color:var(--mut);font-size:10px}
+.dd-panel{position:absolute;top:calc(100% + 5px);left:0;z-index:60;background:#fff;border:1px solid var(--bd);border-radius:8px;
+  box-shadow:0 8px 28px rgba(0,0,0,.14);display:none;min-width:190px}
+.dd.open .dd-panel{display:block}
+.ddhd{padding:7px 12px 6px;font-size:10.5px;font-weight:700;color:#6b7280;border-bottom:1px solid #f1f3f5;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.ddhd a{font-size:10.5px;color:#1d4ed8;cursor:pointer;text-decoration:underline;white-space:nowrap}
+.ddscroll{max-height:300px;overflow-y:auto;padding:4px 0}
+.dp-item{display:flex;align-items:center;gap:7px;padding:5px 12px;font-size:12px;color:#374151;cursor:pointer;user-select:none}
+.dp-item:hover{background:#f6f8fb}
+.dp-item input{accent-color:#1d4ed8;width:13px;height:13px;flex-shrink:0;cursor:pointer;margin:0}
+.dp-item .muted{margin-left:auto;padding-left:12px}
+.summary{display:flex;gap:20px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.summary div{font-size:12px;color:var(--mut)}.summary b{font-size:15px;color:var(--ink);margin-left:5px}
+.wrap{padding:0 0 70px}
+table.board{border-collapse:collapse;width:100%;table-layout:fixed;background:#fff;font-variant-numeric:tabular-nums}
+.board th,.board td{padding:6px 11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid #e6e9ee}
+.board thead th{background:#eceff4;color:#51607a;font-weight:600;font-size:11px;border-bottom:2px solid #b7c2d6;
+  position:sticky;top:0;z-index:5;text-align:right}
+.board thead th.l{text-align:left}
+.board tbody td{text-align:right}
+.board tbody td.l{text-align:left}.board tbody td.c{text-align:center}
+tr.bw td{background:#d9e4f2;font-weight:700;color:#21375b;cursor:pointer;text-align:left;padding:8px 12px}
+tr.br td{background:#eef2f8;font-weight:600;color:#3a4a66;cursor:pointer;text-align:left;padding:5px 12px 5px 30px}
+tr.bv td{background:#f6f9fc;cursor:pointer;text-align:left;padding:6px 12px 6px 44px;border-left:3px solid #9db8e0;border-top:1px solid #dde4ef}
+tr.bw .agg,tr.br .agg{font-weight:400;font-size:11px;color:#5a6b86;margin-left:10px}
+tr.bv .meta{font-size:11.5px;color:var(--mut);margin-left:9px}tr.bv .own{font-size:11.5px;color:#1d4ed8;font-weight:600;margin-left:9px}
+tr.bv b{font-size:12.5px;color:#1f2937}.tg{display:inline-block;width:13px;color:var(--mut);font-size:11px}
+tr.leaf td{color:#374151}tr.leaf td.l{padding-left:40px}
+tr.leaf td.key{font-weight:600;color:#111827}
+tr.leaf td.dim{color:#9aa3b2;font-size:11.5px}
+tr.leaf:hover td{background:#eef4ff}
+.board td.bsacol{border-left:1px solid #f0f1f4}
+.neg{color:var(--red)}.warn{color:var(--orange);font-weight:700}.over{color:var(--red);font-weight:700}
+.surplus{font-weight:700}.muted{color:var(--mut);font-size:11px}.empty{padding:40px;text-align:center;color:var(--mut)}
+.sbar{display:inline-block;height:8px;background:var(--blue);border-radius:2px;vertical-align:middle;margin-left:6px;opacity:.5}
+#gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:#f0f2f6}
+.gcard{background:#fff;border:1px solid var(--bd);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.10);padding:34px 38px;max-width:380px;text-align:center}
+.gcard h2{margin:0 0 6px;font-size:18px}.gcard p{margin:0 0 20px;color:var(--mut);font-size:13px;line-height:1.55}
+.gbtn{display:inline-flex;align-items:center;gap:10px;padding:11px 18px;border:1px solid #d0d4da;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#3c4043}
+.gbtn:hover{background:#f7f8fa;box-shadow:0 1px 4px rgba(0,0,0,.08)}.gbtn:disabled{opacity:.55;cursor:default}
+.gerr{color:var(--red);font-size:12.5px;margin-top:14px;min-height:16px}
+.gmut{color:#9aa3b2;font-size:11px;margin-top:18px}
+#appbody{display:none}
+</style>
+
+<!-- Google Identity Services + Drive API (사내 전용 접근제어, 데이터는 Drive 에만) -->
+<script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script>
+<script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script>
+<script>
+// ════════════════ AUTH & DRIVE (3w 대시보드와 동일 패턴) ════════════════
+const OAUTH_CLIENT_ID = '313527315690-04t6lei9sd9i7ls21a6mhurif4nm8qg7.apps.googleusercontent.com';
+const OAUTH_HD        = 'ekmtc.com';                                   // @ekmtc.com 계정만
+const OAUTH_SCOPE     = 'https://www.googleapis.com/auth/drive.readonly';
+const DRIVE_FOLDER_ID = '1W2W4tIv7hLEJBk9NQT5Z9O_DKv3osJHw';           // 선복보드 데이터 폴더
+const DATA_FILE_NAME  = 'loadboard_data.json';
+
+let _gapiReady=false,_gisReady=false,_tokenClient=null;
+const _driveFileCache={};
+function _gapiInit(){ gapi.load('client', async()=>{ await gapi.client.init({});
+  await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
+  _gapiReady=true; _maybeEnableLogin(); }); }
+function _gisInit(){ _tokenClient=google.accounts.oauth2.initTokenClient({
+  client_id:OAUTH_CLIENT_ID, scope:OAUTH_SCOPE, hd:OAUTH_HD,
+  callback:async(resp)=>{ if(resp.error){_showLoginError('로그인 실패: '+(resp.error_description||resp.error));return;} await onLoginSuccess(); }
+}); _gisReady=true; _maybeEnableLogin(); }
+function _maybeEnableLogin(){ if(_gapiReady&&_gisReady){ const b=document.getElementById('loginBtn');
+  if(b){ b.disabled=false; document.getElementById('gstat').textContent=''; } } }
+function _showLoginError(m){ const e=document.getElementById('gerr'); if(e)e.textContent=m||''; }
+function requestSignIn(){ if(!_tokenClient){_showLoginError('구글 SDK 로딩 중 — 잠시 후 다시 시도하세요.');return;}
+  _showLoginError(''); document.getElementById('gstat').textContent='데이터 불러오는 중…';
+  _tokenClient.requestAccessToken({prompt:''}); }
+async function fetchDriveJson(filename){
+  let fid=_driveFileCache[filename];
+  if(!fid){ const r=await gapi.client.drive.files.list({
+      q:`'${DRIVE_FOLDER_ID}' in parents and name='${filename}' and trashed=false`,
+      fields:'files(id,name,modifiedTime)', orderBy:'modifiedTime desc', pageSize:1 });
+    const fs=r.result.files||[]; if(!fs.length)throw new Error('Drive 파일 없음: '+filename);
+    fid=fs[0].id; _driveFileCache[filename]=fid; }
+  const g=await gapi.client.drive.files.get({fileId:fid, alt:'media'});
+  return JSON.parse(g.body); }
+async function onLoginSuccess(){
+  try{ const data=await fetchDriveJson(DATA_FILE_NAME);
+    document.getElementById('gate').style.display='none';
+    document.getElementById('appbody').style.display='block';
+    document.getElementById('genlab').textContent='· Loadable Space (UISCBS114) · 생성 '+(data.gen_at||'');
+    boot(data.rows||[], data.routes||[]);
+  }catch(e){ _showLoginError('데이터 로드 실패 — '+(e.message||e)+' (접근 권한 또는 파일 확인)');
+    document.getElementById('gstat').textContent=''; }
+}
+function logout(){ try{ const t=gapi.client.getToken&&gapi.client.getToken();
+  if(t&&t.access_token)google.accounts.oauth2.revoke(t.access_token); }catch(e){} location.reload(); }
+</script>
+</head><body>
+
+<!-- 로그인 게이트 -->
+<div id="gate"><div class="gcard">
+  <h2>선복 적재현황 보드</h2>
+  <p>KMTC 내부 영업자료입니다.<br><b>@ekmtc.com</b> 구글 계정으로 로그인해 주세요.</p>
+  <button class="gbtn" id="loginBtn" disabled onclick="requestSignIn()">
+    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    Google로 로그인
+  </button>
+  <div class="gerr" id="gerr"></div>
+  <div class="gmut" id="gstat">구글 SDK 로딩 중…</div>
+</div></div>
+
+<!-- 보드 본체 -->
+<div id="appbody">
+<header><h1>선복 적재현황 보드 <span class="muted" id="genlab" style="font-size:12px"></span></h1>
+<div class="sub">주차 › 항로 › 선명항차 › 적출항(POL) · BSA달성률=Lifting/BSA · ROB=누적 본선적재 · 소석률=ROB/Own Slot · 잉여선복=Loadable Space(ERP UISCBS114)</div></header>
+<div class="bar">
+  <span class="flab">주차</span><input type="text" id="wf"> ~ <input type="text" id="wt">
+  <span class="sep"></span>
+  <div class="dd" id="dd-rt"><button class="dd-btn" id="btn-rt">항로 <span class="v" id="lab-rt">전체</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-rt"><div class="ddhd">항로 선택 <a class="tgl" data-f="rt">전체/해제</a></div><div class="ddscroll" id="routes"></div></div></div>
+  <div class="dd" id="dd-ctr"><button class="dd-btn" id="btn-ctr">선적지 국가 <span class="v" id="lab-ctr">전체</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-ctr"><div class="ddhd">국가 선택 <a class="tgl" data-f="ctr">전체/해제</a></div><div class="ddscroll" id="ctrs"></div></div></div>
+  <div class="dd" id="dd-pol"><button class="dd-btn" id="btn-pol">선적지 포트 <span class="v" id="lab-pol">전체</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-pol"><div class="ddhd"><span id="pol-hint">포트 선택</span> <a class="tgl" data-f="pol">전체/해제</a></div><div class="ddscroll" id="ports"></div></div></div>
+  <span class="sep"></span>
+  <span class="flab">보기</span><button id="b-exp">펼치기</button><button id="b-rt">항로</button><button id="b-wk">주차</button>
+  <span class="sep"></span>
+  <span class="flab" style="margin-left:auto">자료=드라이브</span><button id="logoutBtn" onclick="logout()">로그아웃</button>
+</div>
+<div class="summary" id="summary"><div>BSA 합<b id="s_bsa">–</b></div><div>Lifting 합<b id="s_lift">–</b></div>
+<div>평균 달성률<b id="s_achv">–</b></div><div>총 잉여선복<b id="s_surp">–</b></div><div>항차<b id="s_voy">–</b></div><div>행<b id="s_cnt">–</b></div></div>
+<div class="wrap" id="wrap"></div>
+</div>
+
+<script>
+// ════════════ boot() — 데이터(ALL, ALL_ROUTES)를 받아 보드 렌더 ════════════
+function boot(ALL, ALL_ROUTES){
+const $=id=>document.getElementById(id);
+const CTR_KR={CN:'중국',HK:'홍콩',IN:'인도',PK:'파키스탄',BD:'방글라',LK:'스리랑카',SG:'싱가포르',MY:'말레이',TH:'태국',VN:'베트남',
+  AE:'UAE',SA:'사우디',OM:'오만',BH:'바레인',KH:'캄보디아',MM:'미얀마',ID:'인니',PH:'필리핀',TW:'대만',JP:'일본',KR:'한국',
+  TZ:'탄자니아',KE:'케냐',MX:'멕시코',US:'미국'};
+const fmt=n=>(n==null||isNaN(n))?'–':Math.round(n).toLocaleString();
+const etd=s=>s?s.slice(5).replace('-','/'):'';
+const achvCls=p=>p==null?'':(p>100?'over':(p<80?'warn':''));
+
+const ctrPorts={};
+ALL.forEach(r=>{const c=r.pol_ctr||'ETC';(ctrPorts[c]=ctrPorts[c]||new Set()).add(r.pol);});
+const CTRS=Object.keys(ctrPorts).sort();
+const ALLPORTS=new Set(ALL.map(r=>r.pol));
+const selCtr=new Set(CTRS);
+const selPort=new Set(ALLPORTS);
+const cW=new Set(),cR=new Set(),cV=new Set();
+
+function renderRoutes(){$('routes').innerHTML=ALL_ROUTES.map(r=>`<label class="dp-item"><input type="checkbox" class="rt" value="${r}" checked>${r}</label>`).join('');}
+function renderCtrs(){$('ctrs').innerHTML=CTRS.map(c=>`<label class="dp-item"><input type="checkbox" class="ck" value="${c}" ${selCtr.has(c)?'checked':''}>${c}<span class="muted">${ctrPorts[c].size}</span></label>`).join('');}
+function renderPorts(){
+  const ports=[];CTRS.filter(c=>selCtr.has(c)).forEach(c=>[...ctrPorts[c]].sort().forEach(p=>ports.push([p,c])));
+  $('ports').innerHTML=ports.map(([p,c])=>`<label class="dp-item"><input type="checkbox" class="pk" value="${p}" ${selPort.has(p)?'checked':''}>${p}<span class="muted">${c}</span></label>`).join('');
+  $('pol-hint').textContent=`포트 (${ports.length})`;
+}
+function labels(){
+  const nr=document.querySelectorAll('.rt:checked').length;
+  $('lab-rt').textContent=nr===ALL_ROUTES.length?'전체':(nr===0?'없음':nr+'개');
+  $('lab-ctr').textContent=selCtr.size===CTRS.length?'전체':(selCtr.size===0?'없음':selCtr.size+'개');
+  const shown=[...ALLPORTS].filter(p=>{const c=ALL.find(r=>r.pol===p).pol_ctr;return selCtr.has(c);});
+  const chk=shown.filter(p=>selPort.has(p)).length;
+  $('lab-pol').textContent=(chk===shown.length&&selCtr.size===CTRS.length)?'전체':(chk===0?'없음':chk+'개');
+}
+function selRoutes(){return new Set([...document.querySelectorAll('.rt:checked')].map(c=>c.value));}
+function aggr(rows){return{b:rows.reduce((a,x)=>a+(x.bsa||0),0),l:rows.reduce((a,x)=>a+(x.lifting||0),0),s:rows.reduce((a,x)=>a+(x.surplus||0),0)};}
+
+function apply(){
+  labels();
+  const rs=selRoutes();const wf=parseInt($('wf').value)||-1,wt=parseInt($('wt').value)||99;
+  const rows=ALL.filter(r=>rs.has(r.route)&&selCtr.has(r.pol_ctr||'ETC')&&selPort.has(r.pol)&&r.week>=wf&&r.week<=wt);
+  render(rows);
+}
+
+function render(rows){
+  const sm=aggr(rows);
+  $('s_bsa').textContent=fmt(sm.b);$('s_lift').textContent=fmt(sm.l);
+  $('s_achv').textContent=sm.b?Math.round(sm.l/sm.b*100)+'%':'–';
+  $('s_surp').textContent=fmt(sm.s);$('s_cnt').textContent=rows.length;
+  if(!rows.length){$('wrap').innerHTML='<div class="empty">조건에 맞는 데이터 없음</div>';$('s_voy').textContent='0';return;}
+  const tree={};const voySet=new Set();
+  rows.forEach(r=>{const vk=r.vessel+'|'+r.voyage;voySet.add(r.week+'|'+r.route+'|'+vk);
+    (((tree[r.week]=tree[r.week]||{})[r.route]=tree[r.week][r.route]||{})[vk]=tree[r.week][r.route][vk]||[]).push(r);});
+  $('s_voy').textContent=voySet.size;
+  const maxS=Math.max(1,...rows.map(r=>Math.abs(r.surplus||0)));
+  let h=`<table class="board">
+    <thead><tr><th class="l">POL / 국가</th><th>ETD</th><th>BSA</th><th>Lifting</th><th>달성률</th><th>ROB</th><th>소석률</th><th>잉여선복</th></tr></thead><tbody>`;
+  Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
+    const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
+    const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
+    h+=`<tr class="bw" data-lvl="wk" data-key="${wk}" data-wk="${wk}"><td colspan="8"><span class="tg">▼</span>${wk}주<span class="agg">BSA ${fmt(a.b)} · Lift ${fmt(a.l)} · 달성률 ${a.b?Math.round(a.l/a.b*100):0}% · 잉여 ${fmt(a.s)} · ${nv}항차</span></td></tr>`;
+    Object.keys(tree[wk]).sort().forEach(rt=>{
+      const rk=wk+'|'+rt;const rtRows=[];Object.values(tree[wk][rt]).forEach(x=>rtRows.push(...x));const ra=aggr(rtRows);
+      h+=`<tr class="br" data-lvl="rt" data-key="${rk}" data-wk="${wk}" data-rt="${rk}"><td colspan="8"><span class="tg">▼</span>${rt}<span class="agg">${Object.keys(tree[wk][rt]).length}항차 · BSA ${fmt(ra.b)} · Lift ${fmt(ra.l)} · 잉여 ${fmt(ra.s)}</span></td></tr>`;
+      Object.keys(tree[wk][rt]).sort().forEach(vk=>{
+        const arr=tree[wk][rt][vk];const vkk=rk+'|'+vk;const [vsl,voy]=vk.split('|');
+        const own=arr[0].own_slot;const eds=arr.map(x=>x.etd).filter(Boolean).sort();
+        const er=eds.length?(etd(eds[0])+(eds.length>1?'~'+etd(eds[eds.length-1]):'')):'';
+        h+=`<tr class="bv" data-lvl="vy" data-key="${vkk}" data-wk="${wk}" data-rt="${rk}" data-vy="${vkk}"><td colspan="8"><span class="tg">▼</span><b>${vsl} / ${voy}</b><span class="meta">ETD ${er} · ${arr.length}개 적출항</span><span class="own">Own Slot ${fmt(own)} TEU</span></td></tr>`;
+        arr.forEach(r=>{
+          const aC=achvCls(r.bsa_achv_pct),sC=r.surplus<0?'neg surplus':'surplus';
+          const bw=Math.round(Math.abs(r.surplus||0)/maxS*50),bar=r.surplus>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
+          const uw=Math.max(0,Math.min(100,r.util_pct||0));
+          const ust=`background:linear-gradient(to right,#d7e6fb ${uw}%,transparent ${uw}%)`;
+          const av=r.bsa_achv_pct,aw=Math.max(0,Math.min(100,av||0));
+          const acol=av==null?'transparent':(av>100?'#f7d7d7':(av<80?'#fbe6c4':'#e3edfb'));
+          const ast=`background:linear-gradient(to right,${acol} ${aw}%,transparent ${aw}%)`;
+          h+=`<tr class="leaf" data-wk="${wk}" data-rt="${rk}" data-vy="${vkk}">
+            <td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span></td><td class="c dim">${etd(r.etd)}</td>
+            <td>${fmt(r.bsa)}</td><td>${fmt(r.lifting)}</td><td class="${aC}" style="${ast}">${av==null?'–':av+'%'}</td>
+            <td>${fmt(r.rob)}</td><td style="${ust}">${r.util_pct==null?'–':r.util_pct+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td></tr>`;
+        });
+      });
+    });
+  });
+  $('wrap').innerHTML=h+'</tbody></table>';
+  vis();
+}
+
+function arrow(tr,c){const t=tr.querySelector('.tg');if(t)t.textContent=c?'▸':'▼';}
+function vis(){
+  document.querySelectorAll('.board tbody tr').forEach(tr=>{
+    const lv=tr.dataset.lvl;let show;
+    if(lv==='wk')show=true;
+    else if(lv==='rt')show=!cW.has(tr.dataset.wk);
+    else if(lv==='vy')show=!cW.has(tr.dataset.wk)&&!cR.has(tr.dataset.rt);
+    else show=!cW.has(tr.dataset.wk)&&!cR.has(tr.dataset.rt)&&!cV.has(tr.dataset.vy);
+    tr.style.display=show?'':'none';});
+  document.querySelectorAll('tr.bw').forEach(b=>arrow(b,cW.has(b.dataset.key)));
+  document.querySelectorAll('tr.br').forEach(b=>arrow(b,cR.has(b.dataset.key)));
+  document.querySelectorAll('tr.bv').forEach(b=>arrow(b,cV.has(b.dataset.key)));
+}
+$('wrap').addEventListener('click',e=>{const b=e.target.closest('tr.bw,tr.br,tr.bv');if(!b)return;
+  const lv=b.dataset.lvl,k=b.dataset.key,S=lv==='wk'?cW:lv==='rt'?cR:cV;S.has(k)?S.delete(k):S.add(k);vis();});
+function setDepth(level){cW.clear();cR.clear();cV.clear();
+  if(level>=1)document.querySelectorAll('tr.br').forEach(b=>cR.add(b.dataset.key));
+  if(level>=2)document.querySelectorAll('tr.bw').forEach(b=>cW.add(b.dataset.key));vis();}
+$('b-exp').onclick=()=>setDepth(0);$('b-rt').onclick=()=>setDepth(1);$('b-wk').onclick=()=>setDepth(2);
+
+document.querySelectorAll('.dd-btn').forEach(btn=>btn.addEventListener('click',e=>{
+  const dd=btn.parentElement,open=dd.classList.contains('open');
+  document.querySelectorAll('.dd').forEach(d=>d.classList.remove('open'));
+  if(!open)dd.classList.add('open');e.stopPropagation();}));
+document.addEventListener('click',e=>{if(!e.target.closest('.dd'))document.querySelectorAll('.dd').forEach(d=>d.classList.remove('open'));});
+
+document.querySelector('.bar').addEventListener('click',e=>{
+  const a=e.target.closest('a.tgl');if(!a)return;e.stopPropagation();
+  const f=a.dataset.f;
+  if(f==='rt'){const cb=[...document.querySelectorAll('.rt')];const on=!cb.some(c=>c.checked);cb.forEach(c=>c.checked=on);}
+  else if(f==='ctr'){const on=selCtr.size<CTRS.length;selCtr.clear();if(on){CTRS.forEach(c=>selCtr.add(c));ALLPORTS.forEach(p=>selPort.add(p));}renderCtrs();renderPorts();}
+  else if(f==='pol'){const cb=[...document.querySelectorAll('.pk')];const on=!cb.some(c=>c.checked);cb.forEach(c=>{c.checked=on;on?selPort.add(c.value):selPort.delete(c.value);});}
+  apply();
+});
+$('routes').addEventListener('change',apply);
+$('ctrs').addEventListener('change',e=>{if(!e.target.classList.contains('ck'))return;
+  const c=e.target.value;e.target.checked?selCtr.add(c):selCtr.delete(c);
+  if(e.target.checked)[...ctrPorts[c]].forEach(p=>selPort.add(p));
+  renderPorts();apply();});
+$('ports').addEventListener('change',e=>{if(!e.target.classList.contains('pk'))return;
+  e.target.checked?selPort.add(e.target.value):selPort.delete(e.target.value);apply();});
+['wf','wt'].forEach(id=>{$(id).addEventListener('change',apply);$(id).addEventListener('keydown',e=>{if(e.key==='Enter')apply();});});
+
+renderRoutes();renderCtrs();renderPorts();
+$('wf').value=22;$('wt').value=25;
+apply();
+} // end boot
+</script></body></html>
