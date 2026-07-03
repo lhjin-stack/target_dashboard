@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>픽업 선행지표 모니터 · Pickup Lead-Indicator Monitor</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+  :root{
+    --navy:#1e3a5f; --ink:#1f2937; --mut:#6b7280; --line:#e5e7eb; --bg:#f4f6f9;
+    --blue:#2563eb; --orange:#ea580c; --red:#dc2626; --green:#16a34a; --amber:#b45309;
+    --redbg:#fef2f2; --orbg:#fff7ed; --card:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.5 -apple-system,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;color:var(--ink);background:var(--bg)}
+  a{color:inherit}
+
+  header{padding:16px 22px 14px;background:#fff;border-bottom:1px solid var(--line)}
+  .htop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-.3px}
+  h1 small{font-size:12px;color:var(--mut);font-weight:600;margin-left:6px}
+  .sub{color:var(--mut);font-size:12px;margin-top:6px;max-width:1000px}
+  .sub b{color:var(--ink)}
+  .risk-word{color:var(--red);font-weight:700}
+
+  .langtog{margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .langtog button{border:none;background:#fff;color:var(--mut);font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer}
+  .langtog button.on{background:var(--navy);color:#fff}
+
+  .tabs{display:flex;gap:6px;padding:12px 22px 0;background:#fff}
+  .tabs button{border:1px solid var(--line);border-bottom:none;background:#f8fafc;color:var(--mut);
+    font-size:13px;font-weight:700;padding:9px 20px;border-radius:9px 9px 0 0;cursor:pointer}
+  .tabs button.on{background:#fff;color:var(--navy);border-color:var(--line);box-shadow:0 -2px 0 var(--navy) inset}
+
+  /* ETD 기간 프리셋 바 */
+  .wkbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 22px;background:#fff;border-bottom:1px solid var(--line)}
+  .wkbar .wl{font-size:11px;color:var(--mut);font-weight:700}
+  .pfseg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .pfbtn{border:none;border-right:1px solid var(--line);background:#fff;color:var(--mut);
+    font-size:12.5px;font-weight:700;padding:6px 14px;cursor:pointer;white-space:nowrap}
+  .pfbtn:last-child{border-right:none}
+  .pfbtn.on{background:var(--navy);color:#fff}
+  .cust{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--mut);font-weight:700}
+  .cust input{width:42px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;text-align:center;font-variant-numeric:tabular-nums}
+  .pfmini{border:1px solid var(--navy);background:#fff;color:var(--navy);font-size:11.5px;font-weight:700;
+    padding:4px 10px;border-radius:6px;cursor:pointer}
+  .pfmini:hover{background:var(--navy);color:#fff}
+  .wkbar .wh{font-size:11px;color:#9ca3af;font-weight:600}
+
+  .summary{display:flex;gap:0;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .summary .s{padding:11px 22px;border-right:1px solid #f0f2f5}
+  .summary .k{font-size:11px;color:var(--mut);font-weight:700}
+  .summary .v{font-size:19px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1.15}
+  .summary .v.risk{color:var(--red)} .summary .v.gold{color:var(--orange)}
+  .summary .kb{font-size:10px;color:#9ca3af;font-weight:600;margin-top:3px;line-height:1.3;max-width:190px}
+  .summary .s{cursor:help}
+  .summary .ts{margin-left:auto;padding:11px 22px;font-size:11px;color:#9ca3af;align-self:center}
+
+  .wrap{padding:16px 22px 60px}
+  .sec-h{font-size:14px;font-weight:800;color:var(--ink);margin:22px 2px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .sec-h:first-child{margin-top:4px}
+  .sec-h small{font-weight:600;color:var(--mut)}
+
+  /* CSV 다운로드 바 (항차 다중선택) */
+  .csvbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);
+    border-radius:10px;padding:9px 14px;margin-bottom:12px}
+  .csvbar .cl{font-size:12px;font-weight:800;color:var(--navy)}
+  .csv-btn{border:1px solid var(--navy);background:#fff;color:var(--navy);font-size:12px;font-weight:700;
+    padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap}
+  .csv-btn:hover{background:var(--navy);color:#fff}
+  .csv-btn:disabled{opacity:.4;cursor:default}
+  .csvbar .ch{font-size:11px;color:#9ca3af;font-weight:600}
+  .msel{position:relative}
+  .msel-btn{padding:6px 11px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;background:#fff;
+    cursor:pointer;font-weight:700;color:var(--ink);min-width:150px;text-align:left}
+  .msel-btn::after{content:'▾';float:right;color:#9ca3af;margin-left:8px}
+  .msel-btn.act{border-color:var(--navy);background:var(--navy);color:#fff}
+  .msel-btn.act::after{color:#cbd5e1}
+  .msel-list{position:absolute;top:110%;left:0;z-index:45;background:#fff;border:1px solid var(--line);
+    border-radius:9px;box-shadow:0 10px 30px rgba(0,0,0,.15);max-height:280px;overflow:auto;
+    min-width:300px;display:none;padding:6px}
+  .msel-list.on{display:block}
+  .msel-item{display:flex;gap:7px;align-items:center;font-size:12.5px;padding:5px 7px;cursor:pointer;border-radius:6px}
+  .msel-item:hover{background:#f1f5f9}
+  .msel-item input{margin:0}
+  .msel-all{border-bottom:1px solid var(--line);margin-bottom:4px;padding-bottom:6px;color:var(--mut);font-weight:700}
+  /* 도착지 국가>포트 아코디언 필터 */
+  .dsep{width:1px;height:20px;background:var(--line);margin:0 2px}
+  .dsel{position:relative}
+  .dtree{min-width:290px;max-height:340px}
+  .dt-ctr{border-bottom:1px solid #f4f5f6}
+  .dt-ctr:last-child{border-bottom:none}
+  .dt-crow{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;cursor:pointer}
+  .dt-crow:hover{background:#f1f5f9}
+  .dt-crow input{margin:0}
+  .dt-cname{font-weight:800;color:var(--navy);font-size:12.5px}
+  .dt-cn{font-size:10.5px;color:#9ca3af;font-weight:600}
+  .dt-exp{margin-left:auto;color:#9ca3af;font-size:11px;font-weight:800;width:16px;text-align:center;cursor:pointer}
+  .dt-ports{display:none;padding:0 0 5px 24px}
+  .dt-ports.on{display:block}
+  .dt-prow{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:6px;cursor:pointer;font-size:12px}
+  .dt-prow:hover{background:#f1f5f9}
+  .dt-prow input{margin:0}
+
+  /* ── 확인 필요 카드 그리드 ── */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 15px;
+    border-left:4px solid #cbd5e1}
+  .pcard.risk{border-left-color:var(--red);background:var(--redbg)}
+  .pcard.gold{border-left-color:var(--orange);background:var(--orbg)}
+  .pc-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+  .pc-vsl{font-size:15px;font-weight:800;color:var(--navy);cursor:pointer}
+  .pc-vsl:hover{text-decoration:underline}
+  .pc-rte{font-size:11.5px;color:var(--mut);font-weight:700;background:#f1f5f9;padding:1px 7px;border-radius:6px}
+  .pc-etd{margin-left:auto;font-size:12px;color:var(--mut);font-weight:600}
+  .badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:9px;white-space:nowrap}
+  .badge.risk{background:var(--red);color:#fff}
+  .badge.gold{background:var(--orange);color:#fff}
+  .badge.safe{background:#dcfce7;color:var(--green)}
+
+  /* 픽업률 게이지(픽업/BKG) + 평소 마커 */
+  .gauge{position:relative;height:18px;background:#eef1f4;border-radius:9px;margin:11px 0 5px;overflow:hidden}
+  .gfill{position:absolute;left:0;top:0;bottom:0;border-radius:9px}
+  .gfill.act{background:var(--red)} .gfill.watch{background:var(--orange)} .gfill.ok{background:var(--green)}
+  .gbase{position:absolute;top:-2px;bottom:-2px;width:2px;background:#0f172a}
+  .glab{display:flex;align-items:baseline;gap:6px;font-size:12px;flex-wrap:wrap}
+  .glab .cur{font-size:13px;font-weight:700;color:var(--ink)} .glab .cur b{font-size:16px;color:var(--navy)}
+  .glab .norm{color:var(--mut);font-size:11.5px}
+
+  /* 스탯 칩 + ? 툴팁 */
+  .stats{display:flex;gap:16px;margin-top:11px;flex-wrap:wrap}
+  .stat .sk{font-size:10.5px;color:var(--mut);font-weight:700}
+  .stat .sv{font-size:14px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+  .stat .sv.warn{color:var(--amber)} .stat .sv.red{color:var(--red)}
+  .qm{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;
+    background:#e2e8f0;color:#64748b;font-size:9px;font-weight:800;cursor:help;margin-left:3px;vertical-align:1px}
+
+  /* ── 곡선 차트 (컴팩트) ── */
+  .chartcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;max-width:780px}
+  .ch-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .ch-top select{padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px}
+  .lg{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--mut);font-weight:600}
+  .lg .sw{width:12px;height:12px;border-radius:50%}
+  .lg .ln{width:20px;height:3px;border-radius:2px;background:var(--navy)}
+  .ch-top .bn{margin-left:auto;font-size:11px;color:#9ca3af;font-weight:600}
+  #chart svg{display:block;width:100%;height:auto}
+  #chart circle.dot{cursor:pointer}
+  .tip{position:fixed;z-index:60;background:#0f172a;color:#fff;font-size:12px;line-height:1.5;padding:8px 11px;
+    border-radius:8px;pointer-events:none;display:none;max-width:260px;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .tip b{color:#fbbf24}
+
+  /* ── 전체 항차 테이블 ── */
+  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:9px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;border-bottom:1px solid #f2f4f6}
+  th{background:#f8fafc;font-size:11px;color:var(--mut);font-weight:700;text-align:right}
+  th.l,td.l{text-align:left}
+  tbody tr:hover td{background:#fafbfc}
+  tr.act td{background:rgba(254,242,242,.6)}
+  tr.watch td{background:rgba(255,247,237,.55)}
+  .vsl-lnk{color:var(--navy);font-weight:700;cursor:pointer} .vsl-lnk:hover{text-decoration:underline}
+  .rte-tag{font-size:11px;color:var(--mut)}
+  .dd{font-size:11px;color:var(--mut)}
+  .mini{display:inline-block;position:relative;width:78px;height:11px;background:#eef1f4;border-radius:6px;vertical-align:middle;margin-right:7px;overflow:hidden}
+  .mini .mf{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+  .mini .mb{position:absolute;top:-1px;bottom:-1px;width:2px;background:#0f172a}
+
+  .empty,.loading{padding:44px;text-align:center;color:var(--mut);background:#fff;border:1px solid var(--line);border-radius:10px}
+  .foot{padding:16px 22px;color:#9ca3af;font-size:11px}
+
+  /* 항차 선복 상세 모달 */
+  .ovl{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:40px 16px;overflow:auto}
+  .ovl.on{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .m-head{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .m-head h3{margin:0;font-size:16px;font-weight:800;color:var(--navy)}
+  .m-head .m-etd{font-size:12px;color:var(--mut);font-weight:600}
+  .m-x{margin-left:auto;border:none;background:#f1f5f9;color:var(--mut);font-size:16px;font-weight:800;width:30px;height:30px;border-radius:8px;cursor:pointer}
+  .m-x:hover{background:#e2e8f0}
+  .m-body{padding:14px 20px 20px}
+  .m-body table{border:1px solid var(--line)}
+  .m-body td,.m-body th{border-bottom:1px solid #f2f4f6}
+  .seg{font-size:11px;color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <div class="htop">
+    <h1 id="h_title">픽업 선행지표 모니터 <small id="h_sub">Pickup Lead-Indicator Monitor</small></h1>
+    <div class="langtog">
+      <button id="lang_ko" class="on" onclick="setLang('ko')">한국어</button>
+      <button id="lang_en" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+  <div class="sub" id="h_desc"></div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="wkbar" id="wkbar" style="display:none">
+  <span class="wl" id="wk_lbl"></span>
+  <div class="pfseg" id="pfseg"></div>
+  <span class="cust">
+    <span>D-</span><input id="cin_lo" type="number" min="0" max="21" onkeydown="if(event.key==='Enter')applyCustom()">
+    <span id="c_to">~ D-</span><input id="cin_hi" type="number" min="0" max="21" onkeydown="if(event.key==='Enter')applyCustom()">
+    <button class="pfmini" id="c_apply" onclick="applyCustom()"></button>
+  </span>
+  <span class="dsep"></span>
+  <span class="wl" id="dc_lbl"></span>
+  <div class="dsel" id="dcsel">
+    <button class="msel-btn" id="dcsel_btn" onclick="event.stopPropagation();closePops('dcsel_list');$('dcsel_list').classList.toggle('on')"></button>
+    <div class="msel-list dtree" id="dcsel_list" onclick="event.stopPropagation()"></div>
+  </div>
+  <span class="wl" id="dp_lbl"></span>
+  <div class="dsel" id="dpsel">
+    <button class="msel-btn" id="dpsel_btn" onclick="event.stopPropagation();closePops('dpsel_list');$('dpsel_list').classList.toggle('on')"></button>
+    <div class="msel-list dtree" id="dpsel_list" onclick="event.stopPropagation()"></div>
+  </div>
+  <span class="wh" id="wk_hint"></span>
+</div>
+
+<div class="summary" id="summary" style="display:none">
+  <div class="s" id="sb_risk_box"><div class="k" id="sl_risk"></div><div class="v risk" id="sv_risk">–</div><div class="kb" id="sb_risk"></div></div>
+  <div class="s" id="sb_gold_box"><div class="k" id="sl_gold"></div><div class="v gold" id="sv_gold">–</div><div class="kb" id="sb_gold"></div></div>
+  <div class="s" id="sb_all_box"><div class="k" id="sl_all"></div><div class="v" id="sv_all">–</div><div class="kb" id="sb_all"></div></div>
+  <div class="s" id="sb_cr_box"><div class="k" id="sl_cr"></div><div class="v" id="sv_cr">–</div><div class="kb" id="sb_cr"></div></div>
+  <div class="ts" id="sv_ts"></div>
+</div>
+
+<div class="wrap" id="wrap">
+  <div class="loading" id="loading">…</div>
+</div>
+
+<div class="tip" id="tip"></div>
+<div class="foot" id="foot"></div>
+
+<div class="ovl" id="ovl" onclick="if(event.target===this)closeVoy()">
+  <div class="modal">
+    <div class="m-head"><h3 id="m_title"></h3><span class="m-etd" id="m_etd"></span>
+      <button class="m-x" onclick="closeVoy()">✕</button></div>
+    <div class="m-body" id="m_body"></div>
+  </div>
+</div>
+
+<script>
+/* ── 다국어 사전 ── */
+const T = {
+  ko:{
+    title:"픽업 선행지표 모니터", sub:"Pickup Lead-Indicator Monitor",
+    desc:'<b>평소 픽업곡선 대비 지연</b>으로 막판 <span class="risk-word">대량 캔슬</span> 위험을 조기 포착합니다. '+
+         '판정은 <b>BSA 기준</b>: 예상 잔여(Booked−예상캔슬)가 BSA를 채우면 안전, 못 채우면(빈 슬롯) 확인 대상. '+
+         '예상캔슬 = 미픽업 × 지역 13주 캔슬률. '+
+         '<span style="color:#9ca3af">Booked = KMTC 엠티 픽업 대상(탱크/SOC 화주 직반입 제외).</span>',
+    regions:{SZP:"심천",CAN:"광저우",HKG:"홍콩"},
+    s_risk:"즉시조치", s_gold:"확인", s_all:"안전", s_cr:"지역 캔슬률",
+    b_risk:"D-7 미만 · 빈슬롯",
+    b_gold:"D-7 이상 · 빈슬롯",
+    b_all:"슬롯 확보",
+    b_cr:"부킹생성일 최근 13주(91일)",
+    f_wk:"ETD 기간", f_p1:"D-0~7", f_p2:"D-8~14", f_apply:"적용",
+    pf_hint:"D-0=출항일 · 직접 D-day 범위 입력 가능",
+    dc_lbl:"도착 국가", dp_lbl:"도착 포트", dst_all_c:"전체 국가", dst_all_p:"전체 포트",
+    dst_n:"개", dst_clear:"✕ 전체 해제",
+    tt_risk:"출항 D-7 미만인데 예상 잔여가 BSA 미달(빈 슬롯 ≥30T) — 미픽업 화주 즉시 독촉 대상",
+    tt_gold:"출항 D-7 이상이고 빈 슬롯 있음 — 캔슬위험 화주 확답 받아 둘 대상",
+    tt_all:"예상 잔여(Booked−예상캔슬)가 BSA 이상 = 슬롯 안전. 카드에는 표시 안 함(전체 표에서 확인)",
+    tt_cr:"부킹 생성일 기준 최근 13주(91일) 이 지역 전체의 취소 TEU ÷ 전체 TEU (TEU 가중). 예상캔슬 환산에 사용",
+    baseline:"평소곡선", baseline_wait:"평소곡선 집계중(최초 ~수분)…",
+    asof:"픽업 기준", refresh:"🔄 지금 갱신", refreshing:"갱신 중… (~10초)",
+    refresh_hint:"10분마다 자동 갱신 · 버튼=즉시 (연속 클릭은 3분 쿨다운)",
+    sec_act:"확인 필요 항차", sec_act_sub:"빈 슬롯 노출 큰 순 · 안전 항차는 아래 전체 표에서",
+    sec_curve:"픽업 곡선", sec_curve_sub:"평소 곡선 vs 선택기간 항차 (도트에 마우스오버=상세)",
+    sec_all:"전체 항차", sec_all_sub:"선택기간 전체 · D-day 순",
+    csv_l:"화주리스트 다운로드", csv_ph:"항차 선택", csv_n:"개 선택", csv_clear:"전체 해제",
+    csv_exp:"⬇ 예상캔슬 화주 CSV", csv_np:"⬇ 미픽업 화주 CSV",
+    csv_hint:"여러 항차 선택 가능 · 즉시 다운로드",
+    pickrate:"픽업률", normal:"평소",
+    emptyslot:"예상 빈슬롯", cushion:"여력", expcancel:"예상캔슬", notpick:"미픽업",
+    tt_empty:"BSA − 예상잔여(Booked−예상캔슬). 예상대로 캔슬되면 비어나갈 슬롯(TEU). 이만큼 채우거나 지켜야 함",
+    tt_cushion:"Booked − BSA (과부킹분). 캔슬이 나도 이만큼까지는 BSA를 지킬 수 있는 여유",
+    tt_expc:"미픽업 TEU × 지역 13주 캔슬률. 지금 안 빼간 물량 중 통계적으로 취소될 것으로 보는 양",
+    booked:"Booked", pickup:"픽업", eir:"EIR",
+    route:"항로", etd:"ETD", status:"상태",
+    st_act:"즉시조치", st_watch:"확인", st_safe:"안전",
+    none:"대상 항차 없음", loading:"픽업 집계 중(최초 1회 ~10분+)…",
+    allclear:"조치 필요 항차 없음 (전부 슬롯 확보)",
+    th_vsl:"모선 / 항차", th_pick:"픽업% (평소대비)",
+    lg_base:"평소곡선", lg_act:"즉시조치", lg_watch:"확인", lg_safe:"안전/정상",
+    ch_all:"전체 (지역)", ch_days:"최근", ch_daysu:"일 기준", ch_nodata:"곡선 데이터 준비중 — build_pod_baseline.py 실행 필요",
+    ch_voy_n:"선택기간 항차",
+    foot:"데이터: EQ056I(엠티 픽업)·CS260I(EIR, 심천)·V_SC003I(부킹) · 코크핏 일배치 + 라이브 오버레이",
+    m_title:"선복 상세", m_load:"로딩중…", m_fail:"불러오기 실패",
+    m_pol:"적출항", m_dpo:"ETD", m_bsa:"BSA", m_bkg:"Booked", m_util:"소석률", m_surp:"잉여"
+  },
+  en:{
+    title:"Pickup Lead-Indicator Monitor", sub:"픽업 선행지표 모니터",
+    desc:'Detect mass <span class="risk-word">last-minute cancellations</span> early via <b>pickup lag vs the normal curve</b>. '+
+         'Judgment is <b>BSA-anchored</b>: if expected remaining (Booked−est.cancel) covers BSA the voyage is safe; otherwise (empty slot) it needs attention. '+
+         'Est. Cancel = Not-Picked × region 13-week cancel rate. '+
+         '<span style="color:#9ca3af">Booked = KMTC empty-pickup scope (tank/SOC shipper-owned excluded).</span>',
+    regions:{SZP:"Shenzhen",CAN:"Guangzhou",HKG:"Hong Kong"},
+    s_risk:"Act now", s_gold:"Check", s_all:"Safe", s_cr:"Region Cancel%",
+    b_risk:"D-7 or less · empty slot",
+    b_gold:"D-7+ · empty slot",
+    b_all:"Slots covered",
+    b_cr:"Booking date, last 13 wk (91d)",
+    f_wk:"ETD range", f_p1:"D-0~7", f_p2:"D-8~14", f_apply:"Apply",
+    pf_hint:"D-0=departure · type a custom D-day range",
+    dc_lbl:"Dest country", dp_lbl:"Dest port", dst_all_c:"All countries", dst_all_p:"All ports",
+    dst_n:" sel", dst_clear:"✕ Clear all",
+    tt_risk:"ETD under D-7 with expected remaining below BSA (empty slot ≥30T) — chase not-picked shippers now",
+    tt_gold:"ETD D-7+ with empty slot — secure confirmation from cancel-prone shippers",
+    tt_all:"Expected remaining (Booked−est.cancel) ≥ BSA = slots safe. Hidden from cards (see full table below)",
+    tt_cr:"Cancelled TEU ÷ total TEU (TEU-weighted) for the whole region, by booking creation date over the last 13 weeks (91 days). Used to estimate cancellations",
+    baseline:"Normal curve", baseline_wait:"Building normal curve (~mins on first run)…",
+    asof:"Pickup as of", refresh:"🔄 Refresh now", refreshing:"Refreshing… (~10s)",
+    refresh_hint:"Auto-refresh every 10 min · button = instant (3-min cooldown)",
+    sec_act:"Needs Attention", sec_act_sub:"Sorted by exposed empty slots · safe voyages in the full table below",
+    sec_curve:"Pickup Curve", sec_curve_sub:"Normal curve vs voyages in the selected range (hover a dot for detail)",
+    sec_all:"All Voyages", sec_all_sub:"Everything in range · by D-day",
+    csv_l:"Shipper list download", csv_ph:"Select voyages", csv_n:" selected", csv_clear:"Clear all",
+    csv_exp:"⬇ Est.-cancel shippers CSV", csv_np:"⬇ Not-picked shippers CSV",
+    csv_hint:"Multiple voyages allowed · instant download",
+    pickrate:"Pickup%", normal:"Normal",
+    emptyslot:"Exp. empty slot", cushion:"Cushion", expcancel:"Est. Cancel", notpick:"Not Picked",
+    tt_empty:"BSA − expected remaining (Booked−est.cancel). Slots that will sail empty if cancellations land as expected",
+    tt_cushion:"Booked − BSA (overbooking). How much cancellation the voyage can absorb while still covering BSA",
+    tt_expc:"Not-picked TEU × region 13-week cancel rate. Statistically expected cancellations among cargo not yet picked up",
+    booked:"Booked", pickup:"Pickup", eir:"EIR",
+    route:"Route", etd:"ETD", status:"Status",
+    st_act:"Act now", st_watch:"Check", st_safe:"Safe",
+    none:"No voyages in scope", loading:"Aggregating pickup (first run: ~10 min+)…",
+    allclear:"No action needed (all slots covered)",
+    th_vsl:"Vessel / Voy", th_pick:"Pickup% (vs normal)",
+    lg_base:"Normal curve", lg_act:"Act now", lg_watch:"Check", lg_safe:"Safe/OK",
+    ch_all:"All (region)", ch_days:"last", ch_daysu:"days", ch_nodata:"Curve data not built yet — run build_pod_baseline.py",
+    ch_voy_n:"voyages in range",
+    foot:"Data: EQ056I (empty pickup)·CS260I (EIR, SZP)·V_SC003I (booking) · daily batch + live overlay",
+    m_title:"Loadable Detail", m_load:"Loading…", m_fail:"Load failed",
+    m_pol:"POL", m_dpo:"ETD", m_bsa:"BSA", m_bkg:"Booked", m_util:"Utilization", m_surp:"Surplus"
+  }
+};
+const REGIONS = ["SZP","CAN","HKG"];
+let LANG = "ko", REGION = "SZP", PMON = null, POD = null, _timer = null;
+let PDLO = 0, PDHI = 14;   // ETD 기간 = D-day 범위 (기본 D-0~14: 골든 D-7~11 포함)
+let CH_SEL = "";           // 곡선 선택(POD) — ""=지역 전체
+let DCTR = new Set();      // 선택 도착지 국가 (국가 전체)
+let DPORT = new Set();     // 선택 도착지 포트 (개별)
+function pfMatch(v){ return v.dday!=null && v.dday>=PDLO && v.dday<=PDHI; }
+// 도착지 필터 — 국가필터·포트필터 각각 독립(AND). 각 필터 미선택이면 그 조건은 통과.
+function destMatch(v){
+  const okC = !DCTR.size || (v.dest_ctrs||[]).some(c=>DCTR.has(c));
+  const okP = !DPORT.size || (v.dest_ports||[]).some(p=>DPORT.has(p));
+  return okC && okP;
+}
+const $ = id => document.getElementById(id);
+const fmt = n => (n==null||n===''||isNaN(n)) ? '–' : Math.round(n).toLocaleString();
+function L(){ return T[LANG]; }
+
+function fmtEtd(etd){
+  if(!etd) return '';
+  const s=String(etd);
+  if(/^\d{8}$/.test(s)) return `${s.slice(4,6)}/${s.slice(6,8)}`;
+  const m=s.match(/\d{4}-(\d{2})-(\d{2})/); return m?`${m[1]}/${m[2]}`:s;
+}
+function dday(d){ return d==null?'':(d>=0?`D-${d}`:`D+${-d}`); }
+
+function setLang(l){
+  LANG = l;
+  $('lang_ko').classList.toggle('on', l==='ko');
+  $('lang_en').classList.toggle('on', l==='en');
+  document.documentElement.lang = l;
+  applyStatic();
+  renderTabs();
+  if(PMON) render();
+}
+function applyStatic(){
+  const t = L();
+  $('h_title').childNodes[0].nodeValue = t.title+' ';
+  $('h_sub').textContent = t.sub;
+  $('h_desc').innerHTML = t.desc;
+  $('sl_risk').textContent = t.s_risk;
+  $('sl_gold').textContent = t.s_gold;
+  $('sl_all').textContent = t.s_all;
+  $('sl_cr').textContent = t.s_cr;
+  $('sb_risk').textContent = t.b_risk; $('sb_risk_box').title = t.tt_risk;
+  $('sb_gold').textContent = t.b_gold; $('sb_gold_box').title = t.tt_gold;
+  $('sb_all').textContent  = t.b_all;  $('sb_all_box').title  = t.tt_all;
+  $('sb_cr').textContent   = t.b_cr;   $('sb_cr_box').title   = t.tt_cr;
+  $('wk_lbl').textContent = t.f_wk;
+  $('c_apply').textContent = t.f_apply;
+  $('foot').textContent = t.foot;
+  document.title = t.title+' · '+t.sub;
+}
+function renderTabs(){
+  const t = L();
+  $('tabs').innerHTML = REGIONS.map(r =>
+    `<button class="${r===REGION?'on':''}" onclick="setRegion('${r}')">${t.regions[r]} <small style="opacity:.6">${r}</small></button>`
+  ).join('');
+}
+function setRegion(r){
+  if(r===REGION && PMON) return;
+  REGION = r; PMON = null; POD = null; PDLO = 0; PDHI = 14; CH_SEL = ""; CSVSEL = new Set();
+  DCTR = new Set(); DPORT = new Set();
+  renderTabs();
+  $('summary').style.display='none';
+  $('wkbar').style.display='none';
+  $('wrap').innerHTML = `<div class="loading">${L().loading}</div>`;
+  load();
+}
+
+/* ETD 기간 = D-day 범위 (프리셋 D-0~7 / D-8~14 + 직접입력) */
+function setRange(lo, hi){ PDLO = lo; PDHI = hi; render(); }
+function applyCustom(){
+  let lo = parseInt($('cin_lo').value, 10), hi = parseInt($('cin_hi').value, 10);
+  if(isNaN(lo)) lo = 0; if(isNaN(hi)) hi = 14;
+  lo = Math.max(0, Math.min(21, lo)); hi = Math.max(0, Math.min(21, hi));
+  if(lo > hi){ const s = lo; lo = hi; hi = s; }
+  PDLO = lo; PDHI = hi; render();
+}
+function renderPfBar(){
+  const t = L();
+  const p1 = (PDLO===0 && PDHI===7), p2 = (PDLO===8 && PDHI===14);
+  $('wkbar').style.display='flex';
+  $('pfseg').innerHTML =
+    `<button class="pfbtn ${p1?'on':''}" onclick="setRange(0,7)">${t.f_p1}</button>`+
+    `<button class="pfbtn ${p2?'on':''}" onclick="setRange(8,14)">${t.f_p2}</button>`;
+  $('cin_lo').value = PDLO; $('cin_hi').value = PDHI;
+  $('wk_hint').textContent = t.pf_hint;
+}
+
+/* 도착지 필터 — 국가/포트 별도 드롭다운(행 클릭=선택). 국가·포트 AND 결합. */
+function closePops(keep){ ['msel_list','dcsel_list','dpsel_list'].forEach(id=>{
+  if(id!==keep){ const l=$(id); if(l) l.classList.remove('on'); } }); }
+function renderDestBar(){
+  const t = L();
+  $('dc_lbl').textContent = t.dc_lbl;
+  $('dp_lbl').textContent = t.dp_lbl;
+  const tree = (PMON && PMON.dest_tree) || {};
+  const ctrs = Object.keys(tree).sort();
+  // 포트 → 국가 (라벨용), 전체 포트 목록
+  const port2ctr = {}, allPorts = [];
+  ctrs.forEach(c => tree[c].forEach(p => { port2ctr[p]=c; allPorts.push(p); }));
+  allPorts.sort();
+  // 국가 드롭다운
+  $('dcsel_btn').textContent = DCTR.size ? `${DCTR.size}${t.dst_n}` : t.dst_all_c;
+  $('dcsel_btn').classList.toggle('act', DCTR.size>0);
+  $('dcsel_list').innerHTML = ctrs.length
+    ? `<div class="msel-item msel-all" onclick="DCTR.clear();render()">${t.dst_clear}</div>`+
+      ctrs.map(c=>`<div class="dt-prow" onclick="dTog(DCTR,'${c}')">
+        <input type="checkbox" ${DCTR.has(c)?'checked':''} onclick="event.preventDefault()">
+        <b>${c}</b> <span class="dt-cn">${tree[c].length}${LANG==='ko'?'개 포트':'p'}</span></div>`).join('')
+    : `<div class="dt-prow" style="color:#9ca3af">–</div>`;
+  // 포트 드롭다운(국가 라벨 병기)
+  $('dpsel_btn').textContent = DPORT.size ? `${DPORT.size}${t.dst_n}` : t.dst_all_p;
+  $('dpsel_btn').classList.toggle('act', DPORT.size>0);
+  $('dpsel_list').innerHTML = allPorts.length
+    ? `<div class="msel-item msel-all" onclick="DPORT.clear();render()">${t.dst_clear}</div>`+
+      allPorts.map(p=>`<div class="dt-prow" onclick="dTog(DPORT,'${p}')">
+        <input type="checkbox" ${DPORT.has(p)?'checked':''} onclick="event.preventDefault()">
+        <b>${p}</b> <span class="dt-cn">${port2ctr[p]||''}</span></div>`).join('')
+    : `<div class="dt-prow" style="color:#9ca3af">–</div>`;
+}
+// 행 클릭 → 토글(체크박스 칸 아닌 국가/포트 이름 클릭으로도 선택)
+function dTog(set, key){ if(set.has(key)) set.delete(key); else set.add(key); render(); }
+
+/* ── 정적 데이터 계층: 전체 스냅샷(SNAP)에서 지역별 뷰 구성 (서버/DB 호출 없음) ── */
+let SNAP = null;   // 전체 스냅샷 {ts, source, regions:{SZP,CAN,HKG}}
+function showRegion(){
+  const r = SNAP && SNAP.regions[REGION];
+  if(!r){ $('wrap').innerHTML = `<div class="empty">no data</div>`; return; }
+  PMON = { voyages:r.voyages||[], dest_tree:r.dest_tree||{}, cancel_rate:r.cancel_rate,
+           summary:r.summary||{}, loading:false, loaded_ts:SNAP.ts,
+           baseline_ts:(r.pod&&r.pod.pod_ts)||SNAP.ts };
+  POD = r.pod ? {ok:true, has_pod:r.pod.has_pod, region_curve:r.pod.region_curve||[],
+                 pods:r.pod.pods||[], ndays:r.pod.ndays, pod_ts:SNAP.ts} : null;
+  render();
+}
+// load()는 setRegion에서 호출 — 스냅샷은 이미 로드됨
+function load(){ showRegion(); }
+
+function render(){
+  const t = L(), s = PMON.summary||{};
+  if(PMON.loading){
+    $('summary').style.display='none'; $('wkbar').style.display='none';
+    $('wrap').innerHTML = `<div class="loading">${PMON.msg||t.loading}</div>`; return;
+  }
+  renderPfBar();
+  renderDestBar();
+  const vs = (PMON.voyages||[]).filter(v=>pfMatch(v) && destMatch(v));
+
+  // ── 요약 (선택 기간 기준) ──
+  const act   = vs.filter(v=>v.stance==='act');
+  const watch = vs.filter(v=>v.stance==='watch');
+  const safe  = vs.filter(v=>v.bsa_safe);
+  $('summary').style.display='flex';
+  $('sv_risk').textContent = act.length;
+  $('sv_gold').textContent = watch.length;
+  $('sv_all').textContent  = safe.length;
+  $('sv_cr').textContent   = PMON.cancel_rate!=null ? PMON.cancel_rate+'%' : '–';
+  let ts = PMON.baseline_ts ? `${t.baseline}: ${PMON.baseline_ts}` : t.baseline_wait;
+  if(s.has_baseline===false) ts = t.baseline_wait;
+  const asof = PMON.loaded_ts ? `<b style="color:var(--ink)">${t.asof} ${String(PMON.loaded_ts).slice(5)}</b> · ` : '';
+  $('sv_ts').innerHTML = `${asof}${ts} <span style="color:#cbd5e1">· ADW</span>`;
+
+  const hasEir = !!s.has_eir;
+  const list = [...act, ...watch];   // 카드 = 확인 필요만 (safe/ok 숨김 → 전체 표에)
+
+  // ── ① CSV 바 + 확인필요 카드 → ② 곡선 → ③ 전체 표 ──
+  CARDV = list;   // qm 툴팁이 실제 수치·산식 표시할 때 참조
+  const cardsHtml = list.length
+    ? `<div class="cards">${list.map((v,i)=>cardHtml(v,hasEir,i)).join('')}</div>`
+    : `<div class="empty">✅ ${t.allclear}</div>`;
+  const tableVs = [...vs].sort((a,b)=>(a.dday??99)-(b.dday??99));
+  $('wrap').innerHTML = `
+    <div class="sec-h">🔴 ${t.sec_act} <small>· ${t.sec_act_sub}</small></div>
+    ${csvBarHtml(vs)}
+    ${cardsHtml}
+    <div class="sec-h">📈 ${t.sec_curve} <small>· ${t.sec_curve_sub}</small></div>
+    ${chartCardHtml()}
+    <div class="sec-h">📋 ${t.sec_all} <small>· ${t.sec_all_sub}</small></div>
+    ${tableVs.length ? tableHtml(tableVs, hasEir) : `<div class="empty">${t.none}</div>`}`;
+  drawChart(vs);
+}
+
+/* ── CSV 다운로드 바 (항차 다중선택) ── */
+let CSVSEL = new Set();   // "vsl|voy"
+function csvBarHtml(vs){
+  const t = L();
+  const ordered = [...vs].sort((a,b)=>{
+    const r = {act:0, watch:1}, ra = r[a.stance]??2, rb = r[b.stance]??2;
+    return ra!==rb ? ra-rb : (a.dday??99)-(b.dday??99);
+  });
+  const keys = new Set(ordered.map(v=>v.vsl+'|'+v.voy));
+  CSVSEL.forEach(k=>{ if(!keys.has(k)) CSVSEL.delete(k); });   // 필터 밖으로 나간 선택 정리
+  const ic = v => v.stance==='act'?'🔴':(v.stance==='watch'?'🟡':'🟢');
+  const items = ordered.map(v=>{
+    const k = v.vsl+'|'+v.voy;
+    return `<label class="msel-item"><input type="checkbox" ${CSVSEL.has(k)?'checked':''}
+      onchange="msTog('${k}',this.checked)"> ${ic(v)} ${v.vsl} ${v.voy} · ${dday(v.dday)}${v.route?' · '+v.route:''}</label>`;
+  }).join('');
+  const lab = CSVSEL.size ? `${CSVSEL.size}${t.csv_n}` : t.csv_ph;
+  return `<div class="csvbar">
+    <span class="cl">📥 ${t.csv_l}</span>
+    <div class="msel" id="msel">
+      <button class="msel-btn" onclick="event.stopPropagation();$('msel_list').classList.toggle('on')">${lab}</button>
+      <div class="msel-list" id="msel_list" onclick="event.stopPropagation()">
+        <div class="msel-item msel-all" onclick="CSVSEL.clear();render()">✕ ${t.csv_clear}</div>
+        ${items}
+      </div>
+    </div>
+    <button class="csv-btn" onclick="dlCsv('expcancel')">${t.csv_exp}</button>
+    <button class="csv-btn" onclick="dlCsv('notpicked')">${t.csv_np}</button>
+    <span class="ch">${t.csv_hint}</span>
+  </div>`;
+}
+function msTog(k, on){
+  if(on) CSVSEL.add(k); else CSVSEL.delete(k);
+  // 버튼 라벨만 갱신(리스트 열림 유지)
+  const t = L();
+  const btn = document.querySelector('.msel-btn');
+  if(btn) btn.textContent = CSVSEL.size ? `${CSVSEL.size}${t.csv_n}` : t.csv_ph;
+}
+document.addEventListener('click', ()=>{ ['msel_list','dcsel_list','dpsel_list'].forEach(id=>{ const l=$(id); if(l) l.classList.remove('on'); }); });
+/* ── CSV: 스냅샷 임베드 화주상세(v.detail)에서 브라우저가 직접 생성(서버 X) ── */
+function _csvCell(x){ x = (x==null?'':String(x)); return /[",\n]/.test(x) ? '"'+x.replace(/"/g,'""')+'"' : x; }
+function _dl(name, rows){
+  const csv = '﻿' + rows.map(r=>r.map(_csvCell).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+const _STS = {'01':'Normal','02':'Waiting','03':'Cancel','05':'Checking'};
+function dlCsv(kind){
+  if(!CSVSEL.size){ const l=$('msel_list'); if(l) l.classList.add('on'); return; }
+  const sel = new Set([...CSVSEL]);
+  const vs = (PMON.voyages||[]).filter(v=>sel.has(v.vsl+'|'+v.voy));
+  const stamp = (SNAP&&SNAP.ts?SNAP.ts.slice(5,10).replace('-',''):'');
+  const tag = vs.length===1 ? `${vs[0].vsl}_${vs[0].voy}` : `${vs.length}voys`;
+  let head, rows=[];
+  if(kind==='notpicked'){
+    head=['VSL','VOY','SHIPPER','CODE','BKG_NO','POD','STATUS','BOOKED_TEU','PICKED_TEU','NOT_PICKED_TEU'];
+    vs.forEach(v=>(v.detail||[]).filter(d=>d.not_picked>0)
+      .sort((a,b)=>b.not_picked-a.not_picked)
+      .forEach(d=>rows.push([v.vsl,v.voy,d.shipper,d.code,d.bkg_no,d.pod,_STS[d.sts]||d.sts,d.booked,d.picked,d.not_picked])));
+    _dl(`notpicked_${tag}_${stamp}.csv`, [head,...rows]);
+  }else{
+    head=['VSL','VOY','SHIPPER','CODE','BKG_NO','POD','DEST','STATUS','BOOKED_TEU','CANCEL_RATE_13W_%','EXP_CANCEL_TEU'];
+    vs.forEach(v=>(v.detail||[]).slice()
+      .sort((a,b)=>(b.exp_cancel||0)-(a.exp_cancel||0)||b.booked-a.booked)
+      .forEach(d=>rows.push([v.vsl,v.voy,d.shipper,d.code,d.bkg_no,d.pod,d.dest_ctr,_STS[d.sts]||d.sts,d.booked,d.cancel_rate??'',d.exp_cancel??''])));
+    _dl(`expcancel_${tag}_${stamp}.csv`, [head,...rows]);
+  }
+}
+
+/* ── 확인필요 카드 — 픽업률(픽업/BKG) 게이지 + 평소 마커 ── */
+function pickBar(v){
+  const pc = Math.min(v.pickup_pct??0, 100);
+  const cls = v.stance==='act' ? 'act' : (v.stance==='watch' ? 'watch' : 'ok');
+  const baseMk = v.base_pct!=null ? `<div class="gbase" style="left:${Math.min(v.base_pct,100)}%"></div>` : '';
+  return `<div class="gauge"><div class="gfill ${cls}" style="width:${pc}%"></div>${baseMk}</div>`;
+}
+let CARDV = [];
+function cardHtml(v, hasEir, i){
+  const t = L();
+  const act = v.stance==='act';
+  const cls = act ? 'risk' : 'gold';
+  const icon = act ? '🔴' : '🟡';
+  const stanceTxt = act ? t.st_act : t.st_watch;
+  const pc = v.pickup_pct!=null ? v.pickup_pct+'%' : '–';
+  const normTxt = v.base_pct!=null ? `<span class="norm">${t.normal} ${v.base_pct}%</span>` : '';
+  const eirTxt = (hasEir && v.eir_teu) ? `<span class="norm"> · EIR/BSA ${fmt(v.eir_teu)}/${fmt(v.bsa)}</span>` : '';
+  const qm = kind => `<span class="qm" onmousemove="qmTip(event,${i},'${kind}')" onmouseout="hideTip()">?</span>`;
+  const expChip = (v.exp_cancel!=null && v.exp_cancel>0)
+      ? `<div class="stat"><div class="sk">${t.expcancel}${qm('expc')}</div><div class="sv warn">~${fmt(v.exp_cancel)}</div></div>` : '';
+  return `<div class="pcard ${cls}">
+    <div class="pc-top">
+      <span class="pc-vsl" onclick="voy('${v.vsl}','${v.voy}')">${icon} ${v.vsl} ${v.voy}</span>
+      ${v.route?`<span class="pc-rte">${v.route}</span>`:''}
+      <span class="badge ${cls}">${stanceTxt}</span>
+      <span class="pc-etd">${fmtEtd(v.etd)} · ${dday(v.dday)}</span>
+    </div>
+    ${pickBar(v)}
+    <div class="glab"><span class="cur">${t.pickrate} <b>${pc}</b></span> ${normTxt}${eirTxt}</div>
+    <div class="stats">
+      <div class="stat"><div class="sk">${t.emptyslot}${qm('empty')}</div><div class="sv red">${fmt(v.exposure)}T</div></div>
+      <div class="stat"><div class="sk">BSA</div><div class="sv">${fmt(v.bsa)}</div></div>
+      <div class="stat"><div class="sk">${t.cushion}${qm('cushion')}</div><div class="sv">${fmt(v.cushion)}T</div></div>
+      <div class="stat"><div class="sk">${t.notpick}</div><div class="sv">${fmt(v.not_picked_teu)}T</div></div>
+      ${expChip}
+    </div>
+  </div>`;
+}
+
+/* ? 마크 툴팁 — 그 항차 실제 수치로 산식 표시 (커스텀, 즉시 표시) */
+function qmTip(ev, i, kind){
+  const v = CARDV[i];
+  if(!v) return;
+  const exp0 = v.exp_cancel||0;
+  const rem = (v.booked_total||v.booked_teu||0) - exp0;   // 예상잔여
+  let h = '';
+  if(LANG==='ko'){
+    if(kind==='empty') h = `<b>빈 슬롯 ${fmt(v.exposure)}T</b><br>
+      = BSA ${fmt(v.bsa)} − 예상잔여 ${fmt(rem)}<br>
+      (예상잔여 = Booked ${fmt(v.booked_total)} − 예상캔슬 ${fmt(exp0)})<br>
+      <span style="color:#94a3b8">예상대로 취소되면 이만큼 슬롯이 비어나감</span>`;
+    else if(kind==='cushion') h = `<b>여력 ${fmt(v.cushion)}T</b><br>
+      = Booked ${fmt(v.booked_total)} − BSA ${fmt(v.bsa)}<br>
+      <span style="color:#94a3b8">이만큼 취소돼도 BSA는 지켜지는 과부킹 버퍼</span>`;
+    else if(kind==='expc') h = `<b>예상캔슬 ~${fmt(exp0)}T</b><br>
+      = 미픽업 ${fmt(v.not_picked_teu)}T × 지역 캔슬률 ${PMON.cancel_rate||'–'}%<br>
+      <span style="color:#94a3b8">최근 13주(91일) 지역 전체 취소TEU÷전체TEU</span>`;
+  }else{
+    if(kind==='empty') h = `<b>Empty slot ${fmt(v.exposure)}T</b><br>
+      = BSA ${fmt(v.bsa)} − expected remaining ${fmt(rem)}<br>
+      (remaining = Booked ${fmt(v.booked_total)} − est. cancel ${fmt(exp0)})<br>
+      <span style="color:#94a3b8">Slots that sail empty if cancellations land as expected</span>`;
+    else if(kind==='cushion') h = `<b>Cushion ${fmt(v.cushion)}T</b><br>
+      = Booked ${fmt(v.booked_total)} − BSA ${fmt(v.bsa)}<br>
+      <span style="color:#94a3b8">Overbooking buffer — BSA still covered up to this much cancellation</span>`;
+    else if(kind==='expc') h = `<b>Est. cancel ~${fmt(exp0)}T</b><br>
+      = Not-picked ${fmt(v.not_picked_teu)}T × region cancel rate ${PMON.cancel_rate||'–'}%<br>
+      <span style="color:#94a3b8">Cancelled÷total TEU for the region, last 13 weeks (91 days)</span>`;
+  }
+  const tip = $('tip');
+  tip.innerHTML = h;
+  tip.style.display='block';
+  tip.style.left = Math.min(ev.clientX+14, window.innerWidth-290)+'px';
+  tip.style.top = (ev.clientY+14)+'px';
+}
+
+/* ── ② 픽업 곡선 — 평소 곡선(최근 3개월) vs 선택기간 항차 도트 ── */
+let DOTS = [];
+function chartCardHtml(){
+  const t = L();
+  // POD 선택(도착지별 곡선) — POD baseline 있을 때만
+  let sel = '';
+  if(POD && POD.has_pod){
+    const opts = (POD.pods||[]).map(p=>
+      `<option value="${p.pod}" ${CH_SEL===p.pod?'selected':''}>${p.pod} (${fmt(p.booked)}T·${p.nvoy}voy)</option>`).join('');
+    sel = `<select id="pod_sel" onchange="CH_SEL=this.value;render()">
+      <option value="">${t.ch_all}</option>${opts}</select>`;
+  }
+  const nd = POD && POD.ndays ? `${t.ch_days} ${POD.ndays}${t.ch_daysu}` : '';
+  return `<div class="chartcard">
+    <div class="ch-top">
+      ${sel}
+      <span class="lg"><span class="ln"></span>${t.lg_base}</span>
+      <span class="lg"><span class="sw" style="background:var(--red)"></span>${t.lg_act}</span>
+      <span class="lg"><span class="sw" style="background:var(--orange)"></span>${t.lg_watch}</span>
+      <span class="lg"><span class="sw" style="background:var(--green)"></span>${t.lg_safe}</span>
+      <span class="bn">${nd}${POD&&POD.pod_ts?' · '+POD.pod_ts:''}</span>
+    </div>
+    <div id="chart"></div>
+  </div>`;
+}
+function _curvePoints(){
+  // 선택 POD 곡선 → 없으면 지역 전체(3개월) → 없으면 모니터 baseline(최근 10일)
+  if(POD && POD.has_pod){
+    if(CH_SEL){
+      const p = (POD.pods||[]).find(x=>x.pod===CH_SEL);
+      if(p && p.curve) return Object.entries(p.curve).map(([d,pct])=>({d:+d,pct})).filter(x=>x.pct!=null);
+    }
+    const rc = (POD.region_curve||[]).filter(x=>x.pct!=null);
+    if(rc.length) return rc;
+  }
+  return [];
+}
+function drawChart(vs){
+  const t = L(), el = $('chart');
+  if(!el) return;
+  const W=760, H=185, PL=40, PR=12, PT=12, PB=26;
+  const X = d => PL + (14-d)/14*(W-PL-PR);
+  const Y = p => H-PB - Math.min(p,110)/110*(H-PT-PB);
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  // 골든타임 밴드 D-7~11
+  s += `<rect x="${X(11)}" y="${PT}" width="${X(7)-X(11)}" height="${H-PT-PB}" fill="#fff7ed"/>`;
+  // Y 그리드 0/25/50/75/100
+  for(const p of [0,25,50,75,100]){
+    s += `<line x1="${PL}" y1="${Y(p)}" x2="${W-PR}" y2="${Y(p)}" stroke="#eef1f4" stroke-width="1"/>`;
+    s += `<text x="${PL-7}" y="${Y(p)+4}" font-size="10" fill="#9ca3af" text-anchor="end">${p}%</text>`;
+  }
+  // X 라벨
+  for(const d of [14,11,9,7,5,3,1,0]){
+    s += `<text x="${X(d)}" y="${H-PB+16}" font-size="10" fill="#9ca3af" text-anchor="middle">D-${d}</text>`;
+  }
+  s += `<text x="${(X(11)+X(7))/2}" y="${PT+12}" font-size="10" fill="#ea580c" text-anchor="middle" font-weight="700">D-7~11</text>`;
+  // 평소 곡선
+  const cv = _curvePoints().sort((a,b)=>b.d-a.d);
+  if(cv.length){
+    const pts = cv.map(c=>`${X(c.d)},${Y(c.pct)}`).join(' ');
+    s += `<polyline points="${pts}" fill="none" stroke="#1e3a5f" stroke-width="2.5" stroke-linejoin="round"/>`;
+  }else{
+    s += `<text x="${(PL+W-PR)/2}" y="${(PT+H-PB)/2}" font-size="12" fill="#9ca3af" text-anchor="middle">${t.ch_nodata}</text>`;
+  }
+  // 선택기간 항차 도트
+  DOTS = vs.filter(v=>v.dday!=null && v.dday>=0 && v.dday<=14 && v.pickup_pct!=null);
+  DOTS.forEach((v,i)=>{
+    const col = v.stance==='act' ? 'var(--red)' : (v.stance==='watch' ? 'var(--orange)' : 'var(--green)');
+    s += `<circle class="dot" cx="${X(v.dday)}" cy="${Y(v.pickup_pct)}" r="5" fill="${col}" fill-opacity=".85"
+          stroke="#fff" stroke-width="1.5" data-i="${i}"
+          onmousemove="dotTip(event,${i})" onmouseout="hideTip()" onclick="voy('${v.vsl}','${v.voy}')"/>`;
+  });
+  s += `</svg>`;
+  el.innerHTML = s;
+}
+function dotTip(ev, i){
+  const t = L(), v = DOTS[i];
+  if(!v) return;
+  const tip = $('tip');
+  tip.innerHTML = `<b>${v.vsl} ${v.voy}</b>${v.route?' · '+v.route:''}<br>
+    ${fmtEtd(v.etd)} · ${dday(v.dday)}<br>
+    ${t.pickrate} <b>${v.pickup_pct}%</b>${v.base_pct!=null?` (${t.normal} ${v.base_pct}%)`:''}<br>
+    ${t.booked} ${fmt(v.booked_teu)}T · ${t.notpick} ${fmt(v.not_picked_teu)}T`;
+  tip.style.display='block';
+  const x = Math.min(ev.clientX+14, window.innerWidth-280);
+  tip.style.left = x+'px';
+  tip.style.top = (ev.clientY+14)+'px';
+}
+function hideTip(){ $('tip').style.display='none'; }
+
+/* ── ③ 전체 항차 테이블 ── */
+function miniGauge(v){
+  const col = v.stance==='act'?'var(--red)':(v.stance==='watch'?'var(--orange)':'var(--green)');
+  const baseMk = v.base_pct!=null ? `<span class="mb" style="left:${Math.min(v.base_pct,100)}%"></span>`:'';
+  return `<span class="mini"><span class="mf" style="width:${Math.min(v.pickup_pct,100)}%;background:${col}"></span>${baseMk}</span>`;
+}
+function stBadge(v){
+  const t = L();
+  if(v.stance==='act')   return `<span class="badge risk">${t.st_act}</span>`;
+  if(v.stance==='watch') return `<span class="badge gold">${t.st_watch}</span>`;
+  if(v.bsa_safe)         return `<span class="badge safe">${t.st_safe}</span>`;
+  return '';
+}
+function tableHtml(vs, hasEir){
+  const t = L();
+  const eth = hasEir ? `<th>${t.eir}/BSA</th>` : '';
+  const head = `<tr>
+    <th class="l">${t.th_vsl}</th><th class="l">${t.route}</th><th>${t.etd}</th>
+    <th class="l">${t.status}</th>
+    <th>${t.booked}</th><th>BSA</th>
+    ${eth}<th class="l">${t.th_pick}</th><th>${t.pickup}</th><th>${t.notpick}</th>
+    <th>${t.emptyslot}</th><th>${t.expcancel}</th></tr>`;
+  const rows = vs.map(v=>{
+    const cmp = v.base_pct!=null
+      ? ` <small style="color:#94a3b8">${t.normal} ${v.base_pct}</small>` : '';
+    const pcCol = v.stance==='act'?'var(--red)':(v.pickup_pct>=90?'var(--green)':'var(--ink)');
+    const eir = hasEir ? `<td style="color:#0369a1">${v.eir_teu?fmt(v.eir_teu)+'/'+fmt(v.bsa):'–'}</td>` : '';
+    const exp = (v.exp_cancel!=null && v.exp_cancel>0)
+      ? `<td style="color:var(--amber)">~${fmt(v.exp_cancel)}</td>`
+      : `<td style="color:#cbd5e1">–</td>`;
+    const xps = (v.exposure!=null && v.exposure>0)
+      ? `<td style="color:var(--red);font-weight:700">${fmt(v.exposure)}</td>`
+      : `<td style="color:#cbd5e1">${v.exposure!=null?'0':'–'}</td>`;
+    return `<tr class="${v.stance==='act'?'act':(v.stance==='watch'?'watch':'')}">
+      <td class="l"><span class="vsl-lnk" onclick="voy('${v.vsl}','${v.voy}')">${v.vsl} ${v.voy}</span></td>
+      <td class="l rte-tag">${v.route||'–'}</td>
+      <td>${fmtEtd(v.etd)} <span class="dd">${dday(v.dday)}</span></td>
+      <td class="l">${stBadge(v)}</td>
+      <td>${fmt(v.booked_total||v.booked_teu)}</td>
+      <td>${fmt(v.bsa)}</td>
+      ${eir}
+      <td class="l">${miniGauge(v)}<b style="color:${pcCol}">${v.pickup_pct}%</b>${cmp}</td>
+      <td style="color:${v.picked_teu>0?'var(--green)':'#9ca3af'}">${fmt(v.picked_teu)}</td>
+      <td style="color:${v.not_picked_teu>0?'var(--amber)':'#9ca3af'}">${fmt(v.not_picked_teu)}</td>
+      ${xps}${exp}</tr>`;
+  }).join('');
+  return `<table>${head}<tbody>${rows}</tbody></table>`;
+}
+
+/* 모선 클릭 → 그 항차 화주 상세(스냅샷 임베드, 서버 X). DLY(최종배송지) 필터 지원 */
+let _VOYDET = [], _VOYHEAD = "", _DLYSEL = "";
+function voy(vsl, voyNo){
+  const v = (PMON.voyages||[]).find(x=>x.vsl===vsl && x.voy===voyNo) || {};
+  _VOYDET = (v.detail||[]).slice().sort((a,b)=>b.not_picked-a.not_picked||b.booked-a.booked);
+  _DLYSEL = "";
+  $('m_title').textContent = `${vsl} ${voyNo}`;
+  $('m_etd').textContent = `${fmtEtd(v.etd)} · ${dday(v.dday)} · Booked ${fmt(v.booked_teu)} / BSA ${fmt(v.bsa)}`;
+  renderVoyBody();
+  $('ovl').classList.add('on');
+}
+function renderVoyBody(){
+  const t = L();
+  // DLY 필터 옵션 (그 항차 부킹들의 DLY_PLC distinct, 건수)
+  const cnt = {};
+  _VOYDET.forEach(d=>{ const k=d.dly_plc||'-'; cnt[k]=(cnt[k]||0)+1; });
+  const dlys = Object.keys(cnt).sort();
+  const opts = dlys.map(k=>`<option value="${k}" ${_DLYSEL===k?'selected':''}>${k} (${cnt[k]})</option>`).join('');
+  const det = _DLYSEL ? _VOYDET.filter(d=>(d.dly_plc||'-')===_DLYSEL) : _VOYDET;
+  const body = det.map(d=>`<tr>
+      <td class="l" style="font-variant-numeric:tabular-nums">${d.bkg_no}</td>
+      <td class="l">${d.code}</td>
+      <td class="l"><span title="${(d.shipper||'').replace(/"/g,'')}">${(d.shipper||d.code||'').slice(0,22)}</span></td>
+      <td class="l">${d.pod}</td>
+      <td class="l">${d.dly_plc||'–'}${d.dly_ctr?` <small style="color:#9ca3af">${d.dly_ctr}</small>`:''}</td>
+      <td>${_STS[d.sts]||d.sts}</td>
+      <td>${fmt(d.booked)}</td>
+      <td style="color:${d.picked>0?'var(--green)':'#9ca3af'}">${fmt(d.picked)}</td>
+      <td style="color:${d.not_picked>0?'var(--amber)':'#cbd5e1'}">${fmt(d.not_picked)}</td>
+    </tr>`).join('');
+  const bt = det.reduce((s,d)=>s+d.booked,0), pt = det.reduce((s,d)=>s+d.picked,0), nt = det.reduce((s,d)=>s+d.not_picked,0);
+  const bar = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:700;color:var(--mut)">${LANG==='ko'?'최종배송지(DLY)':'Delivery (DLY)'}</span>
+      <select onchange="_DLYSEL=this.value;renderVoyBody()" style="padding:5px 9px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">
+        <option value="">${LANG==='ko'?'전체':'All'} (${_VOYDET.length})</option>${opts}</select>
+      <span style="margin-left:auto;font-size:12px;color:var(--mut)">${det.length}${LANG==='ko'?'건':''} · Booked ${fmt(bt)} · ${t.pickup} ${fmt(pt)} · ${t.notpick} ${fmt(nt)}</span>
+    </div>`;
+  $('m_body').innerHTML = det.length ? bar + `<table><thead><tr>
+      <th class="l">${LANG==='ko'?'부킹넘버':'BKG NO'}</th>
+      <th class="l">${LANG==='ko'?'화주코드':'Code'}</th>
+      <th class="l">${LANG==='ko'?'화주명':'Shipper'}</th>
+      <th class="l">POD</th><th class="l">DLY</th><th>${t.status}</th>
+      <th>${t.booked}</th><th>${t.pickup}</th><th>${t.notpick}</th>
+    </tr></thead><tbody>${body}</tbody></table>` : (bar + `<div class="empty">${t.none}</div>`);
+}
+function closeVoy(){ $('ovl').classList.remove('on'); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeVoy(); });
+
+/* ══ 인증 게이트 + 스냅샷 로드 ══
+   보안경계 = Drive 파일 도메인제한(ekmtc.com) + 인증된 Drive API 접근.
+   CONFIG는 배포 시 채움. 로컬(파일/사내서버)에선 LOCAL_SNAPSHOT_URL 폴백. */
+/* 보안경계 = Drive 파일 도메인제한(ekmtc.com) + 인증된 Drive 접근. (선복보드와 동일 웹 클라이언트) */
+const CONFIG = {
+  GOOGLE_CLIENT_ID: "313527315690-04t6lei9sd9i7ls21a6mhurif4nm8qg7.apps.googleusercontent.com",
+  DRIVE_FILE_ID: "1vXpReCwZa9AtF0Y1CazsE3hILoYtvJkO",  // Drive pickup_snapshot.json (도메인제한 공유)
+  HD: "ekmtc.com",
+  LOCAL_SNAPSHOT_URL: "/api/pickup_snapshot"  // localhost 테스트 폴백(서버가 파일만 서빙)
+};
+function boot(snap){ SNAP = snap; applyStatic(); renderTabs(); setRegion('SZP'); }
+function gateMsg(html){ $('wrap').innerHTML = `<div class="loading">${html}</div>`; }
+
+const TOK_KEY = 'pmon_tok';
+function _saveTok(r){ try{ localStorage.setItem(TOK_KEY, JSON.stringify({t:r.access_token, exp:Date.now()+((r.expires_in||3500)*1000)})); }catch(e){} }
+function _loadTok(){ try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); if(o&&o.t&&o.exp>Date.now()+60000) return o.t; }catch(e){} return null; }
+function _clearTok(){ try{ localStorage.removeItem(TOK_KEY); }catch(e){} }
+async function driveFetch(token){
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${CONFIG.DRIVE_FILE_ID}?alt=media`,
+                        {headers:{Authorization:'Bearer '+token}});
+  if(!r.ok) throw new Error('Drive '+r.status);
+  return r.json();
+}
+let _tc = null;
+function _gisInit(){
+  if(_tc || !window.google || !google.accounts) return;
+  _tc = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.GOOGLE_CLIENT_ID, scope:'https://www.googleapis.com/auth/drive.readonly', hd: CONFIG.HD,
+    callback: async (resp)=>{
+      if(resp.error){ showGate('로그인 실패: '+resp.error); return; }
+      _saveTok(resp); gateMsg(LANG==='ko'?'데이터 불러오는 중…':'Loading…');
+      try{ boot(await driveFetch(resp.access_token)); }
+      catch(e){ _clearTok(); showGate((LANG==='ko'?'데이터 접근 실패(권한/도메인 확인): ':'Data access failed: ')+e); }
+    }
+  });
+}
+function startAuth(){ _gisInit(); if(!_tc){ showGate(LANG==='ko'?'구글 SDK 로딩 중 — 잠시 후 다시':'Loading Google SDK — retry'); return; }
+  gateMsg(LANG==='ko'?'@ekmtc.com 로그인 중…':'Signing in…'); _tc.requestAccessToken({prompt:''}); }
+function showGate(err){
+  applyStatic();
+  gateMsg(`<div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px">픽업 선행지표 모니터</div>
+    <div style="color:var(--mut);margin-bottom:14px">KMTC 내부 영업자료 · <b>@ekmtc.com</b> 구글 계정으로 로그인</div>
+    <button class="pfmini" style="font-size:14px;padding:9px 22px" onclick="startAuth()">Google로 로그인</button>
+    ${err?`<div style="color:var(--red);font-size:12px;margin-top:12px">${err}</div>`:''}`);
+}
+async function init(){
+  const local = /^(localhost|127\.|0\.0\.0\.0|172\.)/.test(location.hostname) || location.protocol==='file:';
+  if(local){ try{ boot(await fetch(CONFIG.LOCAL_SNAPSHOT_URL).then(r=>r.json())); }
+             catch(e){ gateMsg('스냅샷 로드 실패: '+e); } return; }
+  _gisInit();
+  const t=_loadTok();
+  if(t){ gateMsg(LANG==='ko'?'자동 로그인 중…':'Auto sign-in…');
+         try{ boot(await driveFetch(t)); return; }catch(e){ _clearTok(); } }
+  showGate();
+}
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
