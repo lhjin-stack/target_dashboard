@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>픽업 선행지표 모니터 · Pickup Lead-Indicator Monitor</title>
-<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script>
+<script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script>
 <style>
   :root{
     --navy:#1e3a5f; --ink:#1f2937; --mut:#6b7280; --line:#e5e7eb; --bg:#f4f6f9;
@@ -180,9 +181,34 @@
   .m-body table{border:1px solid var(--line)}
   .m-body td,.m-body th{border-bottom:1px solid #f2f4f6}
   .seg{font-size:11px;color:var(--mut)}
+  /* 로그인 게이트 (선복보드와 동일 · 깔끔) */
+  #gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:#f0f2f6}
+  .gcard{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 14px 44px rgba(0,0,0,.10);padding:38px 40px;max-width:380px;text-align:center}
+  .gcard .glogo{font-size:30px;margin-bottom:10px}
+  .gcard h2{margin:0 0 6px;font-size:19px;color:var(--navy);font-weight:800}
+  .gcard p{margin:0 0 22px;color:var(--mut);font-size:13px;line-height:1.6}
+  .gbtn{display:inline-flex;align-items:center;gap:10px;padding:11px 20px;border:1px solid #dadce0;border-radius:9px;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#3c4043}
+  .gbtn:hover{background:#f7f8fa;box-shadow:0 1px 5px rgba(0,0,0,.1)}.gbtn:disabled{opacity:.5;cursor:default}
+  .gerr{color:var(--red);font-size:12.5px;margin-top:14px;min-height:16px}
+  .gmut{color:#9aa3b2;font-size:11px;margin-top:18px}
+  #appbody{display:none}
 </style>
 </head>
 <body>
+<!-- 로그인 게이트 -->
+<div id="gate"><div class="gcard">
+  <div class="glogo">📦</div>
+  <h2>픽업 선행지표 모니터</h2>
+  <p>KMTC 내부 영업자료입니다.<br><b>@ekmtc.com</b> 구글 계정으로 로그인해 주세요.</p>
+  <button class="gbtn" id="loginBtn" disabled onclick="requestSignIn()">
+    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    Google로 로그인
+  </button>
+  <div class="gerr" id="gerr"></div>
+  <div class="gmut" id="gstat">구글 SDK 로딩 중…</div>
+</div></div>
+
+<div id="appbody">
 <header>
   <div class="htop">
     <h1 id="h_title">픽업 선행지표 모니터 <small id="h_sub">Pickup Lead-Indicator Monitor</small></h1>
@@ -240,6 +266,7 @@
     <div class="m-body" id="m_body"></div>
   </div>
 </div>
+</div><!-- /#appbody -->
 
 <script>
 /* ── 다국어 사전 ── */
@@ -855,62 +882,57 @@ function renderVoyBody(){
 function closeVoy(){ $('ovl').classList.remove('on'); }
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeVoy(); });
 
-/* ══ 인증 게이트 + 스냅샷 로드 ══
-   보안경계 = Drive 파일 도메인제한(ekmtc.com) + 인증된 Drive API 접근.
-   CONFIG는 배포 시 채움. 로컬(파일/사내서버)에선 LOCAL_SNAPSHOT_URL 폴백. */
-/* 보안경계 = Drive 파일 도메인제한(ekmtc.com) + 인증된 Drive 접근. (선복보드와 동일 웹 클라이언트) */
-const CONFIG = {
-  GOOGLE_CLIENT_ID: "313527315690-04t6lei9sd9i7ls21a6mhurif4nm8qg7.apps.googleusercontent.com",
-  DRIVE_FILE_ID: "1vXpReCwZa9AtF0Y1CazsE3hILoYtvJkO",  // Drive pickup_snapshot.json (도메인제한 공유)
-  HD: "ekmtc.com",
-  LOCAL_SNAPSHOT_URL: "/api/pickup_snapshot"  // localhost 테스트 폴백(서버가 파일만 서빙)
-};
+/* ══ AUTH & DRIVE — 선복보드와 동일 검증 패턴(gapi + GIS) ══
+   보안경계 = Drive 파일 도메인제한(ekmtc.com) + 인증된 Drive 접근. */
+const OAUTH_CLIENT_ID = '313527315690-04t6lei9sd9i7ls21a6mhurif4nm8qg7.apps.googleusercontent.com';
+const OAUTH_HD        = 'ekmtc.com';
+const OAUTH_SCOPE     = 'https://www.googleapis.com/auth/drive.readonly';
+const SNAP_FILE_ID    = '1vXpReCwZa9AtF0Y1CazsE3hILoYtvJkO';
+const LOCAL_URL       = '/api/pickup_snapshot';
 function boot(snap){ SNAP = snap; applyStatic(); renderTabs(); setRegion('SZP'); }
-function gateMsg(html){ $('wrap').innerHTML = `<div class="loading">${html}</div>`; }
 
-const TOK_KEY = 'pmon_tok';
+let _gapiReady=false,_gisReady=false,_tokenClient=null;
+function _isLocal(){ return /^(localhost|127\.|0\.0\.0\.0|172\.)/.test(location.hostname)||location.protocol==='file:'; }
+function _gapiInit(){ gapi.load('client', async()=>{ await gapi.client.init({});
+  await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
+  _gapiReady=true; _maybeEnableLogin(); }); }
+const TOK_KEY='pmon_tok';
 function _saveTok(r){ try{ localStorage.setItem(TOK_KEY, JSON.stringify({t:r.access_token, exp:Date.now()+((r.expires_in||3500)*1000)})); }catch(e){} }
 function _loadTok(){ try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); if(o&&o.t&&o.exp>Date.now()+60000) return o.t; }catch(e){} return null; }
 function _clearTok(){ try{ localStorage.removeItem(TOK_KEY); }catch(e){} }
-async function driveFetch(token){
-  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${CONFIG.DRIVE_FILE_ID}?alt=media`,
-                        {headers:{Authorization:'Bearer '+token}});
-  if(!r.ok) throw new Error('Drive '+r.status);
-  return r.json();
-}
-let _tc = null;
-function _gisInit(){
-  if(_tc || !window.google || !google.accounts) return;
-  _tc = google.accounts.oauth2.initTokenClient({
-    client_id: CONFIG.GOOGLE_CLIENT_ID, scope:'https://www.googleapis.com/auth/drive.readonly', hd: CONFIG.HD,
-    callback: async (resp)=>{
-      if(resp.error){ showGate('로그인 실패: '+resp.error); return; }
-      _saveTok(resp); gateMsg(LANG==='ko'?'데이터 불러오는 중…':'Loading…');
-      try{ boot(await driveFetch(resp.access_token)); }
-      catch(e){ _clearTok(); showGate((LANG==='ko'?'데이터 접근 실패(권한/도메인 확인): ':'Data access failed: ')+e); }
-    }
-  });
-}
-function startAuth(){ _gisInit(); if(!_tc){ showGate(LANG==='ko'?'구글 SDK 로딩 중 — 잠시 후 다시':'Loading Google SDK — retry'); return; }
-  gateMsg(LANG==='ko'?'@ekmtc.com 로그인 중…':'Signing in…'); _tc.requestAccessToken({prompt:''}); }
-function showGate(err){
-  applyStatic();
-  gateMsg(`<div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px">픽업 선행지표 모니터</div>
-    <div style="color:var(--mut);margin-bottom:14px">KMTC 내부 영업자료 · <b>@ekmtc.com</b> 구글 계정으로 로그인</div>
-    <button class="pfmini" style="font-size:14px;padding:9px 22px" onclick="startAuth()">Google로 로그인</button>
-    ${err?`<div style="color:var(--red);font-size:12px;margin-top:12px">${err}</div>`:''}`);
-}
-async function init(){
-  const local = /^(localhost|127\.|0\.0\.0\.0|172\.)/.test(location.hostname) || location.protocol==='file:';
-  if(local){ try{ boot(await fetch(CONFIG.LOCAL_SNAPSHOT_URL).then(r=>r.json())); }
-             catch(e){ gateMsg('스냅샷 로드 실패: '+e); } return; }
-  _gisInit();
+function _gisInit(){ if(!window.google||!google.accounts) return;
+  _tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:OAUTH_CLIENT_ID, scope:OAUTH_SCOPE, hd:OAUTH_HD,
+    callback:async(resp)=>{ if(resp.error){_showLoginError('로그인 실패: '+(resp.error_description||resp.error));return;} _saveTok(resp); await onLoginSuccess(); }
+  }); _gisReady=true; _maybeEnableLogin(); }
+function _maybeEnableLogin(){
+  if(_isLocal()){ _localLoad(); return; }
+  if(!(_gapiReady&&_gisReady))return;
+  const b=document.getElementById('loginBtn'); if(b){ b.disabled=false; document.getElementById('gstat').textContent=''; }
   const t=_loadTok();
-  if(t){ gateMsg(LANG==='ko'?'자동 로그인 중…':'Auto sign-in…');
-         try{ boot(await driveFetch(t)); return; }catch(e){ _clearTok(); } }
-  showGate();
+  if(t){ try{ gapi.client.setToken({access_token:t}); document.getElementById('gstat').textContent='자동 로그인 중…'; onLoginSuccess(); }
+         catch(e){ _clearTok(); } }
 }
-window.addEventListener('load', init);
+function _showLoginError(m){ const e=document.getElementById('gerr'); if(e)e.textContent=m||''; const s=document.getElementById('gstat'); if(s)s.textContent=''; }
+function requestSignIn(){ if(!_tokenClient){_showLoginError('구글 SDK 로딩 중 — 잠시 후 다시 시도');return;}
+  _showLoginError(''); document.getElementById('gstat').textContent='데이터 불러오는 중…';
+  _tokenClient.requestAccessToken({prompt:''}); }
+async function fetchDriveSnapshot(){
+  const g=await gapi.client.drive.files.get({fileId:SNAP_FILE_ID, alt:'media'});
+  return JSON.parse(g.body); }
+async function onLoginSuccess(){
+  try{ const snap=await fetchDriveSnapshot();
+    document.getElementById('gate').style.display='none';
+    document.getElementById('appbody').style.display='block';
+    boot(snap);
+  }catch(e){ _clearTok(); _showLoginError('데이터 로드 실패 — '+(e.message||e)+' (권한/파일 확인)'); }
+}
+async function _localLoad(){ try{ const snap=await fetch(LOCAL_URL).then(r=>r.json());
+    document.getElementById('gate').style.display='none';
+    document.getElementById('appbody').style.display='block'; boot(snap);
+  }catch(e){ _showLoginError('스냅샷 로드 실패: '+e); } }
+function logout(){ _clearTok(); location.reload(); }
+window.addEventListener('load', ()=>{ if(_isLocal()) _localLoad(); });
 </script>
 </body>
 </html>
