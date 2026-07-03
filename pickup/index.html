@@ -823,7 +823,7 @@ function tableHtml(vs, hasEir){
       <td class="l rte-tag">${v.route||'–'}</td>
       <td>${fmtEtd(v.etd)} <span class="dd">${dday(v.dday)}</span></td>
       <td class="l">${stBadge(v)}</td>
-      <td>${fmt(v.booked_total||v.booked_teu)}</td>
+      <td>${fmt(v.booked_teu)}</td>
       <td>${fmt(v.bsa)}</td>
       ${eir}
       <td class="l">${miniGauge(v)}<b style="color:${pcCol}">${v.pickup_pct}%</b>${cmp}</td>
