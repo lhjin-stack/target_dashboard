@@ -1,0 +1,244 @@
+<!doctype html><html lang=ko><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>HK 운임 모니터 (테스트)</title>
+<style>
+:root{--ground:#f6f7f9;--panel:#fff;--ink:#182231;--ink2:#3d4756;--grey:#697488;--line:#e3e7ee;--soft:#eef1f5;
+--accent:#1e40af;--asoft:#eaeffb;--good:#15803d;--gbg:#e8f4ec;--warn:#b45309;--wbg:#fbf1e2;--crit:#b91c1c;--cbg:#fbe9e9;
+--mono:ui-monospace,"Cascadia Mono",Consolas,monospace;--sans:-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;}
+*{box-sizing:border-box}body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 22px 70px}
+h1{font-size:21px;margin:0 0 3px;letter-spacing:-.01em}
+.tag{font:600 11px var(--sans);padding:2px 9px;border-radius:20px;vertical-align:middle}
+.tag-test{color:var(--warn);background:var(--wbg)}
+.sub{color:var(--grey);font-size:12.5px;margin-bottom:16px}
+/* filter bar */
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);
+border-radius:11px;padding:11px 13px}
+.brand{font-weight:700;color:var(--accent);font-size:14px;padding-right:4px}
+.fl{display:flex;align-items:center;gap:6px}.fl>.lb{font-size:12px;color:var(--grey)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 13px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--grey)}
+.seg button.on{background:var(--accent);color:#fff;font-weight:600}
+.seg button+button{border-left:1px solid var(--line)}
+.chip{border:1px solid var(--line);background:#fff;border-radius:7px;min-width:30px;justify-content:center;
+padding:5px 11px;font:600 13px var(--mono);cursor:pointer;color:var(--grey);display:inline-flex;align-items:center}
+.chip.on{border-color:var(--accent);background:var(--asoft);color:var(--accent)}
+.dd{position:relative}
+.dd>button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 12px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--ink2);display:inline-flex;gap:7px;align-items:center}
+.dd>button .cnt{color:var(--accent);font-weight:700}
+.ddpanel{display:none;position:absolute;top:110%;left:0;z-index:30;background:#fff;border:1px solid var(--line);
+border-radius:10px;box-shadow:0 8px 28px rgba(20,30,50,.14);padding:8px;min-width:230px;max-height:340px;overflow:auto}
+.dd.open .ddpanel{display:block}
+.ddact{display:flex;justify-content:space-between;padding:3px 6px 7px;border-bottom:1px solid var(--soft);margin-bottom:5px;font-size:12px;color:var(--grey)}
+.ddact a{color:var(--accent);font-size:11.5px;cursor:pointer;text-decoration:none}
+.optc{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:6px;font-size:12.5px;cursor:pointer}
+.optc:hover{background:var(--soft)}.optc input{accent-color:var(--accent)}
+.optc .cc{display:inline-flex;width:26px;height:17px;border-radius:4px;background:#dbe3ef;color:#2b3a52;font:700 10px var(--mono);align-items:center;justify-content:center}
+.optc .em{margin-left:auto;color:var(--grey);font-size:11px}
+.ddempty{padding:14px;text-align:center;color:var(--grey);font-size:12px}
+.note{margin-left:auto;color:var(--grey);font-size:11px;text-align:right}
+.helprow{font-size:11.5px;color:var(--grey);padding:8px 2px 0}
+.helprow b{color:var(--ink2)}
+/* panels */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:11px;margin-top:15px;overflow:hidden}
+.ph{font-size:12.5px;font-weight:700;padding:10px 15px;border-bottom:1px solid var(--soft);background:#fafbfc;
+display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ph .r{color:var(--grey);font-weight:600}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:10px 14px;white-space:nowrap;font-size:13px}
+thead th{background:#fafbfc;color:var(--grey);font-size:11px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+tbody tr+tr td{border-top:1px solid var(--soft)}
+/* matrix layout */
+#mtx{min-width:760px;table-layout:fixed}
+#mtx th.pod,#mtx td.pod{text-align:left;width:230px}
+#mtx th.gcol,#mtx td.gcell{text-align:center;width:132px}
+#mtx th.cntc,#mtx td.cntc{text-align:right;width:110px}
+.cell{cursor:pointer;border-radius:8px;padding:10px 8px;display:inline-flex;flex-direction:column;gap:3px;
+min-width:108px;align-items:center;transition:outline .08s}
+.cell .a{font:700 17px var(--mono)}.cell .t{font:11px var(--mono);color:var(--grey)}
+.cell:hover{outline:2px solid var(--accent)}
+.hg{background:var(--gbg)}.hg .a{color:var(--good)}.hw{background:var(--wbg)}.hw .a{color:var(--warn)}
+.hc{background:var(--cbg)}.hc .a{color:var(--crit)}
+.cell.lown{background:#f2f4f7;border:1px dashed #ccd3de;opacity:.78}.cell.lown .a{color:var(--grey)}
+.cell .n{font:9.5px var(--mono);color:var(--grey);opacity:.85}
+.hn{color:var(--grey)}
+.num{font-family:var(--mono)}.dpos{color:var(--good);font-weight:700}.dneg{color:var(--crit);font-weight:700}.dfl{color:var(--grey)}
+.ctrhead td{background:#f1f4f8;font-weight:700;color:var(--ink2);cursor:pointer;font-size:12.5px;letter-spacing:.02em}
+.ctrhead .cc{display:inline-flex;width:28px;height:19px;border-radius:5px;background:#dbe3ef;color:#2b3a52;font:700 11px var(--mono);align-items:center;justify-content:center;margin-right:9px}
+.portrow td.pod{padding-left:30px}
+/* drilldown */
+#drill th,#drill td{text-align:right}#drill th:first-child,#drill td:first-child{text-align:left}
+.pill{font:600 10.5px var(--sans);padding:2px 8px;border-radius:20px}
+.praise{background:var(--cbg);color:var(--crit)}.pwatch{background:var(--wbg);color:var(--warn)}.pok{background:var(--gbg);color:var(--good)}
+.shname{color:var(--accent);cursor:pointer;font-weight:600}
+.bkrow td{background:#fafbfc}.bkrow table{margin:2px 0}.bkrow thead th{background:#f4f6f9;font-size:10px}
+.bkrow th,.bkrow td{padding:6px 12px}
+.devbar{position:relative;height:17px;width:120px;background:var(--soft);border-radius:3px;display:inline-block;vertical-align:middle}
+.devbar .mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--grey)}
+.devbar i{position:absolute;top:2px;bottom:2px;border-radius:2px}
+.fneg{background:var(--crit);right:50%}.fpos{background:var(--good);left:50%}
+.empty{padding:22px;text-align:center;color:var(--grey)}
+.foot{color:var(--grey);font-size:12px;margin-top:16px}
+</style><script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script><script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script></head><body><div class=wrap><div id=gate style="position:fixed;inset:0;z-index:100;background:#f6f7f9;display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:360px;padding:20px"><div style="font-size:44px">🚢</div><h2 style="margin:6px 0">HK 운임 모니터</h2><p style="color:#697488;font-size:13px">ekmtc.com 계정으로 로그인하세요.</p><button id=loginBtn onclick=signIn() disabled style="margin-top:8px;padding:9px 20px;border:0;border-radius:8px;background:#1e40af;color:#fff;font:600 14px sans-serif;cursor:pointer">구글 로그인</button><div id=gerr style="color:#b91c1c;font-size:12px;margin-top:10px"></div></div></div>
+<h1>🚢 HK 운임 모니터 <span class="tag tag-test">테스트 · 실데이터</span></h1>
+<div class=sub>홍콩 사무소 발 · 실적 O/F(20260601~20260731 출항, D-1 ADW) vs 시트 WK28 타겟 · 등급 = 20260301~20260531 TEU</div>
+
+<div class=bar>
+ <span class=brand>🚢 HK 운임 모니터</span>
+ <span class=fl><span class=lb>기간</span>
+   <span class=seg id=perseg title="스냅샷 빌드 시점 고정 — 변경은 재빌드"><button class=on>주차</button><button>날짜</button></span>
+   <span class=chip style="font-family:var(--sans);font-weight:400;cursor:default" title="빌드 고정 창">6/01~7/31 · 빌드고정</span></span>
+ <span class=fl><span class=lb>규격</span>
+   <span class=seg id=szseg><button data-s="20" class=on>20'</button><button data-s="40">40'</button></span></span>
+ <span class=fl><span class=lb>등급</span><span id=gchips></span></span>
+ <span class=fl><span class=lb>국가</span>
+   <span class="dd" id=ctrdd><button id=ctrbtn>국가 <span class=cnt id=ctrcnt></span> ▾</button>
+     <div class=ddpanel><div class=ddact><span>도착지 국가</span><span><a onclick="ctrAll(1)">전체</a> · <a onclick="ctrAll(0)">해제</a></span></div>
+       <div id=ctropts></div></div></span></span>
+ <span class=fl><span class=lb>포트</span>
+   <span class="dd" id=portdd><button id=portbtn>포트 <span class=cnt id=portcnt></span> ▾</button>
+     <div class=ddpanel><div class=ddact><span>포트 <span class=hn>(선택 국가 하위)</span></span><span><a onclick="portAll(1)">전체</a> · <a onclick="portAll(0)">해제</a></span></div>
+       <div id=portopts></div></div></span></span>
+ <span class=note>D-1 마감 기준<br>확정 O/F + 항차평균(≈)</span>
+</div>
+<div class=helprow>필터는 모두 <b>다중 선택</b>. <b>국가를 먼저 고르면 포트 목록이 그 국가 하위로 좁혀집니다</b>(포트는 국가의 하위). 기간은 스냅샷 빌드 시 결정.</div>
+
+<div class=panel><div class=ph><span>① POD × 등급 요약 — 실제평균 / <span class=hn>타겟</span> (USD, <span id=szlbl>20'</span>)</span>
+  <span class=r>색 = 타겟 대비 · n = 표본 TEU · 회색점선 = 표본&lt;3(참고용) · 국가행 클릭 시 접기</span></div>
+ <div class=scroll><table id=mtx></table></div></div>
+
+<div class=panel id=drillpanel style=display:none><div class=ph id=drillhead></div>
+ <div class=scroll><table id=drill></table></div></div>
+
+<div class=foot id=foot></div>
+
+<script>
+const BAKED=null; let DATA=null;
+let SZ="20", GSEL=new Set(["A","B","C","D"]), CSEL=new Set(), PSEL=new Set(), COLL=new Set(), SEL=null;
+const $=s=>document.querySelector(s), ce=t=>document.createElement(t);
+const esc=s=>(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+const heat=(a,t)=>t==null?"hn":(a-t>=0?"hg":(a-t>=-t*0.05?"hw":"hc"));
+const tgtThresh=t=>t?Math.max(15,t*0.05):15;
+const podCtr=p=>DATA.matrix[p]?DATA.matrix[p].ctr:null;
+const visPort=p=>CSEL.has(podCtr(p))&&PSEL.has(p);
+
+/* 등급 chips — 글자만 */
+function buildGchips(){const h=$("#gchips");h.innerHTML="";
+ for(const g of "ABCD"){const b=ce("span");b.className="chip on";b.textContent=g;
+  b.onclick=()=>{if(GSEL.has(g)){if(GSEL.size>1)GSEL.delete(g);}else GSEL.add(g);
+   b.classList.toggle("on",GSEL.has(g));renderMtx();if(SEL)drill(...SEL);};
+  h.appendChild(b);} }
+
+/* 국가 dropdown */
+function buildCtr(){const h=$("#ctropts");h.innerHTML="";
+ DATA.countries.forEach(([cc,nm])=>{const ports=DATA.ports[cc]||[];
+  const l=ce("label");l.className="optc";
+  const cb=ce("input");cb.type="checkbox";cb.checked=CSEL.has(cc);
+  cb.onchange=()=>{cb.checked?CSEL.add(cc):CSEL.delete(cc);buildCtr();buildPort();applyF();};
+  l.appendChild(cb);const b=ce("span");b.className="cc";b.textContent=cc;l.appendChild(b);
+  l.appendChild(document.createTextNode(nm));
+  const e=ce("span");e.className="em";e.textContent=`포트 ${ports.length}`;l.appendChild(e);
+  h.appendChild(l);});
+ $("#ctrcnt").textContent=CSEL.size;}
+function ctrAll(on){DATA.countries.forEach(([cc])=>on?CSEL.add(cc):CSEL.delete(cc));buildCtr();buildPort();applyF();}
+
+/* 포트 dropdown — 선택된 국가 하위만 */
+function buildPort(){const h=$("#portopts");h.innerHTML="";let shown=0,vis=0;
+ DATA.countries.forEach(([cc,nm])=>{if(!CSEL.has(cc))return;
+  const ports=(DATA.ports[cc]||[]);if(!ports.length)return;shown++;
+  const hd=ce("div");hd.className="optc";hd.style.cursor="default";
+  const b=ce("span");b.className="cc";b.textContent=cc;hd.appendChild(b);
+  const t=ce("span");t.style.fontWeight="700";t.style.color="var(--ink2)";t.textContent=nm;hd.appendChild(t);
+  h.appendChild(hd);
+  ports.forEach(p=>{const l=ce("label");l.className="optc";l.style.paddingLeft="24px";
+   const cb=ce("input");cb.type="checkbox";cb.checked=PSEL.has(p);
+   cb.onchange=()=>{cb.checked?PSEL.add(p):PSEL.delete(p);buildPort();applyF();};
+   l.appendChild(cb);l.appendChild(document.createTextNode(p));h.appendChild(l);
+   if(PSEL.has(p))vis++;});});
+ if(!shown)h.innerHTML='<div class=ddempty>국가를 먼저 선택하세요</div>';
+ $("#portcnt").textContent=vis;}
+function portAll(on){DATA.countries.forEach(([cc])=>{if(CSEL.has(cc))(DATA.ports[cc]||[]).forEach(p=>on?PSEL.add(p):PSEL.delete(p));});buildPort();applyF();}
+
+function applyF(){renderMtx();if(SEL&&visPort(SEL[0]))drill(...SEL);else{SEL=null;$("#drillpanel").style.display="none";}}
+
+/* 매트릭스 */
+function cellHtml(pod,g){const c=(DATA.matrix[pod].cells[g]||{})[SZ];
+ if(!c)return '<span class=hn>—</span>';
+ const low=c.cnt<3;
+ return `<span class="cell ${low?'lown':heat(c.act,c.tgt)}" onclick="drill('${pod}','${g}')" title="표본 ${c.cnt}TEU${low?' — 적어서 참고용':''}"><span class=a>${c.act}</span><span class=t>타겟 ${c.tgt==null?'-':c.tgt} <span class=n>· n${c.cnt}</span></span></span>`;}
+function renderMtx(){const gr=[...GSEL].filter(g=>"ABCD".includes(g)).sort();
+ let h=`<thead><tr><th class=pod>POD</th>`+gr.map(g=>`<th class=gcol>${g}</th>`).join("")+`<th class=cntc>건수(TEU)</th></tr></thead><tbody>`;
+ DATA.countries.forEach(([cc,nm])=>{if(!CSEL.has(cc))return;
+  const ports=(DATA.ports[cc]||[]).filter(p=>PSEL.has(p)&&DATA.matrix[p]);
+  if(!ports.length)return;const open=!COLL.has(cc);
+  let ctot=0;ports.forEach(p=>gr.forEach(g=>{const c=(DATA.matrix[p].cells[g]||{})[SZ];if(c)ctot+=c.cnt;}));
+  h+=`<tr class=ctrhead onclick="tglCtr('${cc}')"><td class=pod colspan="${gr.length+1}"><span class=cc>${cc}</span>${open?'▾':'▸'} ${nm} <span class=hn style="font-weight:400">· 포트 ${ports.length}</span></td><td class=cntc>${ctot||''}</td></tr>`;
+  if(open)ports.forEach(p=>{let cnt=0;gr.forEach(g=>{const c=(DATA.matrix[p].cells[g]||{})[SZ];if(c)cnt+=c.cnt;});
+   h+=`<tr class=portrow><td class=pod><b>${p}</b></td>`+gr.map(g=>`<td class=gcell>${cellHtml(p,g)}</td>`).join("")+`<td class=cntc>${cnt||''}</td></tr>`;});
+ });
+ h+=`</tbody>`;$("#mtx").innerHTML=h;$("#szlbl").textContent=SZ+"'";}
+function tglCtr(cc){COLL.has(cc)?COLL.delete(cc):COLL.add(cc);renderMtx();}
+
+/* 드릴다운 */
+function drill(pod,g){SEL=[pod,g];const arr=((DATA.drill[pod]||{})[g]||{})[SZ]||[];
+ const c=(DATA.matrix[pod].cells[g]||{})[SZ]||{};const dt=c.tgt!=null?(c.act-c.tgt):null;
+ $("#drillpanel").style.display="";
+ $("#drillhead").innerHTML=`<span>② 드릴다운 — <b style="color:var(--accent)">${pod} · ${g}등급 · ${SZ}'</b> 화주별 편차 <span class=hn>(위에서 이 셀을 눌러 진입)</span></span>`+
+  (dt!=null?`<span class=r style="color:${dt<0?'var(--crit)':'var(--good)'}">실제평균 ${c.act} · 타겟 ${c.tgt} · Δ타겟 ${dt>=0?'+':''}${dt}</span>`:'<span class=r>타겟 없음</span>');
+ let h=`<thead><tr><th>화주</th><th>월TEU</th><th>실제O/F</th><th>Δ등급평균</th><th>편차</th><th>Δ타겟</th><th>신호</th><th>건수</th></tr></thead><tbody>`;
+ if(!arr.length)h+=`<tr><td colspan=8 class=empty>이 칸에 O/F 확정 부킹이 없습니다</td></tr>`;
+ arr.forEach((s,i)=>{
+  const sig=(s.cnt<3)?'<span class="pill" style="background:#eef1f5;color:var(--grey)">표본 적음</span>':
+            (s.dtgt!=null&&s.dtgt<=-tgtThresh(c.tgt))?'<span class="pill praise">인상검토</span>':
+            (s.dev<=-15?'<span class="pill pwatch">주시</span>':'<span class="pill pok">양호</span>');
+  const bw=Math.min(50,Math.abs(s.dev)/2);
+  h+=`<tr><td><span class=shname onclick="tog(${i})">▸ ${esc(s.nm)}</span></td>
+   <td class=num>${s.mteu}</td><td class=num>${s.act}</td>
+   <td class="num ${s.dev<0?'dneg':s.dev>0?'dpos':'dfl'}">${s.dev>0?'+':''}${s.dev}</td>
+   <td><span class=devbar><i class=mid></i><i class="${s.dev<0?'fneg':'fpos'}" style="width:${bw}%"></i></span></td>
+   <td class="num ${s.dtgt==null?'dfl':s.dtgt<0?'dneg':'dpos'}">${s.dtgt==null?'-':(s.dtgt>0?'+':'')+s.dtgt}</td>
+   <td>${sig}</td><td class=hn>${s.cnt}TEU</td></tr>
+   <tr class=bkrow id=bk${i} style=display:none><td colspan=8><table><thead><tr><th>부킹넘버</th><th>항차</th><th>POL→POD</th><th>물량</th><th>ETD</th><th>O/F</th><th>RA넘버</th></tr></thead><tbody>`+
+   s.bks.map(b=>`<tr><td>${b.bkg}</td><td>${esc(b.vv)}</td><td>${b.pol}→${b.pod}</td><td class=num>${b.teu}</td><td class=num>${b.etd}</td><td class=num>${b.of}</td><td>${b.ra||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
+   `</tbody></table></td></tr>`;});
+ h+=`</tbody>`;$("#drill").innerHTML=h;
+ $("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});}
+function tog(i){const e=$("#bk"+i);e.style.display=e.style.display=="none"?"":"none";}
+
+/* seg / dropdown 이벤트 */
+$("#szseg").onclick=e=>{if(e.target.dataset.s){SZ=e.target.dataset.s;
+ [...$("#szseg").children].forEach(b=>b.classList.toggle("on",b.dataset.s==SZ));
+ renderMtx();if(SEL)drill(...SEL);}};
+$("#perseg").onclick=e=>{if(e.target.tagName=="BUTTON"){[...$("#perseg").children].forEach(b=>b.classList.remove("on"));e.target.classList.add("on");}};
+$("#ctrbtn").onclick=e=>{e.stopPropagation();$("#portdd").classList.remove("open");$("#ctrdd").classList.toggle("open");};
+$("#portbtn").onclick=e=>{e.stopPropagation();$("#ctrdd").classList.remove("open");$("#portdd").classList.toggle("open");};
+document.addEventListener("click",e=>{if(!$("#ctrdd").contains(e.target))$("#ctrdd").classList.remove("open");
+ if(!$("#portdd").contains(e.target))$("#portdd").classList.remove("open");});
+
+function boot(snap){ DATA=snap; CSEL=new Set(); PSEL=new Set();
+ DATA.countries.forEach(([cc])=>CSEL.add(cc));
+ Object.values(DATA.ports).forEach(a=>a.forEach(p=>PSEL.add(p)));
+ buildGchips();buildCtr();buildPort();renderMtx();
+ const f=$("#foot"); if(f)f.textContent=`매칭 POD ${Object.keys(DATA.matrix).length}개 · 국가 ${DATA.countries.length}개 · 실제 ADW 집계값. 타겟 없는 칸은 회색.`;
+ const g=document.getElementById('gate'); if(g)g.style.display='none';
+}
+
+const OAUTH_CLIENT_ID='313527315690-04t6lei9sd9i7ls21a6mhurif4nm8qg7.apps.googleusercontent.com';
+const OAUTH_HD='ekmtc.com';const OAUTH_SCOPE='https://www.googleapis.com/auth/drive.readonly';
+const SNAP_FILE_ID='1tCgb3LUDytDeUbdKHd9MM98dki6yGtev';const TOK_KEY='hkrate_tok';
+let _gapiReady=false,_gisReady=false,_tokenClient=null;
+function _isLocal(){return /^(localhost|127\.|0\.0\.0\.0|172\.)/.test(location.hostname)||location.protocol==='file:';}
+function _gapiInit(){gapi.load('client',async()=>{await gapi.client.init({});await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');_gapiReady=true;_maybe();});}
+function _saveTok(r){try{localStorage.setItem(TOK_KEY,JSON.stringify({t:r.access_token,exp:Date.now()+((r.expires_in||3500)*1000)}));}catch(e){}}
+function _loadTok(){try{var o=JSON.parse(localStorage.getItem(TOK_KEY)||'null');if(o&&o.t&&o.exp>Date.now()+60000)return o.t;}catch(e){}return null;}
+function _clearTok(){try{localStorage.removeItem(TOK_KEY);}catch(e){}}
+function _gerr(m){var e=document.getElementById('gerr');if(e)e.textContent=m||'';}
+function _gisInit(){if(!window.google||!google.accounts)return;_tokenClient=google.accounts.oauth2.initTokenClient({client_id:OAUTH_CLIENT_ID,scope:OAUTH_SCOPE,hd:OAUTH_HD,callback:async(resp)=>{if(resp.error){_gerr('로그인 실패: '+(resp.error_description||resp.error));return;}_saveTok(resp);await _afterLogin();}});_gisReady=true;_maybe();}
+function _maybe(){if(_isLocal()&&BAKED){boot(BAKED);return;}if(!(_gapiReady&&_gisReady))return;var b=document.getElementById('loginBtn');if(b)b.disabled=false;var t=_loadTok();if(t){try{gapi.client.setToken({access_token:t});_afterLogin();}catch(e){_clearTok();}}}
+function signIn(){if(!_tokenClient){_gerr('구글 SDK 로딩 중 — 잠시 후');return;}_gerr('불러오는 중…');_tokenClient.requestAccessToken({prompt:''});}
+async function _afterLogin(){try{var g=await gapi.client.drive.files.get({fileId:SNAP_FILE_ID,alt:'media'});boot(JSON.parse(g.body));}catch(e){_clearTok();_gerr('데이터 로드 실패 — '+(e.message||e));}}
+function logout(){_clearTok();location.reload();}
+window.addEventListener('load',function(){if(_isLocal()&&BAKED)boot(BAKED);});
+
+</script></div></body></html>
