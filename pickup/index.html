@@ -241,6 +241,12 @@
     <button class="msel-btn" id="dpsel_btn" onclick="event.stopPropagation();closePops('dpsel_list');$('dpsel_list').classList.toggle('on')"></button>
     <div class="msel-list dtree" id="dpsel_list" onclick="event.stopPropagation()"></div>
   </div>
+  <span class="dsep"></span>
+  <span class="wl" id="tk_lbl">탱크</span>
+  <div class="pfseg" id="tkseg">
+    <button class="pfbtn on tkbtn" data-m="inc" onclick="setTankMode('inc')">포함</button>
+    <button class="pfbtn tkbtn" data-m="exc" onclick="setTankMode('exc')">제외</button>
+  </div>
   <span class="wh" id="wk_hint"></span>
 </div>
 
@@ -276,7 +282,7 @@ const T = {
     desc:'<b>평소 픽업곡선 대비 지연</b>으로 막판 <span class="risk-word">대량 캔슬</span> 위험을 조기 포착합니다. '+
          '판정은 <b>BSA 기준</b>: 예상 잔여(Booked−예상캔슬)가 BSA를 채우면 안전, 못 채우면(빈 슬롯) 확인 대상. '+
          '예상캔슬 = 미픽업 × 지역 13주 캔슬률. '+
-         '<span style="color:#9ca3af">Booked = KMTC 엠티 픽업 대상(탱크/SOC 화주 직반입 제외).</span>',
+         '<span style="color:#9ca3af">Booked = 선복 전체(ERP 부킹원장). 탱크(SOC)는 반입=완료로 카운트. 탱크 포함/제외 토글 지원.</span>',
     regions:{SZP:"심천",CAN:"광저우",HKG:"홍콩"},
     s_risk:"즉시조치", s_gold:"확인", s_all:"안전", s_cr:"지역 캔슬률",
     b_risk:"D-7 미만 · 빈슬롯",
@@ -500,7 +506,33 @@ function showRegion(){
            baseline_ts:(r.pod&&r.pod.pod_ts)||SNAP.ts };
   POD = r.pod ? {ok:true, has_pod:r.pod.has_pod, region_curve:r.pod.region_curve||[],
                  pods:r.pod.pods||[], ndays:r.pod.ndays, pod_ts:SNAP.ts} : null;
+  (PMON.voyages||[]).forEach(v=>{ if(v._bk0===undefined){ v._bk0=v.booked_teu||0; v._pk0=v.picked_teu||0; } });
+  applyTankMode();
   render();
+}
+
+/* ── 탱크(SOC) 토글 — 포함(ERP 부킹원장)/제외(순수 빈컨픽업). 항차 booked/picked/픽업%/미픽업 재계산 ── */
+let TANKMODE = 'inc';   // inc=탱크포함, exc=탱크제외
+function applyTankMode(){
+  (PMON&&PMON.voyages||[]).forEach(v=>{
+    const bk = TANKMODE==='exc' ? (v._bk0||0)-(v.tank_teu||0) : (v._bk0||0);
+    const pk = TANKMODE==='exc' ? (v._pk0||0)-(v.tank_picked||0) : (v._pk0||0);
+    v.booked_teu = Math.max(0, bk);
+    v.picked_teu = Math.max(0, pk);
+    v.not_picked_teu = Math.max(0, v.booked_teu - v.picked_teu);
+    v.pickup_pct = v.booked_teu>0 ? Math.round(v.picked_teu*100/v.booked_teu) : 0;
+  });
+}
+function setTankMode(m){
+  TANKMODE = m;
+  document.querySelectorAll('.tkbtn').forEach(b=>b.classList.toggle('on', b.dataset.m===m));
+  applyTankMode(); render();
+}
+// 상세 행(부킹) 탱크제외 보정 — 모달·CSV 공용
+function tankRow(d){
+  if(TANKMODE!=='exc') return d;
+  const bk=Math.max(0,(d.booked||0)-(d.tank||0)), pk=Math.max(0,(d.picked||0)-(d.tank_picked||0));
+  return {...d, booked:bk, picked:pk, not_picked:Math.max(0,bk-pk)};
 }
 // load()는 setRegion에서 호출 — 스냅샷은 이미 로드됨
 function load(){ showRegion(); }
@@ -606,13 +638,13 @@ function dlCsv(kind){
   let head, rows=[];
   if(kind==='notpicked'){
     head=['VSL','VOY','SHIPPER','CODE','BKG_NO','POD','STATUS','BOOKED_TEU','PICKED_TEU','NOT_PICKED_TEU'];
-    vs.forEach(v=>(v.detail||[]).filter(d=>d.not_picked>0)
+    vs.forEach(v=>(v.detail||[]).map(tankRow).filter(d=>d.not_picked>0)
       .sort((a,b)=>b.not_picked-a.not_picked)
       .forEach(d=>rows.push([v.vsl,v.voy,d.shipper,d.code,d.bkg_no,d.pod,_STS[d.sts]||d.sts,d.booked,d.picked,d.not_picked])));
     _dl(`notpicked_${tag}_${stamp}.csv`, [head,...rows]);
   }else{
     head=['VSL','VOY','SHIPPER','CODE','BKG_NO','POD','DEST','STATUS','BOOKED_TEU','CANCEL_RATE_13W_%','EXP_CANCEL_TEU'];
-    vs.forEach(v=>(v.detail||[]).slice()
+    vs.forEach(v=>(v.detail||[]).map(tankRow).filter(d=>d.booked>0)
       .sort((a,b)=>(b.exp_cancel||0)-(a.exp_cancel||0)||b.booked-a.booked)
       .forEach(d=>rows.push([v.vsl,v.voy,d.shipper,d.code,d.bkg_no,d.pod,d.dest_ctr,_STS[d.sts]||d.sts,d.booked,d.cancel_rate??'',d.exp_cancel??''])));
     _dl(`expcancel_${tag}_${stamp}.csv`, [head,...rows]);
@@ -852,7 +884,9 @@ function renderVoyBody(){
   _VOYDET.forEach(d=>{ const k=d.dly_plc||'-'; cnt[k]=(cnt[k]||0)+1; });
   const dlys = Object.keys(cnt).sort();
   const opts = dlys.map(k=>`<option value="${k}" ${_DLYSEL===k?'selected':''}>${k} (${cnt[k]})</option>`).join('');
-  const det = _DLYSEL ? _VOYDET.filter(d=>(d.dly_plc||'-')===_DLYSEL) : _VOYDET;
+  // 탱크 제외 모드: 행 booked/picked에서 탱크분 차감(tankRow), 전부탱크 행은 숨김
+  const det = (_DLYSEL ? _VOYDET.filter(d=>(d.dly_plc||'-')===_DLYSEL) : _VOYDET)
+      .map(tankRow).filter(d=>d.booked>0 || d.picked>0);
   const body = det.map(d=>`<tr>
       <td class="l" style="font-variant-numeric:tabular-nums">${d.bkg_no}</td>
       <td class="l">${d.code}</td>
