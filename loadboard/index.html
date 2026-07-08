@@ -146,6 +146,8 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
     <div class="dd-panel" id="pan-ctr"><div class="ddhd">국가 선택 <a class="tgl" data-f="ctr">전체/해제</a></div><div class="ddscroll" id="ctrs"></div></div></div>
   <div class="dd" id="dd-pol"><button class="dd-btn" id="btn-pol">선적지 포트 <span class="v" id="lab-pol">전체</span> <span class="ar">▾</span></button>
     <div class="dd-panel" id="pan-pol"><div class="ddhd"><span id="pol-hint">포트 선택</span> <a class="tgl" data-f="pol">전체/해제</a></div><div class="ddscroll" id="ports"></div></div></div>
+  <div class="dd" id="dd-team"><button class="dd-btn" id="btn-team">영업주체 <span class="v" id="lab-team">전체</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-team"><div class="ddhd">영업주체 선택 <a class="tgl" data-f="team">전체/해제</a></div><div class="ddscroll" id="teams"></div></div></div>
   <span class="sep"></span>
   <span class="flab">공컨(MT)</span><span class="mtseg" title="BSA·Lifting·달성률의 공컨 포함 여부"><button id="mt-x" class="on">제외 (laden)</button><button id="mt-i">포함 (전체)</button></span>
   <span class="sep"></span>
@@ -171,8 +173,14 @@ const etd=s=>s?s.slice(5).replace('-','/'):'';
 const achvCls=p=>p==null?'':(p>100?'over':(p<80?'warn':''));
 // 공컨(MT) 토글: 'excl'=MT제외(laden, 기본) / 'incl'=MT포함(전체). BSA·Lifting·달성률에만 적용.
 let MT_MODE='excl';
-const bsaOf=r=>MT_MODE==='excl'?(r.bsa||0):(r.bsa_t||0);
-const liftOf=r=>MT_MODE==='excl'?(r.lifting||0):(r.lift_t||0);
+// 영업주체(팀) 다중선택: O=OBT E=EST I=IST J=JBT. 기본 전체.
+const TEAMS=['o','e','i','j'];
+const TEAM_LABEL={o:'OBT (해외)',e:'EST (수출)',i:'IST (수입)',j:'JBT (일본)'};
+const selTeam=new Set(TEAMS);
+const bsaLaden=r=>selTeam.size===TEAMS.length?(r.bsa||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['bsa_'+t]||0):0),0);
+const liftLaden=r=>selTeam.size===TEAMS.length?(r.lifting||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['lift_'+t]||0):0),0);
+const bsaOf=r=>bsaLaden(r)+(MT_MODE==='incl'?(r.bsa_mty||0):0);
+const liftOf=r=>liftLaden(r)+(MT_MODE==='incl'?(r.lift_mty||0):0);
 const achvOf=r=>{const b=bsaOf(r);return b?Math.round(liftOf(r)/b*1000)/10:null;};
 
 const ctrPorts={};
@@ -190,6 +198,7 @@ function renderPorts(){
   $('ports').innerHTML=ports.map(([p,c])=>`<label class="dp-item"><input type="checkbox" class="pk" value="${p}" ${selPort.has(p)?'checked':''}>${p}<span class="muted">${c}</span></label>`).join('');
   $('pol-hint').textContent=`포트 (${ports.length})`;
 }
+function renderTeams(){$('teams').innerHTML=TEAMS.map(t=>`<label class="dp-item"><input type="checkbox" class="tm" value="${t}" ${selTeam.has(t)?'checked':''}>${TEAM_LABEL[t]}</label>`).join('');}
 function labels(){
   const nr=document.querySelectorAll('.rt:checked').length;
   $('lab-rt').textContent=nr===ALL_ROUTES.length?'전체':(nr===0?'없음':nr+'개');
@@ -197,6 +206,7 @@ function labels(){
   const shown=[...ALLPORTS].filter(p=>{const c=ALL.find(r=>r.pol===p).pol_ctr;return selCtr.has(c);});
   const chk=shown.filter(p=>selPort.has(p)).length;
   $('lab-pol').textContent=(chk===shown.length&&selCtr.size===CTRS.length)?'전체':(chk===0?'없음':chk+'개');
+  $('lab-team').textContent=selTeam.size===TEAMS.length?'전체':(selTeam.size===0?'없음':[...selTeam].map(t=>t.toUpperCase()).join('·'));
 }
 function selRoutes(){return new Set([...document.querySelectorAll('.rt:checked')].map(c=>c.value));}
 function aggr(rows){return{b:rows.reduce((a,x)=>a+bsaOf(x),0),l:rows.reduce((a,x)=>a+liftOf(x),0),s:rows.reduce((a,x)=>a+(x.surplus||0),0)};}
@@ -287,6 +297,7 @@ document.querySelector('.bar').addEventListener('click',e=>{
   if(f==='rt'){const cb=[...document.querySelectorAll('.rt')];const on=!cb.some(c=>c.checked);cb.forEach(c=>c.checked=on);}
   else if(f==='ctr'){const on=selCtr.size<CTRS.length;selCtr.clear();if(on){CTRS.forEach(c=>selCtr.add(c));ALLPORTS.forEach(p=>selPort.add(p));}renderCtrs();renderPorts();}
   else if(f==='pol'){const cb=[...document.querySelectorAll('.pk')];const on=!cb.some(c=>c.checked);cb.forEach(c=>{c.checked=on;on?selPort.add(c.value):selPort.delete(c.value);});}
+  else if(f==='team'){const on=selTeam.size<TEAMS.length;selTeam.clear();if(on)TEAMS.forEach(t=>selTeam.add(t));renderTeams();}
   apply();
 });
 $('routes').addEventListener('change',apply);
@@ -294,11 +305,13 @@ $('ctrs').addEventListener('change',e=>{if(!e.target.classList.contains('ck'))re
   const c=e.target.value;e.target.checked?selCtr.add(c):selCtr.delete(c);
   if(e.target.checked)[...ctrPorts[c]].forEach(p=>selPort.add(p));
   renderPorts();apply();});
+$('teams').addEventListener('change',e=>{if(!e.target.classList.contains('tm'))return;
+  e.target.checked?selTeam.add(e.target.value):selTeam.delete(e.target.value);apply();});
 $('ports').addEventListener('change',e=>{if(!e.target.classList.contains('pk'))return;
   e.target.checked?selPort.add(e.target.value):selPort.delete(e.target.value);apply();});
 ['wf','wt'].forEach(id=>{$(id).addEventListener('change',apply);$(id).addEventListener('keydown',e=>{if(e.key==='Enter')apply();});});
 
-renderRoutes();renderCtrs();renderPorts();
+renderRoutes();renderCtrs();renderPorts();renderTeams();
 $('wf').value=22;$('wt').value=25;
 apply();
 } // end boot
