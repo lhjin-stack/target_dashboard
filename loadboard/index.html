@@ -155,6 +155,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
 <script>
 // ════════════ boot() — 데이터(ALL, ALL_ROUTES)를 받아 보드 렌더 ════════════
 function boot(ALL, ALL_ROUTES){
+if(window.__lbBooted)return; window.__lbBooted=true;  // 이중호출 방지(리스너 중복→드롭다운/필터 먹통 버그)
 const $=id=>document.getElementById(id);
 const CTR_KR={CN:'중국',HK:'홍콩',IN:'인도',PK:'파키스탄',BD:'방글라',LK:'스리랑카',SG:'싱가포르',MY:'말레이',TH:'태국',VN:'베트남',
   AE:'UAE',SA:'사우디',OM:'오만',BH:'바레인',KH:'캄보디아',MM:'미얀마',ID:'인니',PH:'필리핀',TW:'대만',JP:'일본',KR:'한국',
