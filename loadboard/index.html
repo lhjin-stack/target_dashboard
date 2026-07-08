@@ -11,7 +11,10 @@ header{padding:12px 18px;background:#fff;border-bottom:1px solid var(--bd)}h1{ma
 input[type=text]{padding:5px 7px;border:1px solid var(--bd);border-radius:6px;width:46px;font-size:13px;text-align:center}
 button{padding:5px 11px;border:1px solid var(--bd);border-radius:6px;background:#fff;cursor:pointer;font-size:12px}
 button:hover{background:#f3f5f9}
-#b-mt{font-weight:600}#b-mt.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.mtseg{display:inline-flex;border:1px solid var(--bd);border-radius:6px;overflow:hidden}
+.mtseg button{border:0;border-radius:0;padding:5px 12px;background:#fff;font-weight:600}
+.mtseg button.on{background:#1d4ed8;color:#fff}
+.mtseg button+button{border-left:1px solid var(--bd)}
 .sep{width:1px;height:20px;background:var(--bd);margin:0 5px}
 .dd{position:relative;display:inline-block}
 .dd-btn{display:inline-flex;align-items:center;gap:6px}
@@ -144,7 +147,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
   <div class="dd" id="dd-pol"><button class="dd-btn" id="btn-pol">선적지 포트 <span class="v" id="lab-pol">전체</span> <span class="ar">▾</span></button>
     <div class="dd-panel" id="pan-pol"><div class="ddhd"><span id="pol-hint">포트 선택</span> <a class="tgl" data-f="pol">전체/해제</a></div><div class="ddscroll" id="ports"></div></div></div>
   <span class="sep"></span>
-  <span class="flab">공컨(MT)</span><button id="b-mt" title="BSA·Lifting·달성률의 공컨 포함 여부">제외 (laden)</button>
+  <span class="flab">공컨(MT)</span><span class="mtseg" title="BSA·Lifting·달성률의 공컨 포함 여부"><button id="mt-x" class="on">제외 (laden)</button><button id="mt-i">포함 (전체)</button></span>
   <span class="sep"></span>
   <span class="flab">보기</span><button id="b-exp">펼치기</button><button id="b-rt">항로</button><button id="b-wk">주차</button>
   <span class="sep"></span>
@@ -269,9 +272,8 @@ function setDepth(level){cW.clear();cR.clear();cV.clear();
   if(level>=1)document.querySelectorAll('tr.br').forEach(b=>cR.add(b.dataset.key));
   if(level>=2)document.querySelectorAll('tr.bw').forEach(b=>cW.add(b.dataset.key));vis();}
 $('b-exp').onclick=()=>setDepth(0);$('b-rt').onclick=()=>setDepth(1);$('b-wk').onclick=()=>setDepth(2);
-$('b-mt').onclick=()=>{MT_MODE=MT_MODE==='excl'?'incl':'excl';
-  $('b-mt').textContent=MT_MODE==='excl'?'제외 (laden)':'포함 (전체)';
-  $('b-mt').classList.toggle('on',MT_MODE==='incl');apply();};
+function setMT(m){MT_MODE=m;$('mt-x').classList.toggle('on',m==='excl');$('mt-i').classList.toggle('on',m==='incl');apply();}
+$('mt-x').onclick=()=>setMT('excl');$('mt-i').onclick=()=>setMT('incl');
 
 document.querySelectorAll('.dd-btn').forEach(btn=>btn.addEventListener('click',e=>{
   const dd=btn.parentElement,open=dd.classList.contains('open');
