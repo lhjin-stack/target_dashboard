@@ -217,9 +217,11 @@ const cW=new Set(),cR=new Set(),cV=new Set();
 // Head/Back haul: (선명,항차base)별 ETD 빠른 접미사=Head, 늦은쪽=Back. 단일 leg는 W/N=Head.
 const HAULS=['head','back'];
 const selHaul=new Set(HAULS);
-(function(){const g={};ALL.forEach(r=>{const v=r.voyage||'';const suf=v.slice(-1);const base=r.vessel+'|'+v.slice(0,-1);const e=r.etd||'9999';(g[base]=g[base]||{});if(g[base][suf]==null||e<g[base][suf])g[base][suf]=e;});
-const head={};Object.keys(g).forEach(base=>{const ks=Object.keys(g[base]);head[base]=ks.length>=2?ks.sort((a,b)=>g[base][a]<g[base][b]?-1:1)[0]:('WN'.includes(ks[0])?ks[0]:null);});
-ALL.forEach(r=>{const v=r.voyage||'';const base=r.vessel+'|'+v.slice(0,-1);r._haul=(v.slice(-1)===head[base])?'head':'back';});})();
+(function(){
+  if(ALL.length && ALL[0].haul!==undefined){ALL.forEach(r=>r._haul=r.haul);return;} // 데이터레이어 계산값(정확) 우선
+  const g={};ALL.forEach(r=>{const v=r.voyage||'';const suf=v.slice(-1);const base=r.vessel+'|'+v.slice(0,-1);const e=r.etd||'9999';(g[base]=g[base]||{});if(g[base][suf]==null||e<g[base][suf])g[base][suf]=e;});
+  const head={};Object.keys(g).forEach(base=>{const ks=Object.keys(g[base]);head[base]=ks.length>=2?ks.sort((a,b)=>g[base][a]<g[base][b]?-1:1)[0]:('WN'.includes(ks[0])?ks[0]:null);});
+  ALL.forEach(r=>{const v=r.voyage||'';const base=r.vessel+'|'+v.slice(0,-1);r._haul=(v.slice(-1)===head[base])?'head':'back';});})();
 
 function renderRoutes(){$('routes').innerHTML=ALL_ROUTES.map(r=>`<label class="dp-item"><input type="checkbox" class="rt" value="${r}" checked>${r}</label>`).join('');}
 function renderCtrs(){$('ctrs').innerHTML=CTRS.map(c=>`<label class="dp-item"><input type="checkbox" class="ck" value="${c}" ${selCtr.has(c)?'checked':''}>${c}<span class="muted">${ctrPorts[c].size}</span></label>`).join('');}
