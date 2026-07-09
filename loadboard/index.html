@@ -53,6 +53,10 @@ tr.leaf:hover td{background:#eef4ff}
 .neg{color:var(--red)}.warn{color:var(--orange);font-weight:700}.over{color:var(--red);font-weight:700}
 .surplus{font-weight:700}.muted{color:var(--mut);font-size:11px}.empty{padding:40px;text-align:center;color:var(--mut)}
 .sbar{display:inline-block;height:8px;background:var(--blue);border-radius:2px;vertical-align:middle;margin-left:6px;opacity:.5}
+tr.totalrow td{background:#c9d8ec;font-weight:800;color:#16233a;border-top:2px solid #8fa9cf}
+.board.nosub .totalrow,.board.nosub .agg{display:none}
+#b-sub.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.langbtn{position:absolute;top:12px;right:16px;font-weight:700;z-index:70}
 #gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:#f0f2f6}
 .gcard{background:#fff;border:1px solid var(--bd);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.10);padding:34px 38px;max-width:380px;text-align:center}
 .gcard h2{margin:0 0 6px;font-size:18px}.gcard p{margin:0 0 20px;color:var(--mut);font-size:13px;line-height:1.55}
@@ -135,28 +139,28 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
 
 <!-- 보드 본체 -->
 <div id="appbody">
-<header><h1>선복 적재현황 보드 <span class="muted" id="genlab" style="font-size:12px"></span></h1>
+<header style="position:relative"><button id="lang" class="langbtn">EN</button><h1><span data-i="title">선복 적재현황 보드</span> <span class="muted" id="genlab" style="font-size:12px"></span></h1>
 <div class="sub">주차 › 항로 › 선명항차 › 적출항(POL) · <b>BSA·Lifting·달성률 = 토글(MT제외/포함)</b> · ROB·소석률·잉여선복 = 항상 공컨(MT) 포함 · 소석률=ROB/Own Slot · 잉여선복=Loadable Space</div></header>
 <div class="bar">
-  <span class="flab">주차</span><input type="text" id="wf"> ~ <input type="text" id="wt">
+  <span class="flab" data-i="f_week">주차</span><input type="text" id="wf"> ~ <input type="text" id="wt">
   <span class="sep"></span>
-  <div class="dd" id="dd-rt"><button class="dd-btn" id="btn-rt">항로 <span class="v" id="lab-rt">전체</span> <span class="ar">▾</span></button>
-    <div class="dd-panel" id="pan-rt"><div class="ddhd">항로 선택 <a class="tgl" data-f="rt">전체/해제</a></div><div class="ddscroll" id="routes"></div></div></div>
-  <div class="dd" id="dd-ctr"><button class="dd-btn" id="btn-ctr">선적지 국가 <span class="v" id="lab-ctr">전체</span> <span class="ar">▾</span></button>
-    <div class="dd-panel" id="pan-ctr"><div class="ddhd">국가 선택 <a class="tgl" data-f="ctr">전체/해제</a></div><div class="ddscroll" id="ctrs"></div></div></div>
-  <div class="dd" id="dd-pol"><button class="dd-btn" id="btn-pol">선적지 포트 <span class="v" id="lab-pol">전체</span> <span class="ar">▾</span></button>
-    <div class="dd-panel" id="pan-pol"><div class="ddhd"><span id="pol-hint">포트 선택</span> <a class="tgl" data-f="pol">전체/해제</a></div><div class="ddscroll" id="ports"></div></div></div>
-  <div class="dd" id="dd-team"><button class="dd-btn" id="btn-team">영업주체 <span class="v" id="lab-team">전체</span> <span class="ar">▾</span></button>
-    <div class="dd-panel" id="pan-team"><div class="ddhd">영업주체 선택 <a class="tgl" data-f="team">전체/해제</a></div><div class="ddscroll" id="teams"></div></div></div>
+  <div class="dd" id="dd-rt"><button class="dd-btn" id="btn-rt"><span data-i="f_route">항로</span> <span class="v" id="lab-rt">전체</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-rt"><div class="ddhd"><span data-i="sel_route">항로 선택</span> <a class="tgl" data-f="rt" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="routes"></div></div></div>
+  <div class="dd" id="dd-ctr"><button class="dd-btn" id="btn-ctr"><span data-i="f_ctr">선적지 국가</span> <span class="v" id="lab-ctr">전체</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-ctr"><div class="ddhd"><span data-i="sel_ctr">국가 선택</span> <a class="tgl" data-f="ctr" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="ctrs"></div></div></div>
+  <div class="dd" id="dd-pol"><button class="dd-btn" id="btn-pol"><span data-i="f_port">선적지 포트</span> <span class="v" id="lab-pol">전체</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-pol"><div class="ddhd"><span id="pol-hint" data-i="sel_port">포트 선택</span> <a class="tgl" data-f="pol" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="ports"></div></div></div>
+  <div class="dd" id="dd-team"><button class="dd-btn" id="btn-team"><span data-i="f_team">영업주체</span> <span class="v" id="lab-team">전체</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-team"><div class="ddhd"><span data-i="sel_team">영업주체 선택</span> <a class="tgl" data-f="team" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="teams"></div></div></div>
   <span class="sep"></span>
-  <span class="flab">공컨(MT)</span><span class="mtseg" title="BSA·Lifting·달성률의 공컨 포함 여부"><button id="mt-x" class="on">제외 (laden)</button><button id="mt-i">포함 (전체)</button></span>
+  <span class="flab" data-i="f_mt">공컨(MT)</span><span class="mtseg" title="BSA·Lifting·달성률의 공컨 포함 여부"><button id="mt-x" class="on">제외 (laden)</button><button id="mt-i">포함 (전체)</button></span>
   <span class="sep"></span>
-  <span class="flab">보기</span><button id="b-exp">펼치기</button><button id="b-rt">항로</button><button id="b-wk">주차</button>
+  <span class="flab" data-i="f_view">보기</span><button id="b-exp" data-i="v_exp">펼치기</button><button id="b-rt" data-i="v_rt">항로</button><button id="b-wk" data-i="v_wk">주차</button><span class="sep"></span><button id="b-sub" class="on" data-i="f_sub">소계·총계</button>
   <span class="sep"></span>
   <span class="flab" style="margin-left:auto">자료=드라이브</span><button id="logoutBtn" onclick="logout()">로그아웃</button>
 </div>
-<div class="summary" id="summary"><div>BSA 합<b id="s_bsa">–</b></div><div>Lifting 합<b id="s_lift">–</b></div>
-<div>평균 달성률<b id="s_achv">–</b></div><div>총 잉여선복<b id="s_surp">–</b></div><div>항차<b id="s_voy">–</b></div><div>행<b id="s_cnt">–</b></div></div>
+<div class="summary" id="summary"><div><span data-i="s_bsa">BSA 합</span><b id="s_bsa">–</b></div><div><span data-i="s_lift">Lifting 합</span><b id="s_lift">–</b></div>
+<div><span data-i="s_achv">평균 달성률</span><b id="s_achv">–</b></div><div><span data-i="s_surp">총 잉여선복</span><b id="s_surp">–</b></div><div><span data-i="s_voy">항차</span><b id="s_voy">–</b></div><div><span data-i="s_cnt">행</span><b id="s_cnt">–</b></div></div>
 <div class="wrap" id="wrap"></div>
 </div>
 
@@ -171,11 +175,27 @@ const CTR_KR={CN:'중국',HK:'홍콩',IN:'인도',PK:'파키스탄',BD:'방글�
 const fmt=n=>(n==null||isNaN(n))?'–':Math.round(n).toLocaleString();
 const etd=s=>s?s.slice(5).replace('-','/'):'';
 const achvCls=p=>p==null?'':(p>100?'over':(p<80?'warn':''));
-// 공컨(MT) 토글: 'excl'=MT제외(laden, 기본) / 'incl'=MT포함(전체). BSA·Lifting·달성률에만 적용.
+let LANG='ko', showSub=true;
+const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항로',f_ctr:'선적지 국가',f_port:'선적지 포트',
+  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',f_sub:'소계·총계',sel_route:'항로 선택',sel_ctr:'국가 선택',
+  sel_port:'포트 선택',sel_team:'영업주체 선택',toggle:'전체/해제',all:'전체',none:'없음',
+  mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
+  s_bsa:'BSA 합',s_lift:'Lifting 합',s_achv:'평균 달성률',s_surp:'총 잉여선복',s_voy:'항차',s_cnt:'행',
+  c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률',c_surp:'잉여선복',
+  total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
+  t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',langbtn:'EN'},
+ en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
+  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',f_sub:'Subtotal·Total',sel_route:'Select Route',sel_ctr:'Select Country',
+  sel_port:'Select Port',sel_team:'Select Team',toggle:'All/None',all:'All',none:'None',
+  mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
+  s_bsa:'Total BSA',s_lift:'Total Lifting',s_achv:'Avg Achv',s_surp:'Total Surplus',s_voy:'Voyages',s_cnt:'Rows',
+  c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%',c_surp:'Surplus',
+  total:'TOTAL',week:'W',voy:'voy',pol_n:'POLs',ownslot:'Own Slot',empty:'No matching data',
+  t_o:'OBT (Overseas)',t_e:'EST (Export)',t_i:'IST (Import)',t_j:'JBT (Japan)',langbtn:'한국어'}};
+const T=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ko[k]||k;
 let MT_MODE='excl';
-// 영업주체(팀) 다중선택: O=OBT E=EST I=IST J=JBT. 기본 전체.
 const TEAMS=['o','e','i','j'];
-const TEAM_LABEL={o:'OBT (해외)',e:'EST (수출)',i:'IST (수입)',j:'JBT (일본)'};
+const T_TEAM=t=>T('t_'+t);
 const selTeam=new Set(TEAMS);
 const bsaLaden=r=>selTeam.size===TEAMS.length?(r.bsa||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['bsa_'+t]||0):0),0);
 const liftLaden=r=>selTeam.size===TEAMS.length?(r.lifting||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['lift_'+t]||0):0),0);
@@ -198,16 +218,21 @@ function renderPorts(){
   $('ports').innerHTML=ports.map(([p,c])=>`<label class="dp-item"><input type="checkbox" class="pk" value="${p}" ${selPort.has(p)?'checked':''}>${p}<span class="muted">${c}</span></label>`).join('');
   $('pol-hint').textContent=`포트 (${ports.length})`;
 }
-function renderTeams(){$('teams').innerHTML=TEAMS.map(t=>`<label class="dp-item"><input type="checkbox" class="tm" value="${t}" ${selTeam.has(t)?'checked':''}>${TEAM_LABEL[t]}</label>`).join('');}
+function renderTeams(){$('teams').innerHTML=TEAMS.map(t=>`<label class="dp-item"><input type="checkbox" class="tm" value="${t}" ${selTeam.has(t)?'checked':''}>${T_TEAM(t)}</label>`).join('');}
 function labels(){
+  const A=T('all'),N=T('none');
   const nr=document.querySelectorAll('.rt:checked').length;
-  $('lab-rt').textContent=nr===ALL_ROUTES.length?'전체':(nr===0?'없음':nr+'개');
-  $('lab-ctr').textContent=selCtr.size===CTRS.length?'전체':(selCtr.size===0?'없음':selCtr.size+'개');
+  $('lab-rt').textContent=nr===ALL_ROUTES.length?A:(nr===0?N:String(nr));
+  $('lab-ctr').textContent=selCtr.size===CTRS.length?A:(selCtr.size===0?N:String(selCtr.size));
   const shown=[...ALLPORTS].filter(p=>{const c=ALL.find(r=>r.pol===p).pol_ctr;return selCtr.has(c);});
   const chk=shown.filter(p=>selPort.has(p)).length;
-  $('lab-pol').textContent=(chk===shown.length&&selCtr.size===CTRS.length)?'전체':(chk===0?'없음':chk+'개');
-  $('lab-team').textContent=selTeam.size===TEAMS.length?'전체':(selTeam.size===0?'없음':[...selTeam].map(t=>t.toUpperCase()).join('·'));
+  $('lab-pol').textContent=(chk===shown.length&&selCtr.size===CTRS.length)?A:(chk===0?N:String(chk));
+  $('lab-team').textContent=selTeam.size===TEAMS.length?A:(selTeam.size===0?N:[...selTeam].map(t=>t.toUpperCase()).join('·'));
 }
+function setLang(l){LANG=l;document.documentElement.lang=l;
+  document.querySelectorAll('[data-i]').forEach(el=>el.textContent=T(el.dataset.i));
+  $('mt-x').textContent=T('mt_x');$('mt-i').textContent=T('mt_i');$('lang').textContent=T('langbtn');
+  renderTeams();apply();}
 function selRoutes(){return new Set([...document.querySelectorAll('.rt:checked')].map(c=>c.value));}
 function aggr(rows){return{b:rows.reduce((a,x)=>a+bsaOf(x),0),l:rows.reduce((a,x)=>a+liftOf(x),0),s:rows.reduce((a,x)=>a+(x.surplus||0),0)};}
 
@@ -223,26 +248,27 @@ function render(rows){
   $('s_bsa').textContent=fmt(sm.b);$('s_lift').textContent=fmt(sm.l);
   $('s_achv').textContent=sm.b?Math.round(sm.l/sm.b*100)+'%':'–';
   $('s_surp').textContent=fmt(sm.s);$('s_cnt').textContent=rows.length;
-  if(!rows.length){$('wrap').innerHTML='<div class="empty">조건에 맞는 데이터 없음</div>';$('s_voy').textContent='0';return;}
+  if(!rows.length){$('wrap').innerHTML=`<div class="empty">${T('empty')}</div>`;$('s_voy').textContent='0';return;}
   const tree={};const voySet=new Set();
   rows.forEach(r=>{const vk=r.vessel+'|'+r.voyage;voySet.add(r.week+'|'+r.route+'|'+vk);
     (((tree[r.week]=tree[r.week]||{})[r.route]=tree[r.week][r.route]||{})[vk]=tree[r.week][r.route][vk]||[]).push(r);});
   $('s_voy').textContent=voySet.size;
   const maxS=Math.max(1,...rows.map(r=>Math.abs(r.surplus||0)));
-  let h=`<table class="board">
-    <thead><tr><th class="l">POL / 국가</th><th>ETD</th><th>BSA</th><th>Lifting</th><th>달성률</th><th>ROB</th><th>소석률</th><th>잉여선복</th></tr></thead><tbody>`;
+  let h=`<table class="board${showSub?'':' nosub'}">
+    <thead><tr><th class="l">${T('c_pol')}</th><th>${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th></tr></thead><tbody>`;
+  h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td></td><td></td><td>${fmt(sm.s)}</td></tr>`;
   Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
     const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
     const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
-    h+=`<tr class="bw" data-lvl="wk" data-key="${wk}" data-wk="${wk}"><td colspan="8"><span class="tg">▼</span>${wk}주<span class="agg">BSA ${fmt(a.b)} · Lift ${fmt(a.l)} · 달성률 ${a.b?Math.round(a.l/a.b*100):0}% · 잉여 ${fmt(a.s)} · ${nv}항차</span></td></tr>`;
+    h+=`<tr class="bw" data-lvl="wk" data-key="${wk}" data-wk="${wk}"><td colspan="8"><span class="tg">▼</span>${wk}${T('week')}<span class="agg">BSA ${fmt(a.b)} · Lift ${fmt(a.l)} · ${T('c_achv')} ${a.b?Math.round(a.l/a.b*100):0}% · ${T('c_surp')} ${fmt(a.s)} · ${nv}${T('voy')}</span></td></tr>`;
     Object.keys(tree[wk]).sort().forEach(rt=>{
       const rk=wk+'|'+rt;const rtRows=[];Object.values(tree[wk][rt]).forEach(x=>rtRows.push(...x));const ra=aggr(rtRows);
-      h+=`<tr class="br" data-lvl="rt" data-key="${rk}" data-wk="${wk}" data-rt="${rk}"><td colspan="8"><span class="tg">▼</span>${rt}<span class="agg">${Object.keys(tree[wk][rt]).length}항차 · BSA ${fmt(ra.b)} · Lift ${fmt(ra.l)} · 잉여 ${fmt(ra.s)}</span></td></tr>`;
+      h+=`<tr class="br" data-lvl="rt" data-key="${rk}" data-wk="${wk}" data-rt="${rk}"><td colspan="8"><span class="tg">▼</span>${rt}<span class="agg">${Object.keys(tree[wk][rt]).length}${T('voy')} · BSA ${fmt(ra.b)} · Lift ${fmt(ra.l)} · ${T('c_surp')} ${fmt(ra.s)}</span></td></tr>`;
       Object.keys(tree[wk][rt]).sort().forEach(vk=>{
         const arr=tree[wk][rt][vk];const vkk=rk+'|'+vk;const [vsl,voy]=vk.split('|');
         const own=arr[0].own_slot;const eds=arr.map(x=>x.etd).filter(Boolean).sort();
         const er=eds.length?(etd(eds[0])+(eds.length>1?'~'+etd(eds[eds.length-1]):'')):'';
-        h+=`<tr class="bv" data-lvl="vy" data-key="${vkk}" data-wk="${wk}" data-rt="${rk}" data-vy="${vkk}"><td colspan="8"><span class="tg">▼</span><b>${vsl} / ${voy}</b><span class="meta">ETD ${er} · ${arr.length}개 적출항</span><span class="own">Own Slot ${fmt(own)} TEU</span></td></tr>`;
+        h+=`<tr class="bv" data-lvl="vy" data-key="${vkk}" data-wk="${wk}" data-rt="${rk}" data-vy="${vkk}"><td colspan="8"><span class="tg">▼</span><b>${vsl} / ${voy}</b><span class="meta">ETD ${er} · ${arr.length} ${T('pol_n')}</span><span class="own">${T('ownslot')} ${fmt(own)} TEU</span></td></tr>`;
         arr.forEach(r=>{
           const av=achvOf(r),aC=achvCls(av),sC=r.surplus<0?'neg surplus':'surplus';
           const bw=Math.round(Math.abs(r.surplus||0)/maxS*50),bar=r.surplus>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
@@ -284,6 +310,8 @@ function setDepth(level){cW.clear();cR.clear();cV.clear();
 $('b-exp').onclick=()=>setDepth(0);$('b-rt').onclick=()=>setDepth(1);$('b-wk').onclick=()=>setDepth(2);
 function setMT(m){MT_MODE=m;$('mt-x').classList.toggle('on',m==='excl');$('mt-i').classList.toggle('on',m==='incl');apply();}
 $('mt-x').onclick=()=>setMT('excl');$('mt-i').onclick=()=>setMT('incl');
+$('lang').onclick=()=>setLang(LANG==='ko'?'en':'ko');
+$('b-sub').onclick=()=>{showSub=!showSub;$('b-sub').classList.toggle('on',showSub);apply();};
 
 document.querySelectorAll('.dd-btn').forEach(btn=>btn.addEventListener('click',e=>{
   const dd=btn.parentElement,open=dd.classList.contains('open');
