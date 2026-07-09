@@ -566,7 +566,7 @@ function render(){
   let ts = PMON.baseline_ts ? `${t.baseline}: ${PMON.baseline_ts}` : t.baseline_wait;
   if(s.has_baseline===false) ts = t.baseline_wait;
   const asof = PMON.loaded_ts ? `<b style="color:var(--ink)">${t.asof} ${String(PMON.loaded_ts).slice(5)}</b> · ` : '';
-  $('sv_ts').innerHTML = `${asof}${ts} <span style="color:#f59e0b" title="${LANG==='ko'?'ADW 일배치(새벽) 미러 — 오늘 발생분은 다음날 반영. 부킹·픽업·EIR 모두 전일 기준.':'ADW daily mirror — today\\'s changes appear next day. Booking/pickup/EIR are as of yesterday.'}">· ADW ${LANG==='ko'?'전일 기준':'as of yesterday'}</span>`;
+  $('sv_ts').innerHTML = `${asof}${ts} <span style="color:#f59e0b" title="${LANG==='ko'?'ADW 일배치(새벽) 미러 — 오늘 발생분은 다음날 반영. 부킹·픽업·EIR 모두 전일 기준.':'ADW daily mirror — today\'s changes appear next day. Booking/pickup/EIR are as of yesterday.'}">· ADW ${LANG==='ko'?'전일 기준':'as of yesterday'}</span>`;
 
   const hasEir = !!s.has_eir;
   const list = [...act, ...watch];   // 카드 = 확인 필요만 (safe/ok 숨김 → 전체 표에)
