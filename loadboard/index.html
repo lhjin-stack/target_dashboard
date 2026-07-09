@@ -219,9 +219,10 @@ const HAULS=['head','back'];
 const selHaul=new Set(HAULS);
 (function(){
   if(ALL.length && ALL[0].haul!==undefined){ALL.forEach(r=>r._haul=r.haul);return;} // 데이터레이어 계산값(정확) 우선
-  const g={};ALL.forEach(r=>{const v=r.voyage||'';const suf=v.slice(-1);const base=r.vessel+'|'+v.slice(0,-1);const e=r.etd||'9999';(g[base]=g[base]||{});if(g[base][suf]==null||e<g[base][suf])g[base][suf]=e;});
-  const head={};Object.keys(g).forEach(base=>{const ks=Object.keys(g[base]);head[base]=ks.length>=2?ks.sort((a,b)=>g[base][a]<g[base][b]?-1:1)[0]:('WN'.includes(ks[0])?ks[0]:null);});
-  ALL.forEach(r=>{const v=r.voyage||'';const base=r.vessel+'|'+v.slice(0,-1);r._haul=(v.slice(-1)===head[base])?'head':'back';});})();
+  const D='EWNS';const vd=v=>{v=v||'';if(!v)return['',''];if(D.includes(v.slice(-1)))return[v.slice(0,-1),v.slice(-1)];if(D.includes(v[0]))return[v.slice(1),v[0]];return[v,''];}; // 방향글자: 접미사('2603N')·접두사('W033') 모두
+  const g={};ALL.forEach(r=>{const p=vd(r.voyage);const base=r.vessel+'|'+p[0];const e=r.etd||'9999';(g[base]=g[base]||{});if(g[base][p[1]]==null||e<g[base][p[1]])g[base][p[1]]=e;});
+  const head={};Object.keys(g).forEach(base=>{const ks=Object.keys(g[base]);head[base]=ks.length>=2?ks.sort((a,b)=>g[base][a]<g[base][b]?-1:1)[0]:('SE'.includes(ks[0])?null:ks[0]);});
+  ALL.forEach(r=>{const p=vd(r.voyage);const base=r.vessel+'|'+p[0];r._haul=(p[1]===head[base])?'head':'back';});})();
 
 function renderRoutes(){$('routes').innerHTML=ALL_ROUTES.map(r=>`<label class="dp-item"><input type="checkbox" class="rt" value="${r}" checked>${r}</label>`).join('');}
 function renderCtrs(){$('ctrs').innerHTML=CTRS.map(c=>`<label class="dp-item"><input type="checkbox" class="ck" value="${c}" ${selCtr.has(c)?'checked':''}>${c}<span class="muted">${ctrPorts[c].size}</span></label>`).join('');}
