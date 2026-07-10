@@ -71,6 +71,9 @@
   .csv-btn:hover{background:var(--navy);color:#fff}
   .csv-btn:disabled{opacity:.4;cursor:default}
   .csvbar .ch{font-size:11px;color:#9ca3af;font-weight:600}
+  /* 항차 미선택 상태로 CSV 버튼을 누르면 선택 버튼을 강조 */
+  .msel-btn.need{border-color:#dc2626;color:#dc2626;animation:needPulse .5s ease-in-out 3}
+  @keyframes needPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}50%{box-shadow:0 0 0 3px rgba(220,38,38,.22)}}
   .msel{position:relative}
   .msel-btn{padding:6px 11px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;background:#fff;
     cursor:pointer;font-weight:700;color:var(--ink);min-width:150px;text-align:left}
@@ -621,8 +624,8 @@ function csvBarHtml(vs){
         ${items}
       </div>
     </div>
-    <button class="csv-btn" onclick="dlCsv('expcancel')">${t.csv_exp}</button>
-    <button class="csv-btn" onclick="dlCsv('notpicked')">${t.csv_np}</button>
+    <button class="csv-btn" onclick="event.stopPropagation();dlCsv('expcancel')">${t.csv_exp}</button>
+    <button class="csv-btn" onclick="event.stopPropagation();dlCsv('notpicked')">${t.csv_np}</button>
     <span class="ch">${t.csv_hint}</span>
   </div>`;
 }
@@ -644,7 +647,15 @@ function _dl(name, rows){
 }
 const _STS = {'01':'Normal','02':'Waiting','03':'Cancel','05':'Checking'};
 function dlCsv(kind){
-  if(!CSVSEL.size){ const l=$('msel_list'); if(l) l.classList.add('on'); return; }
+  // 항차 미선택 = 다운로드 불가. 목록을 열어 선택을 유도한다.
+  // ★버튼 onclick 에 event.stopPropagation() 필수 — 없으면 document 클릭리스너가 방금 연 목록을
+  //   즉시 닫아버려 "버튼이 아무 반응 없음"으로 보인다(2026-07-10 실사용 신고 원인).
+  if(!CSVSEL.size){
+    const l=$('msel_list'); if(l) l.classList.add('on');
+    const btn=document.querySelector('.msel-btn');
+    if(btn){ btn.classList.add('need'); setTimeout(()=>btn.classList.remove('need'), 1600); }
+    return;
+  }
   const sel = new Set([...CSVSEL]);
   const vs = (PMON.voyages||[]).filter(v=>sel.has(v.vsl+'|'+v.voy));
   const stamp = (SNAP&&SNAP.ts?SNAP.ts.slice(5,10).replace('-',''):'');
