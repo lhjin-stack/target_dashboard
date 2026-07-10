@@ -119,13 +119,14 @@
   .badge.gold{background:var(--orange);color:#fff}
   .badge.safe{background:#dcfce7;color:var(--green)}
 
-  /* 픽업률 게이지(픽업/BKG) + 평소 마커 */
+  /* 픽업률 게이지(픽업/BSA, BSA 없으면 픽업/BKG) + 평소 마커 */
   .gauge{position:relative;height:18px;background:#eef1f4;border-radius:9px;margin:11px 0 5px;overflow:hidden}
   .gfill{position:absolute;left:0;top:0;bottom:0;border-radius:9px}
   .gfill.act{background:var(--red)} .gfill.watch{background:var(--orange)} .gfill.ok{background:var(--green)}
   .gbase{position:absolute;top:-2px;bottom:-2px;width:2px;background:#0f172a}
   .glab{display:flex;align-items:baseline;gap:6px;font-size:12px;flex-wrap:wrap}
   .glab .cur{font-size:13px;font-weight:700;color:var(--ink)} .glab .cur b{font-size:16px;color:var(--navy)}
+  .glab .cur small{font-size:10.5px;font-weight:400;color:var(--mut)}
   .glab .norm{color:var(--mut);font-size:11.5px}
 
   /* 스탯 칩 + ? 툴팁 */
@@ -289,7 +290,7 @@ const T = {
     b_gold:"D-7 이상 · 빈슬롯",
     b_all:"슬롯 확보",
     b_cr:"부킹생성일 최근 13주(91일)",
-    f_wk:"ETD 기간", f_p1:"D-0~7", f_p2:"D-8~14", f_apply:"적용",
+    f_wk:"ETD 기간", f_p0:"D-0~11", f_p1:"D-0~7", f_p2:"D-8~14", f_apply:"적용",
     pf_hint:"D-0=출항일 · 직접 D-day 범위 입력 가능",
     dc_lbl:"도착 국가", dp_lbl:"도착 포트", dst_all_c:"전체 국가", dst_all_p:"전체 포트",
     dst_n:"개", dst_clear:"✕ 전체 해제",
@@ -306,7 +307,8 @@ const T = {
     csv_l:"화주리스트 다운로드", csv_ph:"항차 선택", csv_n:"개 선택", csv_clear:"전체 해제",
     csv_exp:"⬇ 예상캔슬 화주 CSV", csv_np:"⬇ 미픽업 화주 CSV",
     csv_hint:"여러 항차 선택 가능 · 즉시 다운로드",
-    pickrate:"픽업률", normal:"평소",
+    pickrate:"픽업률", pickrate_sub:"BSA 대비", normal:"평소",
+    c_booked:"Booked", c_picked:"픽업",
     emptyslot:"예상 빈슬롯", cushion:"여력", expcancel:"예상캔슬", notpick:"미픽업",
     tt_empty:"BSA − 예상잔여(Booked−예상캔슬). 예상대로 캔슬되면 비어나갈 슬롯(TEU). 이만큼 채우거나 지켜야 함",
     tt_cushion:"Booked − BSA (과부킹분). 캔슬이 나도 이만큼까지는 BSA를 지킬 수 있는 여유",
@@ -316,7 +318,7 @@ const T = {
     st_act:"즉시조치", st_watch:"확인", st_safe:"안전",
     none:"대상 항차 없음", loading:"픽업 집계 중(최초 1회 ~10분+)…",
     allclear:"조치 필요 항차 없음 (전부 슬롯 확보)",
-    th_vsl:"모선 / 항차", th_pick:"픽업% (평소대비)",
+    th_vsl:"모선 / 항차", th_pick:"픽업% (BSA대비 · 평소대비)",
     lg_base:"평소곡선", lg_act:"즉시조치", lg_watch:"확인", lg_safe:"안전/정상",
     ch_all:"전체 (지역)", ch_days:"최근", ch_daysu:"일 기준", ch_nodata:"곡선 데이터 준비중 — build_pod_baseline.py 실행 필요",
     ch_voy_n:"선택기간 항차",
@@ -336,7 +338,7 @@ const T = {
     b_gold:"D-7+ · empty slot",
     b_all:"Slots covered",
     b_cr:"Booking date, last 13 wk (91d)",
-    f_wk:"ETD range", f_p1:"D-0~7", f_p2:"D-8~14", f_apply:"Apply",
+    f_wk:"ETD range", f_p0:"D-0~11", f_p1:"D-0~7", f_p2:"D-8~14", f_apply:"Apply",
     pf_hint:"D-0=departure · type a custom D-day range",
     dc_lbl:"Dest country", dp_lbl:"Dest port", dst_all_c:"All countries", dst_all_p:"All ports",
     dst_n:" sel", dst_clear:"✕ Clear all",
@@ -353,7 +355,8 @@ const T = {
     csv_l:"Shipper list download", csv_ph:"Select voyages", csv_n:" selected", csv_clear:"Clear all",
     csv_exp:"⬇ Est.-cancel shippers CSV", csv_np:"⬇ Not-picked shippers CSV",
     csv_hint:"Multiple voyages allowed · instant download",
-    pickrate:"Pickup%", normal:"Normal",
+    pickrate:"Pickup%", pickrate_sub:"of BSA", normal:"Normal",
+    c_booked:"Booked", c_picked:"Picked",
     emptyslot:"Exp. empty slot", cushion:"Cushion", expcancel:"Est. Cancel", notpick:"Not Picked",
     tt_empty:"BSA − expected remaining (Booked−est.cancel). Slots that will sail empty if cancellations land as expected",
     tt_cushion:"Booked − BSA (overbooking). How much cancellation the voyage can absorb while still covering BSA",
@@ -363,7 +366,7 @@ const T = {
     st_act:"Act now", st_watch:"Check", st_safe:"Safe",
     none:"No voyages in scope", loading:"Aggregating pickup (first run: ~10 min+)…",
     allclear:"No action needed (all slots covered)",
-    th_vsl:"Vessel / Voy", th_pick:"Pickup% (vs normal)",
+    th_vsl:"Vessel / Voy", th_pick:"Pickup% (of BSA · vs normal)",
     lg_base:"Normal curve", lg_act:"Act now", lg_watch:"Check", lg_safe:"Safe/OK",
     ch_all:"All (region)", ch_days:"last", ch_daysu:"days", ch_nodata:"Curve data not built yet — run build_pod_baseline.py",
     ch_voy_n:"voyages in range",
@@ -374,7 +377,7 @@ const T = {
 };
 const REGIONS = ["SZP","CAN","HKG"];
 let LANG = "ko", REGION = "SZP", PMON = null, POD = null, _timer = null;
-let PDLO = 0, PDHI = 14;   // ETD 기간 = D-day 범위 (기본 D-0~14: 골든 D-7~11 포함)
+let PDLO = 0, PDHI = 11;   // ETD 기간 = D-day 범위 (기본 D-0~11: 첫 화면은 골든타임 D-7~11까지만)
 let CH_SEL = "";           // 곡선 선택(POD) — ""=지역 전체
 let DCTR = new Set();      // 선택 도착지 국가 (국가 전체)
 let DPORT = new Set();     // 선택 도착지 포트 (개별)
@@ -432,7 +435,7 @@ function renderTabs(){
 }
 function setRegion(r){
   if(r===REGION && PMON) return;
-  REGION = r; PMON = null; POD = null; PDLO = 0; PDHI = 14; CH_SEL = ""; CSVSEL = new Set();
+  REGION = r; PMON = null; POD = null; PDLO = 0; PDHI = 11; CH_SEL = ""; CSVSEL = new Set();
   DCTR = new Set(); DPORT = new Set();
   renderTabs();
   $('summary').style.display='none';
@@ -452,9 +455,10 @@ function applyCustom(){
 }
 function renderPfBar(){
   const t = L();
-  const p1 = (PDLO===0 && PDHI===7), p2 = (PDLO===8 && PDHI===14);
+  const p0 = (PDLO===0 && PDHI===11), p1 = (PDLO===0 && PDHI===7), p2 = (PDLO===8 && PDHI===14);
   $('wkbar').style.display='flex';
   $('pfseg').innerHTML =
+    `<button class="pfbtn ${p0?'on':''}" onclick="setRange(0,11)">${t.f_p0}</button>`+
     `<button class="pfbtn ${p1?'on':''}" onclick="setRange(0,7)">${t.f_p1}</button>`+
     `<button class="pfbtn ${p2?'on':''}" onclick="setRange(8,14)">${t.f_p2}</button>`;
   $('cin_lo').value = PDLO; $('cin_hi').value = PDHI;
@@ -522,7 +526,10 @@ function applyTankMode(){
     v.booked_teu = Math.max(0, bk);
     v.picked_teu = Math.max(0, pk);
     v.not_picked_teu = Math.max(0, v.booked_teu - v.picked_teu);
-    v.pickup_pct = v.booked_teu>0 ? Math.round(v.picked_teu*100/v.booked_teu) : 0;
+    // 픽업률 분모 = BSA(선복). BSA 미배정 항차만 booked 폴백 — 서버와 동일 규칙.
+    const den = v.bsa || v.booked_teu;
+    v.pickup_pct = den>0 ? Math.round(v.picked_teu*100/den) : 0;
+    if(v.bsa) v.fill_bsa = Math.round(v.picked_teu*100/v.bsa);
     // EIR도 탱크분 차감 후 mode booked로 캡(EIR≤부킹 유지) — 부킹만 줄고 EIR 안 주는 문제 해결
     const er = Math.max(0, (v._eir0||0) - (exc ? (v.tank_eir||0) : 0));
     v.eir_teu = Math.min(er, v.booked_teu);
@@ -566,7 +573,7 @@ function render(){
   let ts = PMON.baseline_ts ? `${t.baseline}: ${PMON.baseline_ts}` : t.baseline_wait;
   if(s.has_baseline===false) ts = t.baseline_wait;
   const asof = PMON.loaded_ts ? `<b style="color:var(--ink)">${t.asof} ${String(PMON.loaded_ts).slice(5)}</b> · ` : '';
-  $('sv_ts').innerHTML = `${asof}${ts} <span style="color:#f59e0b" title="${LANG==='ko'?'ADW 일배치(새벽) 미러 — 오늘 발생분은 다음날 반영. 부킹·픽업·EIR 모두 전일 기준.':'ADW daily mirror — today\'s changes appear next day. Booking/pickup/EIR are as of yesterday.'}">· ADW ${LANG==='ko'?'전일 기준':'as of yesterday'}</span>`;
+  $('sv_ts').innerHTML = `${asof}${ts} <span style="color:#f59e0b" title="${LANG==='ko'?'ADW 일배치(새벽) 미러 — 오늘 발생분은 다음날 반영. 부킹·픽업·EIR 모두 전일 기준.':'ADW daily mirror — today\\'s changes appear next day. Booking/pickup/EIR are as of yesterday.'}">· ADW ${LANG==='ko'?'전일 기준':'as of yesterday'}</span>`;
 
   const hasEir = !!s.has_eir;
   const list = [...act, ...watch];   // 카드 = 확인 필요만 (safe/ok 숨김 → 전체 표에)
@@ -676,8 +683,8 @@ function cardHtml(v, hasEir, i){
   const normTxt = v.base_pct!=null ? `<span class="norm">${t.normal} ${v.base_pct}%</span>` : '';
   const eirTxt = (hasEir && v.eir_teu) ? `<span class="norm"> · EIR/BSA ${fmt(v.eir_teu)}/${fmt(v.bsa)}</span>` : '';
   const qm = kind => `<span class="qm" onmousemove="qmTip(event,${i},'${kind}')" onmouseout="hideTip()">?</span>`;
-  const expChip = (v.exp_cancel!=null && v.exp_cancel>0)
-      ? `<div class="stat"><div class="sk">${t.expcancel}${qm('expc')}</div><div class="sv warn">~${fmt(v.exp_cancel)}</div></div>` : '';
+  // 픽업률 분모가 BSA(미배정 항차만 booked)라 라벨에 기준을 명시 — 100% 초과는 과부킹이라 정상.
+  const rateSub = v.pickup_basis==='booked' ? 'Booked 대비' : t.pickrate_sub;
   return `<div class="pcard ${cls}">
     <div class="pc-top">
       <span class="pc-vsl" onclick="voy('${v.vsl}','${v.voy}')">${icon} ${v.vsl} ${v.voy}</span>
@@ -686,13 +693,13 @@ function cardHtml(v, hasEir, i){
       <span class="pc-etd">${fmtEtd(v.etd)} · ${dday(v.dday)}</span>
     </div>
     ${pickBar(v)}
-    <div class="glab"><span class="cur">${t.pickrate} <b>${pc}</b></span> ${normTxt}${eirTxt}</div>
+    <div class="glab"><span class="cur">${t.pickrate} <small>(${rateSub})</small> <b>${pc}</b></span> ${normTxt}${eirTxt}</div>
     <div class="stats">
-      <div class="stat"><div class="sk">${t.emptyslot}${qm('empty')}</div><div class="sv red">${fmt(v.exposure)}T</div></div>
-      <div class="stat"><div class="sk">BSA</div><div class="sv">${fmt(v.bsa)}</div></div>
+      <div class="stat"><div class="sk">BSA</div><div class="sv">${fmt(v.bsa)}T</div></div>
+      <div class="stat"><div class="sk">${t.c_booked}</div><div class="sv">${fmt(v.booked_total||v.booked_teu)}T</div></div>
+      <div class="stat"><div class="sk">${t.c_picked}</div><div class="sv">${fmt(v.picked_teu)}T</div></div>
       <div class="stat"><div class="sk">${t.cushion}${qm('cushion')}</div><div class="sv">${fmt(v.cushion)}T</div></div>
-      <div class="stat"><div class="sk">${t.notpick}</div><div class="sv">${fmt(v.not_picked_teu)}T</div></div>
-      ${expChip}
+      <div class="stat"><div class="sk">${t.emptyslot}${qm('empty')}</div><div class="sv red">${fmt(v.exposure)}T</div></div>
     </div>
   </div>`;
 }
