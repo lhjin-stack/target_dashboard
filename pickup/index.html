@@ -962,7 +962,13 @@ function _clearTok(){ try{ localStorage.removeItem(TOK_KEY); }catch(e){} }
 function _gisInit(){ if(!window.google||!google.accounts) return;
   _tokenClient=google.accounts.oauth2.initTokenClient({
     client_id:OAUTH_CLIENT_ID, scope:OAUTH_SCOPE, hd:OAUTH_HD,
-    callback:async(resp)=>{ if(resp.error){_showLoginError('로그인 실패: '+(resp.error_description||resp.error));return;} _saveTok(resp); await onLoginSuccess(); }
+    callback:async(resp)=>{
+      // 만료 토큰 조용히 재발급(_renewMode)인 경우: 로그인 화면으로 되돌리지 않고 데이터만 다시 본다.
+      if(resp.error){ if(_renewMode){_renewMode=false; return;} _showLoginError('로그인 실패: '+(resp.error_description||resp.error)); return; }
+      _saveTok(resp);
+      if(_renewMode){ _renewMode=false; try{ gapi.client.setToken({access_token:resp.access_token}); }catch(e){} _pollOnce(); return; }
+      await onLoginSuccess();
+    }
   }); _gisReady=true; _maybeEnableLogin(); }
 function _maybeEnableLogin(){
   if(_isLocal()){ _localLoad(); return; }
@@ -984,14 +990,64 @@ async function onLoginSuccess(){
     document.getElementById('gate').style.display='none';
     document.getElementById('appbody').style.display='block';
     boot(snap);
+    _lastMT = await _driveMTime().catch(()=>null);   // 폴링 기준선
+    _startPolling();
   }catch(e){ _clearTok(); _showLoginError('데이터 로드 실패 — '+(e.message||e)+' (권한/파일 확인)'); }
 }
 async function _localLoad(){ try{ const snap=await fetch(LOCAL_URL).then(r=>r.json());
     document.getElementById('gate').style.display='none';
     document.getElementById('appbody').style.display='block'; boot(snap);
+    _startPolling();
   }catch(e){ _showLoginError('스냅샷 로드 실패: '+e); } }
 function logout(){ _clearTok(); location.reload(); }
 window.addEventListener('load', ()=>{ if(_isLocal()) _localLoad(); });
+
+/* ══ 자동 갱신 ══
+   서버(_snapshot_loop 30분 + Hot Dump Watch 5분)가 Drive 스냅샷을 갱신해도 이 페이지는 로그인 때
+   한 번만 받아왔다 → 열어둔 탭이 옛 숫자를 계속 보여줌. 그래서 5분마다 modifiedTime(수백 B)만 조회하고
+   바뀐 경우에만 본문(수 MB)을 다시 받는다.
+   REGION·필터·탱크모드는 전역이라 SNAP만 갈아끼우고 showRegion()을 부르면 화면 상태는 그대로 유지된다. */
+const POLL_MS = 300000;
+let _lastMT = null, _pollTimer = null, _polling = false, _lastPoll = 0, _renewMode = false;
+
+async function _driveMTime(){
+  const g = await gapi.client.drive.files.get({fileId:SNAP_FILE_ID, fields:'modifiedTime'});
+  return (g.result && g.result.modifiedTime) || null;
+}
+function _tokenNearExpiry(){
+  try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); return !(o && o.exp > Date.now()+120000); }
+  catch(e){ return true; }
+}
+function _renewToken(){ if(!_tokenClient || _renewMode) return; _renewMode = true; _tokenClient.requestAccessToken({prompt:''}); }
+
+async function _pollOnce(){
+  if(_polling) return;
+  _polling = true;
+  try{
+    if(_isLocal()){
+      const snap = await fetch(LOCAL_URL).then(r=>r.json());
+      if(!SNAP || snap.ts !== SNAP.ts){ SNAP = snap; showRegion(); }
+      return;
+    }
+    if(_tokenNearExpiry()){ _renewToken(); return; }   // 재발급 콜백이 _pollOnce를 다시 부른다
+    const mt = await _driveMTime();
+    if(!mt || mt === _lastMT) return;
+    _lastMT = mt;
+    SNAP = await fetchDriveSnapshot();
+    showRegion();
+  }catch(e){
+    // 401/네트워크 등: 조용히 넘기고 다음 틱에 재시도. 실패해도 화면은 기존 데이터를 그대로 유지한다.
+    if(String((e && (e.status || e.message)) || '').indexOf('401') >= 0) _renewToken();
+  }finally{ _polling = false; _lastPoll = Date.now(); }
+}
+function _startPolling(){
+  if(_pollTimer) return;
+  _pollTimer = setInterval(_pollOnce, POLL_MS);
+  // 탭으로 돌아왔을 때도 한 번 확인(1분 내 중복 조회는 생략)
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden && Date.now()-_lastPoll > 60000) _pollOnce();
+  });
+}
 </script>
 </body>
 </html>
