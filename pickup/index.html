@@ -164,6 +164,10 @@
   tr.watch td{background:rgba(255,247,237,.55)}
   .vsl-lnk{color:var(--navy);font-weight:700;cursor:pointer} .vsl-lnk:hover{text-decoration:underline}
   .rte-tag{font-size:11px;color:var(--mut)}
+  th.emph,td.emph{font-weight:800;font-size:13.5px;background:rgba(15,23,42,.045)}
+  th.emph{color:var(--navy)} td.emph{color:var(--ink)}
+  th.sub,td.sub{font-size:11px;color:#94a3b8;padding-left:6px;padding-right:8px}
+  th.ts,td.ts{color:#8b5cf6}
   .dd{font-size:11px;color:var(--mut)}
   .mini{display:inline-block;position:relative;width:78px;height:11px;background:#eef1f4;border-radius:6px;vertical-align:middle;margin-right:7px;overflow:hidden}
   .mini .mf{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
@@ -251,6 +255,12 @@
     <button class="pfbtn on tkbtn" data-m="inc" onclick="setTankMode('inc')">포함</button>
     <button class="pfbtn tkbtn" data-m="exc" onclick="setTankMode('exc')">제외</button>
   </div>
+  <span class="dsep"></span>
+  <span class="wl" id="split_lbl">Local/T·S</span>
+  <div class="pfseg" id="splitseg">
+    <button class="pfbtn on splitbtn" data-m="off" onclick="setSplit(false)">숨김</button>
+    <button class="pfbtn splitbtn" data-m="on" onclick="setSplit(true)">표시</button>
+  </div>
   <span class="wh" id="wk_hint"></span>
 </div>
 
@@ -312,6 +322,8 @@ const T = {
     csv_hint:"여러 항차 선택 가능 · 즉시 다운로드",
     pickrate:"픽업률", pickrate_sub:"BSA 대비", normal:"평소",
     c_booked:"Booked", c_picked:"픽업",
+    tot_bkg:"총 BKG", tot_pick:"총 픽업", pickpct:"픽업%",
+    split_on:"표시", split_off:"숨김",
     emptyslot:"예상 빈슬롯", cushion:"여력", expcancel:"예상캔슬", notpick:"미픽업",
     tt_empty:"BSA − 예상잔여(Booked−예상캔슬). 예상대로 캔슬되면 비어나갈 슬롯(TEU). 이만큼 채우거나 지켜야 함",
     tt_cushion:"Booked − BSA (과부킹분). 캔슬이 나도 이만큼까지는 BSA를 지킬 수 있는 여유",
@@ -360,6 +372,8 @@ const T = {
     csv_hint:"Multiple voyages allowed · instant download",
     pickrate:"Pickup%", pickrate_sub:"of BSA", normal:"Normal",
     c_booked:"Booked", c_picked:"Picked",
+    tot_bkg:"Total BKG", tot_pick:"Total Pick", pickpct:"Pickup%",
+    split_on:"Show", split_off:"Hide",
     emptyslot:"Exp. empty slot", cushion:"Cushion", expcancel:"Est. Cancel", notpick:"Not Picked",
     tt_empty:"BSA − expected remaining (Booked−est.cancel). Slots that will sail empty if cancellations land as expected",
     tt_cushion:"Booked − BSA (overbooking). How much cancellation the voyage can absorb while still covering BSA",
@@ -426,6 +440,7 @@ function applyStatic(){
   $('sb_all').textContent  = t.b_all;  $('sb_all_box').title  = t.tt_all;
   $('sb_cr').textContent   = t.b_cr;   $('sb_cr_box').title   = t.tt_cr;
   $('wk_lbl').textContent = t.f_wk;
+  document.querySelectorAll('.splitbtn').forEach(b=>b.textContent = b.dataset.m==='on'?t.split_on:t.split_off);
   $('c_apply').textContent = t.f_apply;
   $('foot').textContent = t.foot;
   document.title = t.title+' · '+t.sub;
@@ -516,6 +531,7 @@ function showRegion(){
   (PMON.voyages||[]).forEach(v=>{ if(v._bk0===undefined){
     v._bk0=v.booked_teu||0; v._pk0=v.picked_teu||0; v._eir0=(v.eir_raw!=null?v.eir_raw:v.eir_teu)||0; } });
   applyTankMode();
+  recomputeStance();
   render();
 }
 
@@ -540,10 +556,40 @@ function applyTankMode(){
     if(v.bsa) v.eir_bsa = v.eir_teu ? Math.round(v.eir_teu*100/v.bsa) : null;
   });
 }
+/* 판정 상수 (server.py _PMON_*) */
+const PM_GAP=30, PM_LAG=15, PM_MAXDD=14, PM_WLO=7, PM_WHI=11;
+/* ★stance(safe/act/watch/ok) 재판정 — 서버는 booked_total(가부킹 포함) 기준이라
+   확정(총BKG=가부킹 제외) 기준 예상빈슬롯과 배지가 어긋남. 확정 기준으로 통일. */
+function recomputeStance(){
+  (PMON&&PMON.voyages||[]).forEach(v=>{
+    const a = vAgg(v);
+    const bsa = v.bsa||0, dday = v.dday, exp = v.exp_cancel||0;
+    const inWin = dday!=null && dday>=PM_WLO && dday<=PM_WHI;
+    let safe=false, isRisk;
+    if(bsa>0){
+      safe = (a.tbkg - exp) >= bsa;
+      isRisk = (dday!=null && dday>=0 && dday<=PM_MAXDD && !safe && (a.empty||0) >= PM_GAP);
+    } else {
+      isRisk = (dday!=null && dday>=0 && dday<=PM_MAXDD && v.lag!=null && v.lag>=PM_LAG && a.notpick>=PM_GAP);
+    }
+    v.stance = (bsa>0 && safe) ? 'safe'
+             : (isRisk && dday!=null && dday<PM_WLO) ? 'act'
+             : isRisk ? 'watch'
+             : (inWin ? 'watch' : 'ok');
+    v.bsa_safe = bsa>0 && safe;
+  });
+}
 function setTankMode(m){
   TANKMODE = m;
   document.querySelectorAll('.tkbtn').forEach(b=>b.classList.toggle('on', b.dataset.m===m));
-  applyTankMode(); render();
+  applyTankMode(); recomputeStance(); render();
+}
+/* Local/T·S 분리 컬럼 접기 — 기본 숨김, 클릭 시 표시 (총BKG/총픽업은 항상) */
+let SHOWSPLIT = false;
+function setSplit(b){
+  SHOWSPLIT = b;
+  document.querySelectorAll('.splitbtn').forEach(x=>x.classList.toggle('on', (x.dataset.m==='on')===b));
+  render();
 }
 // 상세 행(부킹) 탱크제외 보정 — 모달·CSV 공용
 function tankRow(d){
@@ -686,6 +732,7 @@ function pickBar(v){
 let CARDV = [];
 function cardHtml(v, hasEir, i){
   const t = L();
+  const a = vAgg(v);   // 총BKG/픽업/여력/빈슬롯 = 확정(가부킹 제외) 기준
   const act = v.stance==='act';
   const cls = act ? 'risk' : 'gold';
   const icon = act ? '🔴' : '🟡';
@@ -707,10 +754,10 @@ function cardHtml(v, hasEir, i){
     <div class="glab"><span class="cur">${t.pickrate} <small>(${rateSub})</small> <b>${pc}</b></span> ${normTxt}${eirTxt}</div>
     <div class="stats">
       <div class="stat"><div class="sk">BSA</div><div class="sv">${fmt(v.bsa)}T</div></div>
-      <div class="stat"><div class="sk">${t.c_booked}</div><div class="sv">${fmt(v.booked_total||v.booked_teu)}T</div></div>
-      <div class="stat"><div class="sk">${t.c_picked}</div><div class="sv">${fmt(v.picked_teu)}T</div></div>
-      <div class="stat"><div class="sk">${t.cushion}${qm('cushion')}</div><div class="sv">${fmt(v.cushion)}T</div></div>
-      <div class="stat"><div class="sk">${t.emptyslot}${qm('empty')}</div><div class="sv red">${fmt(v.exposure)}T</div></div>
+      <div class="stat"><div class="sk">${t.tot_bkg}</div><div class="sv">${fmt(a.tbkg)}T</div></div>
+      <div class="stat"><div class="sk">${t.tot_pick}</div><div class="sv">${fmt(a.tpick)}T</div></div>
+      <div class="stat"><div class="sk">${t.cushion}${qm('cushion')}</div><div class="sv">${fmt(a.cushion)}T</div></div>
+      <div class="stat"><div class="sk">${t.emptyslot}${qm('empty')}</div><div class="sv red">${fmt(a.empty)}T</div></div>
     </div>
   </div>`;
 }
@@ -719,30 +766,31 @@ function cardHtml(v, hasEir, i){
 function qmTip(ev, i, kind){
   const v = CARDV[i];
   if(!v) return;
+  const a = vAgg(v);
   const exp0 = v.exp_cancel||0;
-  const rem = (v.booked_total||v.booked_teu||0) - exp0;   // 예상잔여
+  const rem = a.tbkg - exp0;   // 예상잔여 (총BKG = 확정, 가부킹 제외)
   let h = '';
   if(LANG==='ko'){
-    if(kind==='empty') h = `<b>빈 슬롯 ${fmt(v.exposure)}T</b><br>
+    if(kind==='empty') h = `<b>빈 슬롯 ${fmt(a.empty)}T</b><br>
       = BSA ${fmt(v.bsa)} − 예상잔여 ${fmt(rem)}<br>
-      (예상잔여 = Booked ${fmt(v.booked_total)} − 예상캔슬 ${fmt(exp0)})<br>
-      <span style="color:#94a3b8">예상대로 취소되면 이만큼 슬롯이 비어나감</span>`;
-    else if(kind==='cushion') h = `<b>여력 ${fmt(v.cushion)}T</b><br>
-      = Booked ${fmt(v.booked_total)} − BSA ${fmt(v.bsa)}<br>
+      (예상잔여 = 총BKG ${fmt(a.tbkg)} − 예상캔슬 ${fmt(exp0)})<br>
+      <span style="color:#94a3b8">예상대로 취소되면 이만큼 슬롯이 비어나감 · 총BKG=확정(가부킹 제외)</span>`;
+    else if(kind==='cushion') h = `<b>여력 ${fmt(a.cushion)}T</b><br>
+      = 총BKG ${fmt(a.tbkg)} − BSA ${fmt(v.bsa)}<br>
       <span style="color:#94a3b8">이만큼 취소돼도 BSA는 지켜지는 과부킹 버퍼</span>`;
     else if(kind==='expc') h = `<b>예상캔슬 ~${fmt(exp0)}T</b><br>
-      = 미픽업 ${fmt(v.not_picked_teu)}T × 지역 캔슬률 ${PMON.cancel_rate||'–'}%<br>
+      = 미픽업 ${fmt(a.notpick)}T × 지역 캔슬률 ${PMON.cancel_rate||'–'}%<br>
       <span style="color:#94a3b8">최근 13주(91일) 지역 전체 취소TEU÷전체TEU</span>`;
   }else{
-    if(kind==='empty') h = `<b>Empty slot ${fmt(v.exposure)}T</b><br>
+    if(kind==='empty') h = `<b>Empty slot ${fmt(a.empty)}T</b><br>
       = BSA ${fmt(v.bsa)} − expected remaining ${fmt(rem)}<br>
-      (remaining = Booked ${fmt(v.booked_total)} − est. cancel ${fmt(exp0)})<br>
-      <span style="color:#94a3b8">Slots that sail empty if cancellations land as expected</span>`;
-    else if(kind==='cushion') h = `<b>Cushion ${fmt(v.cushion)}T</b><br>
-      = Booked ${fmt(v.booked_total)} − BSA ${fmt(v.bsa)}<br>
+      (remaining = Total BKG ${fmt(a.tbkg)} − est. cancel ${fmt(exp0)})<br>
+      <span style="color:#94a3b8">Slots that sail empty if cancellations land as expected · Total BKG = confirmed (excl. waiting)</span>`;
+    else if(kind==='cushion') h = `<b>Cushion ${fmt(a.cushion)}T</b><br>
+      = Total BKG ${fmt(a.tbkg)} − BSA ${fmt(v.bsa)}<br>
       <span style="color:#94a3b8">Overbooking buffer — BSA still covered up to this much cancellation</span>`;
     else if(kind==='expc') h = `<b>Est. cancel ~${fmt(exp0)}T</b><br>
-      = Not-picked ${fmt(v.not_picked_teu)}T × region cancel rate ${PMON.cancel_rate||'–'}%<br>
+      = Not-picked ${fmt(a.notpick)}T × region cancel rate ${PMON.cancel_rate||'–'}%<br>
       <span style="color:#94a3b8">Cancelled÷total TEU for the region, last 13 weeks (91 days)</span>`;
   }
   const tip = $('tip');
@@ -855,16 +903,41 @@ function stBadge(v){
   if(v.bsa_safe)         return `<span class="badge safe">${t.st_safe}</span>`;
   return '';
 }
+/* 항차 집계 — detail(화주행)에서 Local/TS·총계 직접 합산.
+   ★카드·표·모달이 모두 이 값을 써서 구조적으로 일치. 탱크토글(tankRow)도 여기서 자동 반영.
+   ★총BKG = 확정(Normal, status 01) 픽업대상만 = booked_teu — 가부킹(Waiting) 제외. */
+function vAgg(v){
+  const det = (v.detail||[]).map(tankRow);
+  let lb=0,tb=0,lp=0,tp=0;
+  det.forEach(d=>{ if(d.ts){ tb+=d.booked||0; tp+=d.picked||0; }
+                   else    { lb+=d.booked||0; lp+=d.picked||0; } });
+  const tbkg=Math.round(lb+tb), tpick=Math.round(lp+tp);
+  const notpick=Math.max(0,tbkg-tpick);
+  const bsa=v.bsa||0, exp=v.exp_cancel||0;
+  // 예상빈슬롯·여력도 확정(총BKG) 기준 — 가부킹 제외 일관
+  const empty  = bsa>0 ? Math.max(0, Math.round(bsa-(tbkg-exp))) : null;
+  const cushion= bsa>0 ? Math.max(0, Math.round(tbkg-bsa)) : null;
+  return {tbkg, lbkg:Math.round(lb), tsbkg:Math.round(tb),
+          tpick, lpick:Math.round(lp), tspick:Math.round(tp), notpick, empty, cushion};
+}
+
 function tableHtml(vs, hasEir){
   const t = L();
-  const eth = hasEir ? `<th>${t.eir}/BSA</th>` : '';
+  const sp = SHOWSPLIT;   // Local/T·S 분리 컬럼 표시 여부
+  const robTip = LANG==='ko' ? 'ROB (On Board) — 선복보드 UISCBS114 누적적재−양하(적출항 기준). 이 항구 출항 시 배에 실린 TEU'
+                             : 'ROB (On Board) — cumulative loaded − discharged at this POL (loadboard UISCBS114)';
+  const subH = `<th class="sub">Local</th><th class="sub ts">T/S</th>`;
+  const eth = hasEir ? `<th>EIR/BSA</th>` : '';
   const head = `<tr>
     <th class="l">${t.th_vsl}</th><th class="l">${t.route}</th><th>${t.etd}</th>
     <th class="l">${t.status}</th>
-    <th>${t.booked}</th><th>BSA</th>
-    ${eth}<th class="l">${t.th_pick}</th><th>${t.pickup}</th><th>${t.notpick}</th>
-    <th>${t.emptyslot}</th><th>${t.expcancel}</th></tr>`;
+    <th class="emph">${t.tot_bkg}</th>${sp?subH:''}
+    <th title="${robTip}">ROB</th><th>BSA</th>${eth}
+    <th class="l">${t.pickpct}</th>
+    <th class="emph">${t.tot_pick}</th>${sp?subH:''}
+    <th>${t.notpick}</th><th>${t.emptyslot}</th><th>${t.expcancel}</th></tr>`;
   const rows = vs.map(v=>{
+    const a = vAgg(v);
     const cmp = v.base_pct!=null
       ? ` <small style="color:#94a3b8">${t.normal} ${v.base_pct}</small>` : '';
     const pcCol = v.stance==='act'?'var(--red)':(v.pickup_pct>=90?'var(--green)':'var(--ink)');
@@ -872,20 +945,23 @@ function tableHtml(vs, hasEir){
     const exp = (v.exp_cancel!=null && v.exp_cancel>0)
       ? `<td style="color:var(--amber)">~${fmt(v.exp_cancel)}</td>`
       : `<td style="color:#cbd5e1">–</td>`;
-    const xps = (v.exposure!=null && v.exposure>0)
-      ? `<td style="color:var(--red);font-weight:700">${fmt(v.exposure)}</td>`
-      : `<td style="color:#cbd5e1">${v.exposure!=null?'0':'–'}</td>`;
+    const xps = (a.empty!=null && a.empty>0)
+      ? `<td style="color:var(--red);font-weight:700">${fmt(a.empty)}</td>`
+      : `<td style="color:#cbd5e1">${a.empty!=null?'0':'–'}</td>`;
+    const bkSub = sp?`<td class="sub">${fmt(a.lbkg)}</td><td class="sub ts">${a.tsbkg>0?fmt(a.tsbkg):'–'}</td>`:'';
+    const pkSub = sp?`<td class="sub">${fmt(a.lpick)}</td><td class="sub ts">${a.tspick>0?fmt(a.tspick):'–'}</td>`:'';
+    const rob = v.rob!=null ? `<td>${fmt(v.rob)}</td>` : `<td style="color:#cbd5e1">–</td>`;
     return `<tr class="${v.stance==='act'?'act':(v.stance==='watch'?'watch':'')}">
       <td class="l"><span class="vsl-lnk" onclick="voy('${v.vsl}','${v.voy}')">${v.vsl} ${v.voy}</span></td>
       <td class="l rte-tag">${v.route||'–'}</td>
       <td>${fmtEtd(v.etd)} <span class="dd">${dday(v.dday)}</span></td>
       <td class="l">${stBadge(v)}</td>
-      <td>${fmt(v.booked_teu)}</td>
-      <td>${fmt(v.bsa)}</td>
+      <td class="emph">${fmt(a.tbkg)}</td>${bkSub}
+      ${rob}<td>${fmt(v.bsa)}</td>
       ${eir}
       <td class="l">${miniGauge(v)}<b style="color:${pcCol}">${v.pickup_pct}%</b>${cmp}</td>
-      <td style="color:${v.picked_teu>0?'var(--green)':'#9ca3af'}">${fmt(v.picked_teu)}</td>
-      <td style="color:${v.not_picked_teu>0?'var(--amber)':'#9ca3af'}">${fmt(v.not_picked_teu)}</td>
+      <td class="emph" style="color:${a.tpick>0?'var(--green)':'#9ca3af'}">${fmt(a.tpick)}</td>${pkSub}
+      <td style="color:${a.notpick>0?'var(--amber)':'#9ca3af'}">${fmt(a.notpick)}</td>
       ${xps}${exp}</tr>`;
   }).join('');
   return `<table>${head}<tbody>${rows}</tbody></table>`;
@@ -897,8 +973,11 @@ function voy(vsl, voyNo){
   const v = (PMON.voyages||[]).find(x=>x.vsl===vsl && x.voy===voyNo) || {};
   _VOYDET = (v.detail||[]).slice().sort((a,b)=>b.not_picked-a.not_picked||b.booked-a.booked);
   _DLYSEL = "";
+  const a = vAgg(v);
   $('m_title').textContent = `${vsl} ${voyNo}`;
-  $('m_etd').textContent = `${fmtEtd(v.etd)} · ${dday(v.dday)} · Booked ${fmt(v.booked_teu)} / BSA ${fmt(v.bsa)}`;
+  $('m_etd').textContent = `${fmtEtd(v.etd)} · ${dday(v.dday)} · 총BKG ${fmt(a.tbkg)}`
+    + (a.tsbkg>0?` (Local ${fmt(a.lbkg)} + T/S ${fmt(a.tsbkg)})`:``)
+    + ` / BSA ${fmt(v.bsa)}`;
   renderVoyBody();
   $('ovl').classList.add('on');
 }
@@ -912,8 +991,8 @@ function renderVoyBody(){
   // 탱크 제외 모드: 행 booked/picked에서 탱크분 차감(tankRow), 전부탱크 행은 숨김
   const det = (_DLYSEL ? _VOYDET.filter(d=>(d.dly_plc||'-')===_DLYSEL) : _VOYDET)
       .map(tankRow).filter(d=>d.booked>0 || d.picked>0);
-  const body = det.map(d=>`<tr>
-      <td class="l" style="font-variant-numeric:tabular-nums">${d.bkg_no}</td>
+  const body = det.map(d=>`<tr${d.ts?' style="background:#faf5ff"':''}>
+      <td class="l" style="font-variant-numeric:tabular-nums">${d.bkg_no}${d.ts?` <small style="color:#8b5cf6;font-weight:700" title="${LANG==='ko'?'환적(T/S) — 상류 출발지에서 픽업, 심천발 아님':'transshipment — picked up upstream'}">T/S</small>`:''}</td>
       <td class="l">${d.code}</td>
       <td class="l"><span title="${(d.shipper||'').replace(/"/g,'')}">${(d.shipper||d.code||'').slice(0,22)}</span></td>
       <td class="l">${d.pod}</td>
