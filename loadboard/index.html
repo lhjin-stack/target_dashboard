@@ -290,10 +290,10 @@ function pickCells(r, PMAP){
   // 픽업률 = 픽업/부킹(확정) — ≤100%로 직관적(스냅샷 pct는 픽업/BSA라 과부킹시 100%초과)
   const pct = p.booked>0 ? Math.round(p.picked*100/p.booked) : null;
   const pcol=pct==null?'#999':(pct>=90?'#0a7d33':(pct<50?'#c0392b':'#333'));
-  return `<td class="c pk1" style="font-weight:600;color:${pcol}">${pct==null?'–':pct+'%'}</td>`
+  return `<td class="c pk1">${p.eir?fmt(p.eir):'–'}</td>`
        + `<td class="c">${fmt(p.picked)}</td>`
        + `<td class="c" style="color:${p.notp>0?'#c47f0a':'#bbb'}">${fmt(p.notp)}</td>`
-       + `<td class="c">${p.eir?fmt(p.eir):'–'}</td>`;
+       + `<td class="c" style="font-weight:600;color:${pcol}">${pct==null?'–':pct+'%'}</td>`;
 }
 function render(rows, PM){
   const pmShow = PM!==null && PM!==undefined;          // 픽업/EIR 컬럼 표시(SHK/DCB만)
@@ -311,7 +311,7 @@ function render(rows, PM){
   $('s_voy').textContent=voySet.size;
   const maxS=Math.max(1,...rows.map(r=>Math.abs(r.surplus||0)));
   let h=`<table class="board${showSub?'':' nosub'}">
-    <thead><tr><th class="l">${T('c_pol')}</th><th>${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th>${pmShow?`<th class="pk1">${T('c_pick_pct')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_eir')}</th>`:''}</tr></thead><tbody>`;
+    <thead><tr><th class="l">${T('c_pol')}</th><th>${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
   if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td></td><td></td><td>${fmt(sm.s)}</td>${emptyPC}</tr>`;
   Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
     const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
