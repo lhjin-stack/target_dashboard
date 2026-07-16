@@ -117,7 +117,8 @@ async function fetchDriveJson(filename){
   const g=await gapi.client.drive.files.get({fileId:fid, alt:'media'});
   return JSON.parse(g.body); }
 // ★픽업/EIR 조인 — 픽업 스냅샷(SZP=SHK/DCB)을 (선명|항차)로 맵핑. SHK/DCB 필터 시에만 지연 로드.
-let PICKMAP=null, _pickLoading=false, _pickTs='';
+//   덤프 기반이라 30분마다 갱신됨 → 아래 폴링으로 열어둔 탭도 자동 최신화(필터 유지).
+let PICKMAP=null, _pickLoading=false, _pickTs='', _pickMTime=null, _pickPoll=null;
 async function loadPickup(){
   if(PICKMAP!==null||_pickLoading) return;
   _pickLoading=true;
@@ -130,8 +131,23 @@ async function loadPickup(){
                           booked:v.booked_teu, eir:v.eir_teu, bsa:v.bsa};
     });
     PICKMAP=m;
+    try{ const mm=await gapi.client.drive.files.get({fileId:PICKUP_FILE_ID, fields:'modifiedTime'});
+         _pickMTime=(mm.result&&mm.result.modifiedTime)||_pickMTime; }catch(e){}
   }catch(e){ PICKMAP={}; console.warn('픽업 스냅샷 로드 실패', e); }
-  finally{ _pickLoading=false; apply(); }
+  finally{ _pickLoading=false; _startPickPoll(); apply(); }
+}
+// 5분마다 픽업 스냅샷 modifiedTime만 확인 → 바뀌었으면 재로드(열어둔 탭 자동 최신화). 필터는 apply()가 유지.
+const PICK_POLL_MS = 300000;
+function _startPickPoll(){
+  if(_pickPoll) return;
+  _pickPoll = setInterval(async()=>{
+    if(PICKMAP===null || _pickLoading) return;
+    try{
+      const g=await gapi.client.drive.files.get({fileId:PICKUP_FILE_ID, fields:'modifiedTime'});
+      const mt=(g.result&&g.result.modifiedTime)||null;
+      if(mt && mt!==_pickMTime){ PICKMAP=null; await loadPickup(); }   // 스냅샷 바뀜 → 재로드+재렌더
+    }catch(e){}
+  }, PICK_POLL_MS);
 }
 async function onLoginSuccess(){
   try{ const data=await fetchDriveJson(DATA_FILE_NAME);
