@@ -200,7 +200,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
   <span class="flab" style="margin-left:auto">자료=드라이브</span><button id="logoutBtn" onclick="logout()">로그아웃</button>
 </div>
 <div class="summary" id="summary"><div><span data-i="s_bsa">BSA 합</span><b id="s_bsa">–</b></div><div><span data-i="s_lift">Lifting 합</span><b id="s_lift">–</b></div>
-<div><span data-i="s_achv">평균 달성률</span><b id="s_achv">–</b></div><div><span data-i="s_surp">총 Loadable Space</span><b id="s_surp">–</b></div><div><span data-i="s_voy">항차</span><b id="s_voy">–</b></div><div><span data-i="s_cnt">행</span><b id="s_cnt">–</b></div></div>
+<div><span data-i="s_achv">평균 달성률</span><b id="s_achv">–</b></div><div><span data-i="s_surp">총 Loadable Space</span><b id="s_surp">–</b></div><div><span data-i="s_own">총 Own Slot</span><b id="s_own">–</b></div><div><span data-i="s_util">평균 소석률</span><b id="s_util">–</b></div><div><span data-i="s_voy">항차</span><b id="s_voy">–</b></div><div><span data-i="s_cnt">행</span><b id="s_cnt">–</b></div></div>
 <div class="wrap" id="wrap"></div>
 </div>
 
@@ -220,7 +220,8 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',f_sub:'소계·총계',f_skp:'스킵 포함',sel_route:'항로 선택',sel_ctr:'국가 선택',
   sel_port:'포트 선택',sel_team:'영업주체 선택',toggle:'전체/해제',all:'전체',none:'없음',
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
-  s_bsa:'BSA 합',s_lift:'Lifting 합',s_achv:'평균 달성률',s_surp:'총 Loadable Space',s_voy:'항차',s_cnt:'행',
+  s_bsa:'BSA 합',s_lift:'Lifting 합',s_achv:'평균 달성률',s_surp:'총 Loadable Space',s_own:'총 Own Slot',s_util:'평균 소석률',s_voy:'항차',s_cnt:'행',
+  rob_na:'항차당 적출항이 2개 이상이라 ROB 합산 시 중복 계산됨(선적지·항로를 좁히면 표시)',
   c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률',c_surp:'Loadable Space',
   c_pick_pct:'픽업%',c_pick:'픽업',c_notpick:'미픽업',c_eir:'EIR',pick_wait:'픽업/EIR 불러오는 중…',pick_asof:'픽업 기준',
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
@@ -229,7 +230,8 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',sel_route:'Select Route',sel_ctr:'Select Country',
   sel_port:'Select Port',sel_team:'Select Team',toggle:'All/None',all:'All',none:'None',
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
-  s_bsa:'Total BSA',s_lift:'Total Lifting',s_achv:'Avg Achv',s_surp:'Total Loadable Space',s_voy:'Voyages',s_cnt:'Rows',
+  s_bsa:'Total BSA',s_lift:'Total Lifting',s_achv:'Avg Achv',s_surp:'Total Loadable Space',s_own:'Total Own Slot',s_util:'Avg Util%',s_voy:'Voyages',s_cnt:'Rows',
+  rob_na:'A voyage has 2+ origin ports here, so summing ROB double-counts (narrow origin/route to show)',
   c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%',c_surp:'Loadable Space',
   c_pick_pct:'Pickup%',c_pick:'Picked',c_notpick:'Not Picked',c_eir:'EIR',pick_wait:'Loading pickup/EIR…',pick_asof:'Pickup as of',
   total:'TOTAL',week:'W',voy:'voy',pol_n:'POLs',ownslot:'Own Slot',empty:'No matching data',
@@ -287,7 +289,22 @@ function setLang(l){LANG=l;document.documentElement.lang=l;
   $('mt-x').textContent=T('mt_x');$('mt-i').textContent=T('mt_i');$('lang').textContent=T('langbtn');
   renderTeams();renderHaul();apply();}
 function selRoutes(){return new Set([...document.querySelectorAll('.rt:checked')].map(c=>c.value));}
-function aggr(rows){return{b:rows.reduce((a,x)=>a+bsaOf(x),0),l:rows.reduce((a,x)=>a+liftOf(x),0),s:rows.reduce((a,x)=>a+(x.surplus||0),0)};}
+// ★ROB/Own Slot 집계: ROB는 그 기항지 시점의 누적 재선량이라 한 항차의 POL 행을 여러 개 더하면 중복 계산.
+//   → 그룹 내 항차마다 행이 1개뿐일 때(=선적지·항로를 좁힌 조회)만 합계·소석률을 낸다. Own Slot은 항차당 1회만 가산.
+function aggr(rows){
+  const own={};let dup=false;
+  rows.forEach(x=>{const k=x.vessel+'|'+x.voyage;if(k in own)dup=true;else own[k]=x.own_slot||0;});
+  const o=Object.values(own).reduce((a,b)=>a+b,0);
+  return{b:rows.reduce((a,x)=>a+bsaOf(x),0),l:rows.reduce((a,x)=>a+liftOf(x),0),s:rows.reduce((a,x)=>a+(x.surplus||0),0),
+         r:rows.reduce((a,x)=>a+(x.rob||0),0),o:o,u:!dup};
+}
+const aggUtil=a=>(a.u&&a.o)?Math.round(a.r/a.o*100):null;
+// 총계·소계행의 ROB·소석률 셀
+function aggCells(a){
+  if(!a.u)return `<td class="dim" title="${T('rob_na')}">–</td><td class="dim" title="${T('rob_na')}">–</td>`;
+  const u=aggUtil(a);
+  return `<td>${fmt(a.r)}</td><td>${u==null?'–':u+'%'}</td>`;
+}
 
 function apply(){
   labels();
@@ -320,6 +337,9 @@ function render(rows, PM){
   $('s_bsa').textContent=fmt(sm.b);$('s_lift').textContent=fmt(sm.l);
   $('s_achv').textContent=sm.b?Math.round(sm.l/sm.b*100)+'%':'–';
   $('s_surp').textContent=fmt(sm.s);$('s_cnt').textContent=rows.length;
+  $('s_own').textContent=fmt(sm.o);
+  const smU=aggUtil(sm);$('s_util').textContent=smU==null?'–':smU+'%';
+  $('s_util').parentElement.title=sm.u?'':T('rob_na');
   if(!rows.length){$('wrap').innerHTML=`<div class="empty">${T('empty')}</div>`;$('s_voy').textContent='0';return;}
   const tree={};const voySet=new Set();
   rows.forEach(r=>{const vk=r.vessel+'|'+r.voyage;voySet.add(r.week+'|'+r.route+'|'+vk);
@@ -328,16 +348,16 @@ function render(rows, PM){
   const maxS=Math.max(1,...rows.map(r=>Math.abs(r.surplus||0)));
   let h=`<table class="board${showSub?'':' nosub'}">
     <thead><tr><th class="l">${T('c_pol')}</th><th>${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
-  if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td></td><td></td><td>${fmt(sm.s)}</td>${emptyPC}</tr>`;
+  if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td>${aggCells(sm)}<td>${fmt(sm.s)}</td>${emptyPC}</tr>`;
   Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
     const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
     const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
     h+=showSub
-      ? `<tr class="bw" data-lvl="wk" data-key="${wk}" data-wk="${wk}"><td class="l"><span class="tg">▼</span>${wk}${T('week')} <span class="cnt">${nv}${T('voy')}</span></td><td></td><td>${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td></td><td></td><td>${fmt(a.s)}</td>${emptyPC}</tr>`
+      ? `<tr class="bw" data-lvl="wk" data-key="${wk}" data-wk="${wk}"><td class="l"><span class="tg">▼</span>${wk}${T('week')} <span class="cnt">${nv}${T('voy')}</span></td><td></td><td>${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td>${aggCells(a)}<td>${fmt(a.s)}</td>${emptyPC}</tr>`
       : `<tr class="bw" data-lvl="wk" data-key="${wk}" data-wk="${wk}"><td class="l" colspan="${NC}"><span class="tg">▼</span>${wk}${T('week')} <span class="cnt">${nv}${T('voy')}</span></td></tr>`;
     Object.keys(tree[wk]).sort().forEach(rt=>{
       const rk=wk+'|'+rt;const rtRows=[];Object.values(tree[wk][rt]).forEach(x=>rtRows.push(...x));const ra=aggr(rtRows);
-      h+=`<tr class="br" data-lvl="rt" data-key="${rk}" data-wk="${wk}" data-rt="${rk}"><td colspan="${NC}"><span class="tg">▼</span>${rt}<span class="agg">${Object.keys(tree[wk][rt]).length}${T('voy')} · BSA ${fmt(ra.b)} · Lift ${fmt(ra.l)} · ${T('c_surp')} ${fmt(ra.s)}</span></td></tr>`;
+      h+=`<tr class="br" data-lvl="rt" data-key="${rk}" data-wk="${wk}" data-rt="${rk}"><td colspan="${NC}"><span class="tg">▼</span>${rt}<span class="agg">${Object.keys(tree[wk][rt]).length}${T('voy')} · BSA ${fmt(ra.b)} · Lift ${fmt(ra.l)}${aggUtil(ra)==null?'':` · ROB ${fmt(ra.r)} · ${T('c_util')} ${aggUtil(ra)}%`} · ${T('c_surp')} ${fmt(ra.s)}</span></td></tr>`;
       Object.keys(tree[wk][rt]).sort().forEach(vk=>{
         const arr=tree[wk][rt][vk];const vkk=rk+'|'+vk;const [vsl,voy]=vk.split('|');
         const own=arr[0].own_slot;const eds=arr.map(x=>x.etd).filter(Boolean).sort();
