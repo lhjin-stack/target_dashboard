@@ -51,6 +51,11 @@ td.vsl.vclick:hover{text-decoration:underline;color:#1d4ed8}
 .lph-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 11px;border-bottom:1px solid #f0f2f5;font-size:13px}
 .lph-meta{font-size:11px;color:var(--mut);margin-top:2px}
 .lph-undo{font-size:12px;color:#b26a00;white-space:nowrap;padding:4px 9px}
+.board .rmk{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .rmk-edit{cursor:pointer}
+.board .rmk-edit:hover{background:#eef4ff}
+.rmk-by{font-size:10px;color:#8a94a6}
+.rmk-add{color:#c0c6d0;font-weight:700}
 .dd{position:relative;display:inline-block}
 .dd-btn{display:inline-flex;align-items:center;gap:6px}
 .dd-btn .v{font-weight:600;color:var(--ink)} .dd-btn .ar{color:var(--mut);font-size:10px}
@@ -219,7 +224,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
 <div id="appbody">
 
 <div id="topbar"><header style="position:relative"><button id="lang" class="langbtn">EN</button>
-<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><h1><span data-i="title">선복 적재현황 보드</span> <span class="muted" id="genlab" style="font-size:12px">· Loadable Space (UISCBS114) </span></h1>
+<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><h1><span style="color:#dc2626">Max</span> ROB Dashboard <span style="font-size:11px;color:#8a94a6;font-weight:400">by JTLEE</span> <span class="muted" id="genlab" style="font-size:12px">· Loadable Space (UISCBS114) </span></h1>
 <span class="mtseg modeseg"><button id="mode-week" class="on" data-i="m_week">주차별</button><button id="mode-voy" data-i="m_voy">항차별</button></span></div>
 <div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA)·소석률(ROB/Own Slot) = 각각 ALL/Laden 토글</b> · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot·Loadable Space=총계 고정</div></header>
 <div class="bar">
@@ -282,7 +287,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
   s_bsa:'BSA 합',s_lift:'Lifting 합',s_achv:'평균 달성률',s_surp:'총 Loadable Space',s_own:'총 Own Slot',s_util:'평균 소석률',s_voy:'항차',s_cnt:'행',
   rob_na:'항차당 적출항이 2개 이상이라 ROB 합산 시 중복 계산됨(선적지·항로를 좁히면 표시)',
-  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률',c_surp:'Loadable Space',c_slack:'잉여선복',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',
+  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률',c_surp:'Loadable Space',c_slack:'잉여선복',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',c_rmk:'Remark',
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
@@ -292,7 +297,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
   s_bsa:'Total BSA',s_lift:'Total Lifting',s_achv:'Avg Achv',s_surp:'Total Loadable Space',s_own:'Total Own Slot',s_util:'Avg Util%',s_voy:'Voyages',s_cnt:'Rows',
   rob_na:'A voyage has 2+ origin ports here, so summing ROB double-counts (narrow origin/route to show)',
-  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%',c_surp:'Loadable Space',c_slack:'Surplus',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',
+  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%',c_surp:'Loadable Space',c_slack:'Surplus',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',c_rmk:'Remark',
   total:'TOTAL',week:'W',voy:'voy',pol_n:'POLs',ownslot:'Own Slot',empty:'No matching data',
   t_o:'OBT (Overseas)',t_e:'EST (Export)',t_i:'IST (Import)',t_j:'JBT (Japan)',f_haul:'Head/Back',sel_haul:'Select Head/Back',h_head:'Head Haul',h_back:'Back Haul',langbtn:'한국어'}};
 const T=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ko[k]||k;
@@ -315,7 +320,7 @@ const utilOf=r=>{const o=r.own_slot||0;return o?Math.round(robOf(r)/o*1000)/10:n
 const weeks=[...new Set(ALL.map(r=>r.week).filter(w=>w!=null))].sort((a,b)=>a-b);
 const weekStart={};
 ALL.forEach(r=>{ if(r.etd&&weekStart[r.week]===undefined){ const d=new Date(r.etd+'T00:00:00Z'); weekStart[r.week]=new Date(d.getTime()-d.getUTCDay()*86400000); } });
-const wkLabel=w=>{ const d=weekStart[w]; return d?`${d.getUTCMonth()+1}월 ${Math.ceil(d.getUTCDate()/7)}주차 (W${w})`:`W${w}`; };
+const wkLabel=w=>{ const d=weekStart[w]; if(!d)return `W${w}`; const e=new Date(d.getTime()+6*86400000); const md=x=>`${x.getUTCMonth()+1}/${x.getUTCDate()}`; return `${d.getUTCMonth()+1}월 ${Math.ceil(d.getUTCDate()/7)}주차 (W${w}, ${md(d)}~${md(e)})`; };
 const wkBtn=w=>{ const d=weekStart[w]; return d?`${d.getUTCMonth()+1}/${Math.ceil(d.getUTCDate()/7)}·W${w}`:`W${w}`; };
 const _today=(()=>{const n=new Date();return Date.UTC(n.getFullYear(),n.getMonth(),n.getDate());})();
 let _curW=weeks[0]; weeks.forEach(w=>{const s=weekStart[w];if(s&&_today>=s.getTime()&&_today<s.getTime()+604800000)_curW=w;});
@@ -477,6 +482,35 @@ function undoTo(vk,port,label){
   }).catch(()=>toast('되돌리기 실패 — 8077에서 여세요'));
 }
 
+// ── Remark (공유 Google Sheet, 8077 서버 /api/loadboard/remark) ──
+let REMARKS={};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function fetchRemarks(){
+  return fetch('/api/loadboard/remark').then(r=>r.json()).then(j=>{ if(j&&j.ok)REMARKS=j.remarks||{}; }).catch(()=>{});
+}
+function rmkCell(vk, first){
+  if(!first) return '<td class="l rmk"></td>';
+  const rk=REMARKS[vk];
+  if(rk&&rk.remark) return `<td class="l rmk rmk-edit" onclick="editRemark('${vk}')" title="${esc(rk.remark)}  (${esc(rk.by||'')} ${esc(rk.at||'')})">${esc(rk.remark)}${rk.by?` <span class="rmk-by">${esc(rk.by)}</span>`:''}</td>`;
+  return `<td class="l rmk rmk-edit" onclick="editRemark('${vk}')" title="클릭: 리마크 입력"><span class="rmk-add">+</span></td>`;
+}
+function saveRemark(vk, text, who){
+  return fetch('/api/loadboard/remark',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({voy_key:vk, remark:text, set_by:who||''})}).then(r=>r.json());
+}
+function editRemark(vk){
+  let who=(localStorage.getItem('lb_user')||'').trim();
+  if(!who){ who=(prompt('작성자 이름(기록용)','')||'').trim(); if(who)localStorage.setItem('lb_user',who); }
+  const cur=REMARKS[vk]?REMARKS[vk].remark:'';
+  const v=prompt('리마크 입력 — '+vk.replace('|',' / '), cur);
+  if(v===null) return;
+  const name=vk.replace('|',' / ');
+  saveRemark(vk, v.trim(), who).then(j=>{
+    if(j&&j.ok){ if(v.trim())REMARKS[vk]={remark:v.trim(),by:who,at:(j.rec&&j.rec.at)||''}; else delete REMARKS[vk];
+      toast(`✔ ${name} 리마크 저장${who?' · '+who:''}`); apply(); }
+    else toast('리마크 저장 실패: '+((j&&j.error)||'서버 오류'));
+  }).catch(e=>toast('리마크 저장 실패 — 8077 서버에서 열어야 저장됩니다'));
+}
 const ctrName=c=>CTR_KR[c]?`${c} ${CTR_KR[c]}`:c;
 function renderRoutes(){$('routes').innerHTML=ALL_ROUTES.map(r=>`<label class="dp-item"><input type="checkbox" class="rt" value="${r}" checked>${r}</label>`).join('');}
 function renderCtrs(){$('ctrs').innerHTML=CTRS.map(c=>`<label class="dp-item"><input type="checkbox" class="ck" value="${c}" ${selCtr.has(c)?'checked':''}>${c}<span class="muted">${ctrPorts[c].size}</span></label>`).join('');}
@@ -561,7 +595,7 @@ function renderVoyage(voys){
   if(!voys.length){$('wrap').innerHTML=`<div class="empty">${T('empty')}</div>`;$('s_voy').textContent='0';return;}
   const maxS=Math.max(1,...loadAll.map(r=>Math.abs(r.surplus||0)));
   let h=`<table class="board grid voyage">
-    <thead><tr><th>${T('c_ord')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('ownslot')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th><th>${T('c_slack')}</th></tr></thead><tbody>`;
+    <thead><tr><th>${T('c_ord')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('ownslot')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th><th>${T('c_slack')}</th><th class="l">${T('c_rmk')}</th></tr></thead><tbody>`;
   let blk=0;
   voys.forEach(v=>{
     blk^=1;const bcls=blk?' blk1':'';const lastPol=LASTMAP[v.k];
@@ -581,7 +615,7 @@ function renderVoyage(voys){
        + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
        + `<td>${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))}</td><td>${isDis?'<span class="dim">–</span>':fmt(liftOf(r))}</td><td class="${aC}">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
        + `<td class="gk own">${first?fmt(v.own):''}</td><td>${fmt(robOf(r))}</td>`
-       + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td></tr>`;
+       + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(v.k,first)}</tr>`;
     });
   });
   $('wrap').innerHTML=h+'</tbody></table>';
@@ -615,8 +649,8 @@ function render(rows,PM){
   $('s_voy').textContent=voySet.size;
   const maxS=Math.max(1,...rows.map(r=>Math.abs(r.surplus||0)));
   let h=`<table class="board grid${showSub?'':' nosub'}">
-    <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('ownslot')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th><th>${T('c_slack')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
-  if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td class="l"></td><td class="l"></td><td class="l"></td><td class="l"></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td>${fmt(sm.o)}</td>${aggRobCell(sm)}${aggUtilCell(sm)}<td>${fmt(sm.s)}</td>${aggSlackCell(sm)}${emptyPC}</tr>`;
+    <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('ownslot')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th><th>${T('c_slack')}</th><th class="l">${T('c_rmk')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
+  if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td class="l"></td><td class="l"></td><td class="l"></td><td class="l"></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td>${fmt(sm.o)}</td>${aggRobCell(sm)}${aggUtilCell(sm)}<td>${fmt(sm.s)}</td>${aggSlackCell(sm)}<td class="l"></td>${emptyPC}</tr>`;
   let blk=0, lastWk=null, lastRt=null;
   Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
     Object.keys(tree[wk]).sort().forEach(rt=>{
@@ -641,14 +675,14 @@ function render(rows,PM){
            + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
            + `<td>${fmt(bsaOf(r))}</td><td>${fmt(liftOf(r))}</td><td class="${aC}" style="${ast}">${av==null?'–':av+'%'}</td>`
            + `<td class="gk own">${first?fmt(own):''}</td><td>${fmt(robOf(r))}</td>`
-           + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${pmShow?pickCells(r,PMAP):''}</tr>`;
+           + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(vk,first)}${pmShow?pickCells(r,PMAP):''}</tr>`;
         });
       });
     });
     if(showSub){
       const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
       const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
-      h+=`<tr class="subrow"><td class="l">${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td>${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td>${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}<td>${fmt(a.s)}</td>${aggSlackCell(a)}${emptyPC}</tr>`;
+      h+=`<tr class="subrow"><td class="l">${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td>${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td>${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}<td>${fmt(a.s)}</td>${aggSlackCell(a)}<td class="l"></td>${emptyPC}</tr>`;
     }
   });
   $('wrap').innerHTML=h+'</tbody></table>';
@@ -714,7 +748,9 @@ window._apply=apply;                                   // 전역 픽업 폴링�
 function fetchOverrides(){ return Promise.resolve(); } // pages: 공유 오버라이드 read 없음(스코프 미적용)
 function openLastPort(){ toast('라스트포트 수동 지정은 사내망(8077)에서만 가능합니다.'); }
 function openHistory(){ toast('변경내역은 사내망(8077)에서만 볼 수 있습니다.'); }
-window.openLastPort=openLastPort;   // 렌더 행의 인라인 onclick(전역 스코프)이 boot 내부 함수를 찾도록
+function fetchRemarks(){ return Promise.resolve(); }   // pages: 리마크 read 없음(스코프 미적용)
+function editRemark(){ toast('리마크는 사내망(8077)에서만 작성/조회할 수 있습니다.'); }
+window.openLastPort=openLastPort; window.editRemark=editRemark;   // 인라인 onclick(전역)용
 renderRoutes();renderCtrs();renderPorts();renderTeams();renderHaul();renderWkList('f');renderWkList('t');
 // 초기 상태 → DOM 동기화 (강제/저장된 viewMode·showLast·lastBasis 반영. 중국/동남아 토글은 라스트 ON일 때 노출)
 $('mode-week').classList.toggle('on',viewMode==='week');
@@ -725,6 +761,7 @@ $('lb-cn').classList.toggle('on',lastBasis==='cn');
 $('lb-sea').classList.toggle('on',lastBasis==='sea');
 apply();
 fetchOverrides().then(()=>apply());   // 공유 시트의 수동 라스트포트 반영(서버 있을 때만)
+fetchRemarks().then(()=>apply());     // 공유 리마크 반영(서버 있을 때만)
 $('lpm').addEventListener('click',e=>{if(e.target.id==='lpm')closeLastPort();}); // 배경 클릭=닫기
 
 // 상단(제목·필터·요약바) 고정 높이 측정 → 컬럼헤더가 그 아래 붙도록 --topH 갱신(필터바 줄바꿈·언어토글 대응)
