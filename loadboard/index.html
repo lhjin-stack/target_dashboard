@@ -51,9 +51,12 @@ td.vsl.vclick:hover{text-decoration:underline;color:#1d4ed8}
 .lph-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 11px;border-bottom:1px solid #f0f2f5;font-size:13px}
 .lph-meta{font-size:11px;color:var(--mut);margin-top:2px}
 .lph-undo{font-size:12px;color:#b26a00;white-space:nowrap;padding:4px 9px}
-.board .rmk{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.board .rmk-edit{cursor:pointer}
+.board .rmk{min-width:300px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .rmk-edit{cursor:text}
 .board .rmk-edit:hover{background:#eef4ff}
+.board td.rmk-editing{white-space:nowrap}
+.rmk-in{width:230px;padding:3px 7px;font-size:12px;text-align:left;border:1px solid #1d4ed8;border-radius:5px}
+.rmk-save{margin-left:5px;padding:3px 10px;font-size:12px;background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 .rmk-by{font-size:10px;color:#8a94a6}
 .rmk-add{color:#c0c6d0;font-weight:700}
 .dd{position:relative;display:inline-block}
@@ -61,6 +64,8 @@ td.vsl.vclick:hover{text-decoration:underline;color:#1d4ed8}
 .dd-btn .v{font-weight:600;color:var(--ink)} .dd-btn .ar{color:var(--mut);font-size:10px}
 .dd-panel{position:absolute;top:calc(100% + 5px);left:0;z-index:60;background:#fff;border:1px solid var(--bd);border-radius:8px;
   box-shadow:0 8px 28px rgba(0,0,0,.14);display:none;min-width:190px}
+#pan-wf,#pan-wt{min-width:245px}
+.wkopt{white-space:nowrap}
 .dd.open .dd-panel{display:block}
 .ddhd{padding:7px 12px 6px;font-size:10.5px;font-weight:700;color:#6b7280;border-bottom:1px solid #f1f3f5;display:flex;justify-content:space-between;align-items:center;gap:14px}
 .ddhd a{font-size:10.5px;color:#1d4ed8;cursor:pointer;text-decoration:underline;white-space:nowrap}
@@ -491,25 +496,39 @@ function fetchRemarks(){
 function rmkCell(vk, first){
   if(!first) return '<td class="l rmk"></td>';
   const rk=REMARKS[vk];
-  if(rk&&rk.remark) return `<td class="l rmk rmk-edit" onclick="editRemark('${vk}')" title="${esc(rk.remark)}  (${esc(rk.by||'')} ${esc(rk.at||'')})">${esc(rk.remark)}${rk.by?` <span class="rmk-by">${esc(rk.by)}</span>`:''}</td>`;
-  return `<td class="l rmk rmk-edit" onclick="editRemark('${vk}')" title="클릭: 리마크 입력"><span class="rmk-add">+</span></td>`;
+  if(rk&&rk.remark) return `<td class="l rmk rmk-edit" onclick="editRemark('${vk}',this)" title="${esc(rk.remark)}  (${esc(rk.by||'')} ${esc(rk.at||'')})">${esc(rk.remark)}${rk.by?` <span class="rmk-by">${esc(rk.by)}</span>`:''}</td>`;
+  return `<td class="l rmk rmk-edit" onclick="editRemark('${vk}',this)" title="클릭해서 메모 입력"><span class="rmk-add">＋</span></td>`;
 }
 function saveRemark(vk, text, who){
   return fetch('/api/loadboard/remark',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({voy_key:vk, remark:text, set_by:who||''})}).then(r=>r.json());
 }
-function editRemark(vk){
-  let who=(localStorage.getItem('lb_user')||'').trim();
-  if(!who){ who=(prompt('작성자 이름(기록용)','')||'').trim(); if(who)localStorage.setItem('lb_user',who); }
+// 작성자: 로그인 아이디(pages) 우선 → 저장된 이름 → (최초 1회만) 입력
+function remarkAuthor(){
+  if(window.LB_LOGIN_ID) return window.LB_LOGIN_ID;
+  let u=(localStorage.getItem('lb_user')||'').trim();
+  if(!u){ u=(prompt('작성자 이름 (최초 1회만, 이후 자동)','')||'').trim(); if(u)localStorage.setItem('lb_user',u); }
+  return u;
+}
+// 빈칸 클릭 → 셀에서 바로 입력 → 저장(엔터/버튼). 작성자 자동.
+function editRemark(vk, cell){
+  if(!cell||cell.querySelector('.rmk-in')) return;
   const cur=REMARKS[vk]?REMARKS[vk].remark:'';
-  const v=prompt('리마크 입력 — '+vk.replace('|',' / '), cur);
-  if(v===null) return;
-  const name=vk.replace('|',' / ');
-  saveRemark(vk, v.trim(), who).then(j=>{
-    if(j&&j.ok){ if(v.trim())REMARKS[vk]={remark:v.trim(),by:who,at:(j.rec&&j.rec.at)||''}; else delete REMARKS[vk];
-      toast(`✔ ${name} 리마크 저장${who?' · '+who:''}`); apply(); }
-    else toast('리마크 저장 실패: '+((j&&j.error)||'서버 오류'));
-  }).catch(e=>toast('리마크 저장 실패 — 8077 서버에서 열어야 저장됩니다'));
+  cell.classList.add('rmk-editing');
+  cell.innerHTML=`<input class="rmk-in" maxlength="200" value="${esc(cur)}"><button class="rmk-save" type="button">저장</button>`;
+  const inp=cell.querySelector('.rmk-in'); inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
+  const done=()=>saveRemarkInline(vk, inp.value.trim());
+  cell.querySelector('.rmk-save').onclick=e=>{ e.stopPropagation(); done(); };
+  inp.onclick=e=>e.stopPropagation();
+  inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();done();} else if(e.key==='Escape'){apply();} };
+}
+function saveRemarkInline(vk, text){
+  const who=remarkAuthor();
+  saveRemark(vk, text, who).then(j=>{
+    if(j&&j.ok){ if(text)REMARKS[vk]={remark:text,by:who,at:(j.rec&&j.rec.at)||''}; else delete REMARKS[vk];
+      toast(text?`✔ 리마크 저장${who?' · '+who:''}`:'리마크 삭제'); apply(); }
+    else { toast('리마크 저장 실패: '+((j&&j.error)||'서버 오류')); apply(); }
+  }).catch(e=>{ toast('리마크 저장 실패 — 8077 서버에서 열어야 저장됩니다'); apply(); });
 }
 const ctrName=c=>CTR_KR[c]?`${c} ${CTR_KR[c]}`:c;
 function renderRoutes(){$('routes').innerHTML=ALL_ROUTES.map(r=>`<label class="dp-item"><input type="checkbox" class="rt" value="${r}" checked>${r}</label>`).join('');}
