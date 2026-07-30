@@ -57,6 +57,7 @@ td.vsl.vclick:hover{text-decoration:underline;color:#1d4ed8}
 .board td.rmk-editing{white-space:nowrap}
 .rmk-in{width:230px;padding:3px 7px;font-size:12px;text-align:left;border:1px solid #1d4ed8;border-radius:5px}
 .rmk-save{margin-left:5px;padding:3px 10px;font-size:12px;background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.rmk-cancel{margin-left:3px;padding:3px 8px;font-size:12px;color:#888}
 .rmk-by{font-size:10px;color:#8a94a6}
 .rmk-add{color:#c0c6d0;font-weight:700}
 .dd{position:relative;display:inline-block}
@@ -498,15 +499,21 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 function fetchRemarks(){
   return fetch('/api/loadboard/remark').then(r=>r.json()).then(j=>{ if(j&&j.ok)REMARKS=j.remarks||{}; }).catch(()=>{});
 }
-function rmkCell(vk, first){
-  if(!first) return '<td class="l rmk"></td>';
-  const rk=REMARKS[vk];
-  if(rk&&rk.remark) return `<td class="l rmk rmk-edit" onclick="editRemark('${vk}',this)" title="${esc(rk.remark)}  (${esc(rk.by||'')} ${esc(rk.at||'')})">${esc(rk.remark)}${rk.by?` <span class="rmk-by">${esc(rk.by)}</span>`:''}</td>`;
-  return `<td class="l rmk rmk-edit" onclick="editRemark('${vk}',this)" title="클릭해서 메모 입력"><span class="rmk-add">＋</span></td>`;
+// ★리마크 키 = 항차당 각 POL별 (선명|항차|POL). 모든 행에 개별 입력 가능.
+function rmkKey(r){ return r.vessel+'|'+r.voyage+'|'+(r.pol||''); }
+function rmkInner(key){
+  const rk=REMARKS[key];
+  if(rk&&rk.remark) return `${esc(rk.remark)}${rk.by?` <span class="rmk-by">${esc(rk.by)}</span>`:''}`;
+  return '<span class="rmk-add">＋</span>';
 }
-function saveRemark(vk, text, who){
+function rmkCell(r){
+  const key=rmkKey(r), rk=REMARKS[key];
+  const tip=(rk&&rk.remark)?`${esc(rk.remark)}  (${esc(rk.by||'')} ${esc(rk.at||'')})`:'클릭해서 메모 입력';
+  return `<td class="l rmk rmk-edit" onclick="editRemark('${esc(key)}',this)" title="${tip}">${rmkInner(key)}</td>`;
+}
+function saveRemark(key, text, who){
   return fetch('/api/loadboard/remark',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({voy_key:vk, remark:text, set_by:who||''})}).then(r=>r.json());
+    body:JSON.stringify({voy_key:key, remark:text, set_by:who||''})}).then(r=>r.json());
 }
 // 작성자: 로그인 아이디(pages) 우선 → 저장된 이름 → (최초 1회만) 입력
 function remarkAuthor(){
@@ -515,25 +522,30 @@ function remarkAuthor(){
   if(!u){ u=(prompt('작성자 이름 (최초 1회만, 이후 자동)','')||'').trim(); if(u)localStorage.setItem('lb_user',u); }
   return u;
 }
-// 빈칸 클릭 → 셀에서 바로 입력 → 저장(엔터/버튼). 작성자 자동.
-function editRemark(vk, cell){
+// 빈칸 클릭 → 그 셀에서 바로 입력 → 저장(엔터/저장버튼)/취소(Esc·✕·바깥클릭). ★해당 셀만 갱신(전체 재렌더X=렉없음).
+function editRemark(key, cell){
   if(!cell||cell.querySelector('.rmk-in')) return;
-  const cur=REMARKS[vk]?REMARKS[vk].remark:'';
+  const cur=REMARKS[key]?REMARKS[key].remark:'';
   cell.classList.add('rmk-editing');
-  cell.innerHTML=`<input class="rmk-in" maxlength="200" value="${esc(cur)}"><button class="rmk-save" type="button">저장</button>`;
+  cell.innerHTML=`<input class="rmk-in" maxlength="200" value="${esc(cur)}"><button class="rmk-save" type="button">저장</button><button class="rmk-cancel" type="button" title="취소(Esc)">✕</button>`;
   const inp=cell.querySelector('.rmk-in'); inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
-  const done=()=>saveRemarkInline(vk, inp.value.trim());
-  cell.querySelector('.rmk-save').onclick=e=>{ e.stopPropagation(); done(); };
+  const revert=()=>{ cell.classList.remove('rmk-editing'); cell.innerHTML=rmkInner(key); };
+  const save=()=>{ rmkSave(key, inp.value.trim(), cell); };
+  cell.querySelector('.rmk-save').onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); save(); };
+  cell.querySelector('.rmk-cancel').onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); revert(); };
   inp.onclick=e=>e.stopPropagation();
-  inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();done();} else if(e.key==='Escape'){apply();} };
+  inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();save();} else if(e.key==='Escape'){e.preventDefault();revert();} };
+  inp.onblur=()=>setTimeout(()=>{ if(cell.querySelector('.rmk-in')&&!cell.classList.contains('rmk-saving'))revert(); },160); // 바깥클릭=취소
 }
-function saveRemarkInline(vk, text){
+function rmkSave(key, text, cell){
   const who=remarkAuthor();
-  saveRemark(vk, text, who).then(j=>{
-    if(j&&j.ok){ if(text)REMARKS[vk]={remark:text,by:who,at:(j.rec&&j.rec.at)||''}; else delete REMARKS[vk];
-      toast(text?`✔ 리마크 저장${who?' · '+who:''}`:'리마크 삭제'); apply(); }
-    else { toast('리마크 저장 실패: '+((j&&j.error)||'서버 오류')); apply(); }
-  }).catch(e=>{ toast('리마크 저장 실패 — 8077 서버에서 열어야 저장됩니다'); apply(); });
+  cell.classList.add('rmk-saving');
+  saveRemark(key, text, who).then(j=>{
+    if(j&&j.ok){ if(text)REMARKS[key]={remark:text,by:who,at:(j.rec&&j.rec.at)||''}; else delete REMARKS[key];
+      toast(text?`✔ 리마크 저장${who?' · '+who:''}`:'리마크 삭제'); }
+    else toast('리마크 저장 실패: '+((j&&j.error)||'서버 오류'));
+    cell.classList.remove('rmk-editing','rmk-saving'); cell.innerHTML=rmkInner(key);
+  }).catch(e=>{ toast('리마크 저장 실패 — 8077 서버에서 열어야 저장됩니다'); cell.classList.remove('rmk-editing','rmk-saving'); cell.innerHTML=rmkInner(key); });
 }
 const ctrName=c=>CTR_KR[c]?`${c} ${CTR_KR[c]}`:c;
 function renderRoutes(){$('routes').innerHTML=ALL_ROUTES.map(r=>`<label class="dp-item"><input type="checkbox" class="rt" value="${r}" checked>${r}</label>`).join('');}
@@ -639,7 +651,7 @@ function renderVoyage(voys){
        + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
        + `<td>${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))}</td><td>${isDis?'<span class="dim">–</span>':fmt(liftOf(r))}</td><td class="${aC}">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
        + `<td class="gk own">${first?fmt(v.own):''}</td><td>${fmt(robOf(r))}</td>`
-       + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(v.k,first)}</tr>`;
+       + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}</tr>`;
     });
   });
   $('wrap').innerHTML=h+'</tbody></table>';
@@ -699,7 +711,7 @@ function render(rows,PM){
            + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
            + `<td>${fmt(bsaOf(r))}</td><td>${fmt(liftOf(r))}</td><td class="${aC}" style="${ast}">${av==null?'–':av+'%'}</td>`
            + `<td class="gk own">${first?fmt(own):''}</td><td>${fmt(robOf(r))}</td>`
-           + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(vk,first)}${pmShow?pickCells(r,PMAP):''}</tr>`;
+           + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${pmShow?pickCells(r,PMAP):''}</tr>`;
         });
       });
     });
