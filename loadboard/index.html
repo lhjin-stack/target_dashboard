@@ -138,8 +138,10 @@ table.board.grid{table-layout:auto;width:auto;max-width:100%}
 <script>
 const OAUTH_CLIENT_ID = '313527315690-04t6lei9sd9i7ls21a6mhurif4nm8qg7.apps.googleusercontent.com';
 const OAUTH_HD        = 'ekmtc.com';
-const OAUTH_SCOPE     = 'https://www.googleapis.com/auth/drive.readonly';
+// drive.readonly(데이터 fetch) + spreadsheets(리마크 read/write) + email(작성자 자동). ★GCP 동의화면 Internal 전제.
+const OAUTH_SCOPE     = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email';
 const DRIVE_FOLDER_ID = '1W2W4tIv7hLEJBk9NQT5Z9O_DKv3osJHw';
+const RMK_SHEET_ID    = '17Jkv66FxW5qRKysMPHQNzIRKTmHpxNx0G7Izpvc4jBg';   // 라스트포트/리마크 공유 시트
 const DATA_FILE_NAME  = 'loadboard_data.json';
 const ROT_FILE_NAME   = 'loadboard_rotation.json';   // 항차별 로테이션(양하·경유)
 const PICKUP_FILE_ID  = '1vXpReCwZa9AtF0Y1CazsE3hILoYtvJkO';
@@ -147,8 +149,9 @@ let _gapiReady=false,_gisReady=false,_tokenClient=null;
 const _driveFileCache={};
 function _gapiInit(){ gapi.load('client', async()=>{ await gapi.client.init({});
   await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
+  try{ await gapi.client.load('https://sheets.googleapis.com/$discovery/rest?version=v4'); }catch(e){ console.warn('sheets 로드 실패', e); }
   _gapiReady=true; _maybeEnableLogin(); }); }
-const TOK_KEY='lb_tok';
+const TOK_KEY='lb_tok2';   // 스코프 확장(spreadsheets/email) → 기존 토큰 무효화 재로그인 유도
 function _saveTok(r){ try{ localStorage.setItem(TOK_KEY, JSON.stringify({t:r.access_token, exp:Date.now()+((r.expires_in||3500)*1000)})); }catch(e){} }
 function _loadTok(){ try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); if(o&&o.t&&o.exp>Date.now()+60000) return o.t; }catch(e){} return null; }
 function _clearTok(){ try{ localStorage.removeItem(TOK_KEY); }catch(e){} }
@@ -206,6 +209,8 @@ function _startPickPoll(){
 }
 async function onLoginSuccess(){
   try{
+    try{ const ui=await gapi.client.request({path:'https://www.googleapis.com/oauth2/v3/userinfo'});
+         window.LB_LOGIN_ID=((ui.result&&ui.result.email)||'').split('@')[0]; }catch(e){ console.warn('userinfo 실패', e); }
     const data=await fetchDriveJson(DATA_FILE_NAME);
     let rot=[]; try{ rot=(await fetchDriveJson(ROT_FILE_NAME)).rows||[]; }catch(e){ console.warn('로테이션 없음', e); }
     document.getElementById('gate').style.display='none';
@@ -764,12 +769,28 @@ $('wt-search').addEventListener('input',e=>renderWkList('t',e.target.value));
 
 // ── pages(github.io) 전용: 라스트포트 수동지정/변경내역/공유는 사내(8077) 서버 전용 ──
 window._apply=apply;                                   // 전역 픽업 폴링이 재렌더 호출
-function fetchOverrides(){ return Promise.resolve(); } // pages: 공유 오버라이드 read 없음(스코프 미적용)
+function fetchOverrides(){ return Promise.resolve(); } // pages: 라스트포트 오버라이드는 8077 전용(조회 미표시)
 function openLastPort(){ toast('라스트포트 수동 지정은 사내망(8077)에서만 가능합니다.'); }
 function openHistory(){ toast('변경내역은 사내망(8077)에서만 볼 수 있습니다.'); }
-function fetchRemarks(){ return Promise.resolve(); }   // pages: 리마크 read 없음(스코프 미적용)
-function editRemark(){ toast('리마크는 사내망(8077)에서만 작성/조회할 수 있습니다.'); }
-window.openLastPort=openLastPort; window.editRemark=editRemark;   // 인라인 onclick(전역)용
+// ── 리마크: pages는 구글 로그인으로 공유시트 직접 read/write (spreadsheets 스코프, 작성자=로그인ID) ──
+function _rmkNow(){ const d=new Date(),p=n=>('0'+n).slice(-2); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+function fetchRemarks(){
+  if(!(window.gapi&&gapi.client&&gapi.client.sheets)) return Promise.resolve();
+  return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'remark!A:D'})
+    .then(r=>{ const m={}; (r.result.values||[]).slice(1).forEach(row=>{ if(row[0]&&row[1])m[row[0]]={remark:row[1],by:row[2]||'',at:row[3]||''}; }); REMARKS=m; })
+    .catch(e=>{ console.warn('remark read 실패', e); });
+}
+function saveRemark(vk,text,who){
+  if(!(window.gapi&&gapi.client&&gapi.client.sheets)) return Promise.resolve({ok:false,error:'sheets 미로드(재로그인 필요)'});
+  const now=_rmkNow(), row=[[vk,text||'',who||'',now]];
+  return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'remark!A:D'})
+    .then(r=>{ const vals=r.result.values||[]; let idx=-1; for(let i=1;i<vals.length;i++){ if((vals[i]||[])[0]===vk){idx=i;break;} }
+      if(idx>=0) return gapi.client.sheets.spreadsheets.values.update({spreadsheetId:RMK_SHEET_ID,range:'remark!A'+(idx+1)+':D'+(idx+1),valueInputOption:'RAW',resource:{values:row}});
+      return gapi.client.sheets.spreadsheets.values.append({spreadsheetId:RMK_SHEET_ID,range:'remark!A:D',valueInputOption:'RAW',insertDataOption:'INSERT_ROWS',resource:{values:row}});
+    }).then(()=>({ok:true,rec:{at:now}}))
+    .catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||String(e)}));
+}
+window.openLastPort=openLastPort; window.editRemark=editRemark;   // 인라인 onclick(전역)용 (editRemark=gen 인라인)
 renderRoutes();renderCtrs();renderPorts();renderTeams();renderHaul();renderWkList('f');renderWkList('t');
 // 초기 상태 → DOM 동기화 (강제/저장된 viewMode·showLast·lastBasis 반영. 중국/동남아 토글은 라스트 ON일 때 노출)
 $('mode-week').classList.toggle('on',viewMode==='week');
