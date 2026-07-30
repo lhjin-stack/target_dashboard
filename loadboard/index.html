@@ -16,6 +16,41 @@ button:hover{background:#f3f5f9}
 .mtseg button.on{background:#1d4ed8;color:#fff}
 .mtseg button+button{border-left:1px solid var(--bd)}
 .sep{width:1px;height:20px;background:var(--bd);margin:0 5px}
+.vlab{font-size:11px;font-weight:700;color:#3a4a66;background:#eef2f8;padding:3px 8px;border-radius:5px;margin-right:2px}
+.modeseg button{padding:5px 14px}
+.board.grid.voyage tbody tr.skprow td{background:#f4f5f7;color:#aab1bd}
+.board.grid tbody tr.lastrow td{background:#fff6e0}
+.board.grid tbody tr.lastrow.blk1 td{background:#fdf0d4}
+.lasttag{font-size:9px;font-weight:700;color:#b26a00;background:#ffe6b0;padding:1px 4px;border-radius:3px;vertical-align:middle}
+td.vsl.vclick{cursor:pointer}
+td.vsl.vclick:hover{text-decoration:underline;color:#1d4ed8}
+.lpm{display:none;position:fixed;inset:0;background:rgba(20,28,45,.38);z-index:200;align-items:center;justify-content:center}
+.lpm-bd{background:#fff;border-radius:10px;min-width:340px;max-width:440px;max-height:80vh;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,.28)}
+.lpm-hd{font-size:14px;padding:13px 16px;border-bottom:1px solid var(--bd);position:relative}
+.lpm-x{position:absolute;right:14px;top:12px;cursor:pointer;color:#888;font-size:15px}
+.lpm-sub{font-size:12px;color:var(--mut);padding:10px 16px 4px}
+.lpm-list{padding:4px 10px 8px}
+.lpm-row{display:flex;justify-content:space-between;align-items:center;padding:8px 11px;border-radius:6px;cursor:pointer;font-size:13px}
+.lpm-row:hover{background:#eef4ff}
+.lpm-row.sel{background:#fff6e0;font-weight:600}
+.lpm-meta{font-size:11px;color:var(--mut);display:flex;gap:5px;align-items:center}
+.lpm-t{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px}
+.lpm-t.auto{color:#3a4a66;background:#e6ecf6}
+.lpm-t.ovr{color:#b26a00;background:#ffe6b0}
+.lpm-t.skip{color:#8a94a6;background:#eceef2}
+.lpm-t.dis{color:#5a6b8a;background:#eef2f8}
+.lpm-ord{display:inline-block;min-width:16px;color:#aab1bd;font-size:11px}
+.lpm-row.skiprow{color:#aab1bd;cursor:default}
+.lpm-row.skiprow:hover{background:transparent}
+.lpm-ft{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--bd)}
+.lpm-reset{color:#b26a00}
+.lpm-who{font-size:11px;color:var(--mut);margin-right:auto;display:flex;align-items:center;gap:5px}
+.lpm-who input{width:104px;padding:3px 7px;font-size:12px;text-align:left}
+.lpm-toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#1d2433;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,.3);opacity:0;transition:opacity .25s;pointer-events:none}
+.lpm-toast.show{opacity:1}
+.lph-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 11px;border-bottom:1px solid #f0f2f5;font-size:13px}
+.lph-meta{font-size:11px;color:var(--mut);margin-top:2px}
+.lph-undo{font-size:12px;color:#b26a00;white-space:nowrap;padding:4px 9px}
 .dd{position:relative;display:inline-block}
 .dd-btn{display:inline-flex;align-items:center;gap:6px}
 .dd-btn .v{font-weight:600;color:var(--ink)} .dd-btn .ar{color:var(--mut);font-size:10px}
@@ -25,6 +60,8 @@ button:hover{background:#f3f5f9}
 .ddhd{padding:7px 12px 6px;font-size:10.5px;font-weight:700;color:#6b7280;border-bottom:1px solid #f1f3f5;display:flex;justify-content:space-between;align-items:center;gap:14px}
 .ddhd a{font-size:10.5px;color:#1d4ed8;cursor:pointer;text-decoration:underline;white-space:nowrap}
 .ddscroll{max-height:300px;overflow-y:auto;padding:4px 0}
+.ddsearch{width:calc(100% - 16px);margin:6px 8px 2px;padding:5px 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px;text-align:left}
+.dp-item.sel{background:#e7effa;font-weight:600;color:#1d4ed8}
 .dp-item{display:flex;align-items:center;gap:7px;padding:5px 12px;font-size:12px;color:#374151;cursor:pointer;user-select:none}
 .dp-item:hover{background:#f6f8fb}
 .dp-item input{accent-color:#1d4ed8;width:13px;height:13px;flex-shrink:0;cursor:pointer;margin:0}
@@ -32,10 +69,13 @@ button:hover{background:#f3f5f9}
 .summary{display:flex;gap:20px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--bd);flex-wrap:wrap}
 .summary div{font-size:12px;color:var(--mut)}.summary b{font-size:15px;color:var(--ink);margin-left:5px}
 .wrap{padding:0 0 70px}
+
+/* ── 표 ── */
 table.board{border-collapse:collapse;width:100%;table-layout:fixed;background:#fff;font-variant-numeric:tabular-nums}
 .board th,.board td{padding:6px 11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid #e6e9ee}
 .board thead th{background:#eceff4;color:#51607a;font-weight:600;font-size:11px;border-bottom:2px solid #b7c2d6;
-  position:sticky;top:0;z-index:5;text-align:right}
+  position:sticky;top:var(--topH,0px);z-index:5;text-align:right}
+#topbar{position:sticky;top:0;z-index:30;background:#fff}
 .board thead th.l{text-align:left}
 .board tbody td{text-align:right}
 .board tbody td.l{text-align:left}.board tbody td.c{text-align:center}
@@ -47,48 +87,57 @@ tr.bv td{background:#f6f9fc;cursor:pointer;text-align:left;padding:6px 12px 6px 
 tr.bw .agg,tr.br .agg{font-weight:400;font-size:11px;color:#5a6b86;margin-left:10px}
 tr.bv .meta{font-size:11.5px;color:var(--mut);margin-left:9px}tr.bv .own{font-size:11.5px;color:#1d4ed8;font-weight:600;margin-left:9px}
 tr.bv b{font-size:12.5px;color:#1f2937}.tg{display:inline-block;width:13px;color:var(--mut);font-size:11px}
-tr.leaf td{color:#374151}tr.leaf td.l{padding-left:40px}
+tr.leaf td{color:#374151}
 tr.leaf td.key{font-weight:600;color:#111827}
 tr.leaf td.dim{color:#9aa3b2;font-size:11.5px}
 tr.leaf:hover td{background:#eef4ff}
 .board td.bsacol{border-left:1px solid #f0f1f4}
-.board th.pk1,.board td.pk1{border-left:2px solid #b7c2d6}
-.board thead th.pk1{background:#e7effa}
 .neg{color:var(--red)}.warn{color:var(--orange);font-weight:700}.over{color:var(--red);font-weight:700}
 .surplus{font-weight:700}.muted{color:var(--mut);font-size:11px}.empty{padding:40px;text-align:center;color:var(--mut)}
 .sbar{display:inline-block;height:8px;background:var(--blue);border-radius:2px;vertical-align:middle;margin-left:6px;opacity:.5}
 tr.totalrow td{background:#c9d8ec;font-weight:800;color:#16233a;border-top:2px solid #8fa9cf}
 .board.nosub .totalrow,.board.nosub .agg{display:none}
+/* ── 평평 그리드(flat) ── */
+table.board.grid{table-layout:auto;width:auto;max-width:100%}
+.board.grid th,.board.grid td{padding:7px 14px}
+.board thead th.c{text-align:center}
+.board.grid td.gk{color:#4a5568}
+.board.grid td.vsl{font-weight:600;color:#1f2937}
+.board.grid td.own{color:#1d4ed8;font-weight:600}
+.board.grid tbody tr.blk1 td{background:#fafbfd}
+.board.grid tbody tr.vstart td{border-top:2px solid #cbd6e8}
+.board.grid tbody tr.wkstart td{border-top:2px solid #5b7bb0}
+.board.grid tbody tr.subrow td{background:#eef2f8;font-weight:600;color:#3a4a66;border-top:1px solid #cbd6e8}
+.board.grid.nosub tr.subrow{display:none}
+.board.grid tbody tr.leaf:hover td{background:#eef4ff}
 #b-sub.on,#b-skp.on,#b-last.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
-.langbtn{position:absolute;top:12px;right:16px;font-weight:700;z-index:70}
-#gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:#f0f2f6}
-.gcard{background:#fff;border:1px solid var(--bd);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.10);padding:34px 38px;max-width:380px;text-align:center}
-.gcard h2{margin:0 0 6px;font-size:18px}.gcard p{margin:0 0 20px;color:var(--mut);font-size:13px;line-height:1.55}
-.gbtn{display:inline-flex;align-items:center;gap:10px;padding:11px 18px;border:1px solid #d0d4da;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#3c4043}
-.gbtn:hover{background:#f7f8fa;box-shadow:0 1px 4px rgba(0,0,0,.08)}.gbtn:disabled{opacity:.55;cursor:default}
-.gerr{color:var(--red);font-size:12.5px;margin-top:14px;min-height:16px}
-.gmut{color:#9aa3b2;font-size:11px;margin-top:18px}
+.langbtn{position:absolute;top:12px;right:16px;font-weight:700}
+
+.board .pk1{border-left:2px solid #cbd6e8}
 #appbody{display:none}
+#gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#eef1f6;z-index:500}
+.gcard{background:#fff;padding:34px 40px;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.12);text-align:center;max-width:400px}
+.gcard h2{margin:0 0 10px;font-size:19px}.gcard p{color:#555;font-size:13px;line-height:1.6}
+.gbtn{margin-top:14px;display:inline-flex;align-items:center;gap:9px;padding:10px 18px;border:1px solid var(--bd);border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:600}
+.gbtn:disabled{opacity:.5;cursor:default}.gerr{color:#c0392b;font-size:12px;margin-top:10px;min-height:14px}
+.gmut{color:#999;font-size:11px;margin-top:8px}#logoutBtn{font-size:11px}
 </style>
 
-<!-- Google Identity Services + Drive API (사내 전용 접근제어, 데이터는 Drive 에만) -->
 <script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script>
 <script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script>
 <script>
-// ════════════════ AUTH & DRIVE (3w 대시보드와 동일 패턴) ════════════════
 const OAUTH_CLIENT_ID = '313527315690-04t6lei9sd9i7ls21a6mhurif4nm8qg7.apps.googleusercontent.com';
-const OAUTH_HD        = 'ekmtc.com';                                   // @ekmtc.com 계정만
+const OAUTH_HD        = 'ekmtc.com';
 const OAUTH_SCOPE     = 'https://www.googleapis.com/auth/drive.readonly';
-const DRIVE_FOLDER_ID = '1W2W4tIv7hLEJBk9NQT5Z9O_DKv3osJHw';           // 선복보드 데이터 폴더
+const DRIVE_FOLDER_ID = '1W2W4tIv7hLEJBk9NQT5Z9O_DKv3osJHw';
 const DATA_FILE_NAME  = 'loadboard_data.json';
-const PICKUP_FILE_ID  = '1vXpReCwZa9AtF0Y1CazsE3hILoYtvJkO';   // 픽업 스냅샷 — SHK/DCB 선택 시 픽업/EIR 조인용
-
+const ROT_FILE_NAME   = 'loadboard_rotation.json';   // 항차별 로테이션(양하·경유)
+const PICKUP_FILE_ID  = '1vXpReCwZa9AtF0Y1CazsE3hILoYtvJkO';
 let _gapiReady=false,_gisReady=false,_tokenClient=null;
 const _driveFileCache={};
 function _gapiInit(){ gapi.load('client', async()=>{ await gapi.client.init({});
   await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
   _gapiReady=true; _maybeEnableLogin(); }); }
-// 토큰 임시보관(브라우저). 만료(약1h) 전엔 재방문·새로고침 시 클릭 없이 자동로드.
 const TOK_KEY='lb_tok';
 function _saveTok(r){ try{ localStorage.setItem(TOK_KEY, JSON.stringify({t:r.access_token, exp:Date.now()+((r.expires_in||3500)*1000)})); }catch(e){} }
 function _loadTok(){ try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); if(o&&o.t&&o.exp>Date.now()+60000) return o.t; }catch(e){} return null; }
@@ -99,7 +148,6 @@ function _gisInit(){ _tokenClient=google.accounts.oauth2.initTokenClient({
 }); _gisReady=true; _maybeEnableLogin(); }
 function _maybeEnableLogin(){ if(!(_gapiReady&&_gisReady))return;
   const b=document.getElementById('loginBtn'); if(b){ b.disabled=false; document.getElementById('gstat').textContent=''; }
-  // 저장된 토큰이 살아있으면 버튼 클릭 없이 자동 로드(실패 시 조용히 버튼으로 폴백)
   const t=_loadTok();
   if(t){ try{ gapi.client.setToken({access_token:t}); document.getElementById('gstat').textContent='자동 로그인 중…'; onLoginSuccess(); }
          catch(e){ _clearTok(); } } }
@@ -116,8 +164,7 @@ async function fetchDriveJson(filename){
     fid=fs[0].id; _driveFileCache[filename]=fid; }
   const g=await gapi.client.drive.files.get({fileId:fid, alt:'media'});
   return JSON.parse(g.body); }
-// ★픽업/EIR 조인 — 픽업 스냅샷(SZP=SHK/DCB)을 (선명|항차)로 맵핑. SHK/DCB 필터 시에만 지연 로드.
-//   덤프 기반이라 30분마다 갱신됨 → 아래 폴링으로 열어둔 탭도 자동 최신화(필터 유지).
+// 픽업/EIR — 전역(gapi 접근). boot 안 render/apply가 PICKMAP 참조.
 let PICKMAP=null, _pickLoading=false, _pickTs='', _pickMTime=null, _pickPoll=null;
 async function loadPickup(){
   if(PICKMAP!==null||_pickLoading) return;
@@ -134,27 +181,27 @@ async function loadPickup(){
     try{ const mm=await gapi.client.drive.files.get({fileId:PICKUP_FILE_ID, fields:'modifiedTime'});
          _pickMTime=(mm.result&&mm.result.modifiedTime)||_pickMTime; }catch(e){}
   }catch(e){ PICKMAP={}; console.warn('픽업 스냅샷 로드 실패', e); }
-  finally{ _pickLoading=false; _startPickPoll(); apply(); }
+  finally{ _pickLoading=false; _startPickPoll(); if(window._apply)window._apply(); }
 }
-// 5분마다 픽업 스냅샷 modifiedTime만 확인 → 바뀌었으면 재로드(열어둔 탭 자동 최신화). 필터는 apply()가 유지.
 const PICK_POLL_MS = 300000;
 function _startPickPoll(){
   if(_pickPoll) return;
-  _pickPoll = setInterval(async()=>{
+  _pickPoll=setInterval(async()=>{
     if(PICKMAP===null || _pickLoading) return;
-    try{
-      const g=await gapi.client.drive.files.get({fileId:PICKUP_FILE_ID, fields:'modifiedTime'});
+    try{ const g=await gapi.client.drive.files.get({fileId:PICKUP_FILE_ID, fields:'modifiedTime'});
       const mt=(g.result&&g.result.modifiedTime)||null;
-      if(mt && mt!==_pickMTime){ PICKMAP=null; await loadPickup(); }   // 스냅샷 바뀜 → 재로드+재렌더
+      if(mt && mt!==_pickMTime){ PICKMAP=null; await loadPickup(); }
     }catch(e){}
   }, PICK_POLL_MS);
 }
 async function onLoginSuccess(){
-  try{ const data=await fetchDriveJson(DATA_FILE_NAME);
+  try{
+    const data=await fetchDriveJson(DATA_FILE_NAME);
+    let rot=[]; try{ rot=(await fetchDriveJson(ROT_FILE_NAME)).rows||[]; }catch(e){ console.warn('로테이션 없음', e); }
     document.getElementById('gate').style.display='none';
     document.getElementById('appbody').style.display='block';
-    document.getElementById('genlab').textContent='· Loadable Space (UISCBS114) · 생성 '+(data.gen_at||'');
-    boot(data.rows||[], data.routes||[]);
+    const gl=document.getElementById('genlab'); if(gl)gl.textContent='· Loadable Space (UISCBS114) · 생성 '+(data.gen_at||'');
+    boot(data.rows||[], data.routes||[], rot);
   }catch(e){ _clearTok(); _showLoginError('데이터 로드 실패 — '+(e.message||e)+' (접근 권한 또는 파일 확인)');
     document.getElementById('gstat').textContent=''; }
 }
@@ -162,25 +209,28 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
   if(t&&t.access_token)google.accounts.oauth2.revoke(t.access_token); }catch(e){} location.reload(); }
 </script>
 </head><body>
-
-<!-- 로그인 게이트 -->
 <div id="gate"><div class="gcard">
   <h2>선복 적재현황 보드</h2>
   <p>KMTC 내부 영업자료입니다.<br><b>@ekmtc.com</b> 구글 계정으로 로그인해 주세요.</p>
-  <button class="gbtn" id="loginBtn" disabled onclick="requestSignIn()">
-    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-    Google로 로그인
-  </button>
+  <button class="gbtn" id="loginBtn" disabled onclick="requestSignIn()">Google로 로그인</button>
   <div class="gerr" id="gerr"></div>
   <div class="gmut" id="gstat">구글 SDK 로딩 중…</div>
 </div></div>
-
-<!-- 보드 본체 -->
 <div id="appbody">
-<header style="position:relative"><button id="lang" class="langbtn">EN</button><h1><span data-i="title">선복 적재현황 보드</span> <span class="muted" id="genlab" style="font-size:12px"></span></h1>
-<div class="sub">주차 › 항로 › 선명항차 › 적출항(POL) · <b>BSA·Lifting·달성률 = 토글(MT제외/포함)</b> · ROB·소석률·Loadable Space = 항상 공컨(MT) 포함 · 소석률=ROB/Own Slot · Loadable Space=추가 적재 가능공간(ERP UISCBS114)</div></header>
+
+<div id="topbar"><header style="position:relative"><button id="lang" class="langbtn">EN</button>
+<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><h1><span data-i="title">선복 적재현황 보드</span> <span class="muted" id="genlab" style="font-size:12px">· Loadable Space (UISCBS114) </span></h1>
+<span class="mtseg modeseg"><button id="mode-week" class="on" data-i="m_week">주차별</button><button id="mode-voy" data-i="m_voy">항차별</button></span></div>
+<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA)·소석률(ROB/Own Slot) = 각각 ALL/Laden 토글</b> · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot·Loadable Space=총계 고정</div></header>
 <div class="bar">
-  <span class="flab" data-i="f_week">주차</span><input type="text" id="wf"> ~ <input type="text" id="wt">
+  <span class="flab" data-i="f_week">주차</span>
+  <div class="dd" id="dd-wf"><button class="dd-btn" id="btn-wf"><span class="v" id="lab-wf">–</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-wf"><div class="ddhd"><span data-i="sel_wf">시작 주차</span></div>
+    <input type="text" id="wf-search" class="ddsearch" placeholder="27 · 7월 …"><div class="ddscroll" id="weeks-f"></div></div></div>
+  <span style="color:var(--mut);font-size:12px">~</span>
+  <div class="dd" id="dd-wt"><button class="dd-btn" id="btn-wt"><span class="v" id="lab-wt">–</span> <span class="ar">▾</span></button>
+    <div class="dd-panel" id="pan-wt"><div class="ddhd"><span data-i="sel_wt">종료 주차</span></div>
+    <input type="text" id="wt-search" class="ddsearch" placeholder="27 · 7월 …"><div class="ddscroll" id="weeks-t"></div></div></div>
   <span class="sep"></span>
   <div class="dd" id="dd-rt"><button class="dd-btn" id="btn-rt"><span data-i="f_route">항로</span> <span class="v" id="lab-rt">전체</span> <span class="ar">▾</span></button>
     <div class="dd-panel" id="pan-rt"><div class="ddhd"><span data-i="sel_route">항로 선택</span> <a class="tgl" data-f="rt" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="routes"></div></div></div>
@@ -193,67 +243,94 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
   <div class="dd" id="dd-haul"><button class="dd-btn" id="btn-haul"><span data-i="f_haul">Head/Back</span> <span class="v" id="lab-haul">전체</span> <span class="ar">▾</span></button>
     <div class="dd-panel" id="pan-haul"><div class="ddhd"><span data-i="sel_haul">Head/Back 선택</span> <a class="tgl" data-f="haul" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="hauls"></div></div></div>
   <span class="sep"></span>
-  <span class="flab" data-i="f_mt">공컨(MT)</span><span class="mtseg" title="BSA·Lifting·달성률의 공컨 포함 여부"><button id="mt-x" class="on">제외 (laden)</button><button id="mt-i">포함 (전체)</button></span>
-  <span class="sep"></span>
-  <span class="flab" data-i="f_view">보기</span><button id="b-exp" data-i="v_exp">펼치기</button><button id="b-rt" data-i="v_rt">항로</button><button id="b-wk" data-i="v_wk">주차</button><span class="sep"></span><button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-last" data-i="f_last" title="라스트 포트만: 각 항차의 마지막 중국(CN) 적출항(=바운드 바뀌기 전). PKW/SIN 등 비중국 하브 후행포트는 자동 제외">라스트포트</button>
-  <span class="sep"></span>
+  <span class="vlab" data-i="viewopt">보기옵션</span>
+  <span class="flab" data-i="c_achv">달성률</span><span class="mtseg" title="달성률(Lifting/BSA) 공컨 포함 · ALL=MT+Laden, Laden=laden만"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button></span>
+  <span class="flab" data-i="c_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 포함 · ALL=MT+Laden ROB, Laden=laden ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button></span>
+  <button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button>
+  <span class="mtseg lbseg" id="lbseg" style="display:none"><button id="lb-cn" class="on" data-i="lb_cn">중국</button><button id="lb-sea" data-i="lb_sea">동남아</button></span>
+  <button id="b-hist" data-i="f_hist" title="변경내역">🕘 변경내역</button>
   <span class="flab" style="margin-left:auto">자료=드라이브</span><button id="logoutBtn" onclick="logout()">로그아웃</button>
 </div>
 <div class="summary" id="summary"><div><span data-i="s_bsa">BSA 합</span><b id="s_bsa">–</b></div><div><span data-i="s_lift">Lifting 합</span><b id="s_lift">–</b></div>
 <div><span data-i="s_achv">평균 달성률</span><b id="s_achv">–</b></div><div><span data-i="s_surp">총 Loadable Space</span><b id="s_surp">–</b></div><div><span data-i="s_own">총 Own Slot</span><b id="s_own">–</b></div><div><span data-i="s_util">평균 소석률</span><b id="s_util">–</b></div><div><span data-i="s_voy">항차</span><b id="s_voy">–</b></div><div><span data-i="s_cnt">행</span><b id="s_cnt">–</b></div></div>
-<div class="wrap" id="wrap"></div>
 </div>
-
+<div class="wrap" id="wrap"></div>
+<div id="lpm" class="lpm"></div>
+</div>
 <script>
-// ════════════ boot() — 데이터(ALL, ALL_ROUTES)를 받아 보드 렌더 ════════════
-function boot(ALL, ALL_ROUTES){
-if(window.__lbBooted)return; window.__lbBooted=true;  // 이중호출 방지(리스너 중복→드롭다운 먹통 버그)
-const $=id=>document.getElementById(id);
+function boot(ALL, ALL_ROUTES, ROT){
+if(window.__lbBooted)return; window.__lbBooted=true;
+ROT=ROT||[];
+
+
+   // 항차별 로테이션: 양하·경유 기항지(dis). load는 ALL 재사용. (Phase 2에서 사용)
 const CTR_KR={CN:'중국',HK:'홍콩',IN:'인도',PK:'파키스탄',BD:'방글라',LK:'스리랑카',SG:'싱가포르',MY:'말레이',TH:'태국',VN:'베트남',
   AE:'UAE',SA:'사우디',OM:'오만',BH:'바레인',KH:'캄보디아',MM:'미얀마',ID:'인니',PH:'필리핀',TW:'대만',JP:'일본',KR:'한국',
   TZ:'탄자니아',KE:'케냐',MX:'멕시코',US:'미국'};
+const $=id=>document.getElementById(id);
 const fmt=n=>(n==null||isNaN(n))?'–':Math.round(n).toLocaleString();
 const etd=s=>s?s.slice(5).replace('-','/'):'';
 const achvCls=p=>p==null?'':(p>100?'over':(p<80?'warn':''));
+// ── 언어(한/영) + 소계·총계 표시 ──
 let LANG='ko', showSub=false, showSkip=false, showLast=false;   // showSkip=false → 스킵 포트 제외(기본). showLast=라스트포트만
+let viewMode='week';    // 'week'=주차별(적출항) / 'voyage'=항차별(전 기항지 로테이션)
+let lastBasis='cn';     // 라스트포트 기준: 'cn'=중국발(마지막 CN 적출항) / 'sea'=동남아발(마지막 적출항)
 const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항로',f_ctr:'선적지 국가',f_port:'선적지 포트',
-  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',sel_route:'항로 선택',sel_ctr:'국가 선택',
-  sel_port:'포트 선택',sel_team:'영업주체 선택',toggle:'전체/해제',all:'전체',none:'없음',
+  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',
+  m_week:'주차별',m_voy:'항차별',c_ord:'순번',lb_cn:'중국',lb_sea:'동남아',f_hist:'🕘 변경내역',sel_route:'항로 선택',sel_ctr:'국가 선택',
+  sel_port:'포트 선택',sel_team:'영업주체 선택',sel_wf:'시작 주차',sel_wt:'종료 주차',toggle:'전체/해제',all:'전체',none:'없음',
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
   s_bsa:'BSA 합',s_lift:'Lifting 합',s_achv:'평균 달성률',s_surp:'총 Loadable Space',s_own:'총 Own Slot',s_util:'평균 소석률',s_voy:'항차',s_cnt:'행',
   rob_na:'항차당 적출항이 2개 이상이라 ROB 합산 시 중복 계산됨(선적지·항로를 좁히면 표시)',
-  c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률',c_surp:'Loadable Space',
-  c_pick_pct:'픽업%',c_pick:'픽업',c_notpick:'미픽업',c_eir:'EIR',pick_wait:'픽업/EIR 불러오는 중…',pick_asof:'픽업 기준',
+  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률',c_surp:'Loadable Space',c_slack:'잉여선복',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
-  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',sel_route:'Select Route',sel_ctr:'Select Country',
-  sel_port:'Select Port',sel_team:'Select Team',toggle:'All/None',all:'All',none:'None',
+  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',
+  m_week:'By Week',m_voy:'By Voyage',c_ord:'Seq',lb_cn:'China',lb_sea:'SE Asia',f_hist:'🕘 History',sel_route:'Select Route',sel_ctr:'Select Country',
+  sel_port:'Select Port',sel_team:'Select Team',sel_wf:'From week',sel_wt:'To week',toggle:'All/None',all:'All',none:'None',
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
   s_bsa:'Total BSA',s_lift:'Total Lifting',s_achv:'Avg Achv',s_surp:'Total Loadable Space',s_own:'Total Own Slot',s_util:'Avg Util%',s_voy:'Voyages',s_cnt:'Rows',
   rob_na:'A voyage has 2+ origin ports here, so summing ROB double-counts (narrow origin/route to show)',
-  c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%',c_surp:'Loadable Space',
-  c_pick_pct:'Pickup%',c_pick:'Picked',c_notpick:'Not Picked',c_eir:'EIR',pick_wait:'Loading pickup/EIR…',pick_asof:'Pickup as of',
+  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%',c_surp:'Loadable Space',c_slack:'Surplus',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',
   total:'TOTAL',week:'W',voy:'voy',pol_n:'POLs',ownslot:'Own Slot',empty:'No matching data',
   t_o:'OBT (Overseas)',t_e:'EST (Export)',t_i:'IST (Import)',t_j:'JBT (Japan)',f_haul:'Head/Back',sel_haul:'Select Head/Back',h_head:'Head Haul',h_back:'Back Haul',langbtn:'한국어'}};
 const T=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ko[k]||k;
-let MT_MODE='excl';
+// 달성률(Lifting/BSA) 토글: 'all'=MT+Laden / 'laden'=laden만(기본). 소석률(ROB/Own Slot) 토글: 'all'=MT+Laden ROB(기본) / 'laden'=laden ROB.
+let achvMode='laden', utilMode='all';
+// 영업주체(팀) 다중선택: O=OBT E=EST I=IST J=JBT. 기본 전체.
 const TEAMS=['o','e','i','j'];
 const T_TEAM=t=>T('t_'+t);
 const selTeam=new Set(TEAMS);
+// laden BSA/Lifting: 전체선택이면 클린 총계(r.bsa/r.lifting), 부분선택이면 선택 팀 합. 달성률 ALL이면 MT(bsa_mty/lift_mty) 가산.
 const bsaLaden=r=>selTeam.size===TEAMS.length?(r.bsa||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['bsa_'+t]||0):0),0);
 const liftLaden=r=>selTeam.size===TEAMS.length?(r.lifting||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['lift_'+t]||0):0),0);
-const bsaOf=r=>bsaLaden(r)+(MT_MODE==='incl'?(r.bsa_mty||0):0);
-const liftOf=r=>liftLaden(r)+(MT_MODE==='incl'?(r.lift_mty||0):0);
+const bsaOf=r=>bsaLaden(r)+(achvMode==='all'?(r.bsa_mty||0):0);
+const liftOf=r=>liftLaden(r)+(achvMode==='all'?(r.lift_mty||0):0);
 const achvOf=r=>{const b=bsaOf(r);return b?Math.round(liftOf(r)/b*1000)/10:null;};
+// ROB/소석률: ALL=r.rob(MT포함) / Laden=r.rob_laden(있으면). rob_laden 미탑재 시 r.rob 폴백(데이터레이어 추가 전까지 ALL과 동일).
+const robOf=r=>(utilMode==='all')?(r.rob||0):(r.rob_laden!=null?r.rob_laden:(r.rob||0));
+const utilOf=r=>{const o=r.own_slot||0;return o?Math.round(robOf(r)/o*1000)/10:null;};
+// ── 주차: 데이터 ETD로 주 시작(일요일) 도출 → "M월 W주차 (Wxx)" 라벨(하드코딩 앵커 불필요, 연도 롤오버 안전) ──
+const weeks=[...new Set(ALL.map(r=>r.week).filter(w=>w!=null))].sort((a,b)=>a-b);
+const weekStart={};
+ALL.forEach(r=>{ if(r.etd&&weekStart[r.week]===undefined){ const d=new Date(r.etd+'T00:00:00Z'); weekStart[r.week]=new Date(d.getTime()-d.getUTCDay()*86400000); } });
+const wkLabel=w=>{ const d=weekStart[w]; return d?`${d.getUTCMonth()+1}월 ${Math.ceil(d.getUTCDate()/7)}주차 (W${w})`:`W${w}`; };
+const wkBtn=w=>{ const d=weekStart[w]; return d?`${d.getUTCMonth()+1}/${Math.ceil(d.getUTCDate()/7)}·W${w}`:`W${w}`; };
+const _today=(()=>{const n=new Date();return Date.UTC(n.getFullYear(),n.getMonth(),n.getDate());})();
+let _curW=weeks[0]; weeks.forEach(w=>{const s=weekStart[w];if(s&&_today>=s.getTime()&&_today<s.getTime()+604800000)_curW=w;});
+const _lastS=weekStart[weeks[weeks.length-1]]; if(_lastS&&_today>=_lastS.getTime()+604800000)_curW=weeks[weeks.length-1];
+// 기본 범위 = 현재주 ~ +7주(데이터에 있는 마지막). from/to 각각 존재 주차.
+let wkFrom=_curW;
+const _cand=weeks.filter(w=>w>=_curW&&w<=_curW+7);
+let wkTo=_cand.length?_cand[_cand.length-1]:_curW;
 
 const ctrPorts={};
 ALL.forEach(r=>{const c=r.pol_ctr||'ETC';(ctrPorts[c]=ctrPorts[c]||new Set()).add(r.pol);});
 const CTRS=Object.keys(ctrPorts).sort();
 const ALLPORTS=new Set(ALL.map(r=>r.pol));
-const selCtr=new Set(CTRS);
-const selPort=new Set(ALLPORTS);
-const cW=new Set(),cR=new Set(),cV=new Set();
+const selCtr=new Set(CTRS);            // 선택 국가
+const selPort=new Set(ALLPORTS);       // 선택 포트
 // Head/Back haul: (선명,항차base)별 ETD 빠른 접미사=Head, 늦은쪽=Back. 단일 leg는 W/N=Head.
 const HAULS=['head','back'];
 const selHaul=new Set(HAULS);
@@ -278,6 +355,129 @@ const selHaul=new Set(HAULS);
   Object.values(best).forEach(r=>r._isLast=true);
 })();
 
+// ── 라스트포트 (기준 토글) : 전체 로테이션(적출+양하, 스킵제외) ord순으로 결정 ──
+//   cn = 마지막 CN 적출항(비중국 하브 후행적재 제외). CN 없으면 라스트 없음.
+//   sea = 도착국(마지막 기항 국가) 직전 국가의 마지막 적출항.
+//        예 JKTG PUS-INC-TAO-SHA-SIN-PKW → 도착국 MY(PKW) 직전국 SG의 SIN.
+function lastPortOf(rot, basis){
+  const seq=rot.filter(r=>r.skp!=='Y').slice()
+    .sort((a,b)=>((a.ord!=null?a.ord:0)-(b.ord!=null?b.ord:0))||((a.etd||'')<(b.etd||'')?-1:1));
+  if(!seq.length) return null;
+  const loads=seq.filter(r=>r.role!=='dis');
+  if(basis==='cn'){ const cn=loads.filter(r=>(r.pol_ctr||'')==='CN'); return cn.length?cn[cn.length-1]:null; }
+  // sea: 도착국(마지막 기항 국가) 직전 국가의 마지막 기항항 — 적출/양하 무관(직전국 마지막 '포트').
+  //   예 JKTG …SHA-SIN-PKW → 도착 MY 직전 SG의 SIN(SIN이 양하여도 선택).
+  const finalCtr=seq[seq.length-1].pol_ctr||'';
+  const cand=seq.filter(r=>(r.pol_ctr||'')!==finalCtr);
+  return cand.length?cand[cand.length-1]:seq[seq.length-1];
+}
+// (선명|항차) → 라스트 포트 pol. LASTOVR(수동 오버라이드)가 있으면 우선.
+let LASTOVR={};
+function computeLastMap(basis){
+  if(!VOYROT) buildVoyRot();
+  const m={};
+  Object.keys(VOYROT).forEach(k=>{
+    if(LASTOVR[k]){m[k]=LASTOVR[k];return;}       // 수동 지정 우선
+    const lp=lastPortOf(VOYROT[k],basis); if(lp)m[k]=lp.pol;
+  });
+  return m;
+}
+let LASTMAP={};   // apply()에서 lastBasis로 갱신
+
+// ── 항차별 로테이션: (선명|항차) → 전 calling port(load+dis) ord순 ──
+let VOYROT=null;
+function buildVoyRot(){
+  VOYROT={};
+  const add=r=>{const k=r.vessel+'|'+r.voyage;(VOYROT[k]=VOYROT[k]||[]).push(r);};
+  ALL.forEach(add); (ROT||[]).forEach(add);
+  Object.keys(VOYROT).forEach(k=>VOYROT[k].sort((a,b)=>((a.ord!=null?a.ord:0)-(b.ord!=null?b.ord:0))||((a.etd||'')<(b.etd||'')?-1:1)));
+}
+
+// ── 라스트포트 수동 오버라이드 (공유 Google Sheet, 8077 서버 /api/loadboard/lastport 경유) ──
+//   서버 없는 환경(file:// 더블클릭)에선 fetch 실패 → 조용히 무시(자동 라스트만 동작).
+function lbUser(){ const el=$('lpm-user'); let u=el?el.value.trim():''; if(!u)u=localStorage.getItem('lb_user')||''; if(u)localStorage.setItem('lb_user',u); return u; }
+function fetchOverrides(){
+  return fetch('/api/loadboard/lastport').then(r=>r.json()).then(j=>{
+    if(j&&j.ok){ LASTOVR={}; const o=j.overrides||{}; Object.keys(o).forEach(k=>LASTOVR[k]=o[k].last_port); }
+  }).catch(()=>{});
+}
+function saveOverride(vk,port,who){
+  return fetch('/api/loadboard/lastport',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({voy_key:vk,port:port,set_by:who||''})}).then(r=>r.json());
+}
+let _toastT=null;
+function toast(msg){ let t=$('lpmToast'); if(!t){t=document.createElement('div');t.id='lpmToast';t.className='lpm-toast';document.body.appendChild(t);} t.textContent=msg; t.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(function(){t.classList.remove('show');},2800); }
+function openLastPort(vk){
+  if(!VOYROT) buildVoyRot();
+  const parts=vk.split('|'),vsl=parts[0],voy=parts[1];
+  const rot=(VOYROT[vk]||[]).slice()
+    .sort((a,b)=>((a.ord!=null?a.ord:0)-(b.ord!=null?b.ord:0))||((a.etd||'')<(b.etd||'')?-1:1));
+  if(!rot.length) return;
+  const auto=lastPortOf(rot,lastBasis),autoPol=auto?auto.pol:'';
+  const ovr=LASTOVR[vk]||'',cur=ovr||autoPol;
+  let h=`<div class="lpm-bd"><div class="lpm-hd">라스트포트 지정 — <b>${vsl} / ${voy}</b><span class="lpm-x" onclick="closeLastPort()">✕</span></div>`
+   +`<div class="lpm-sub">전체 로테이션입니다(스킵항 제외 선택). <b>라스트</b>로 쓸 포트를 고르세요. 저장하면 다른 사용자에게도 공유됩니다.</div><div class="lpm-list">`;
+  rot.forEach(r=>{
+    const isSkip=r.skp==='Y', isDis=r.role==='dis', sel=!isSkip&&r.pol===cur;
+    const tags=(!isSkip&&r.pol===autoPol?'<span class="lpm-t auto">자동</span>':'')
+             +(!isSkip&&ovr&&r.pol===ovr?'<span class="lpm-t ovr">지정됨</span>':'')
+             +(isSkip?'<span class="lpm-t skip">스킵</span>':'')
+             +(!isSkip&&isDis?'<span class="lpm-t dis">양하</span>':'');
+    const click=isSkip?'':` onclick="pickLastPort('${vk}','${r.pol}')"`;
+    h+=`<div class="lpm-row${sel?' sel':''}${isSkip?' skiprow':''}"${click}><span>${r.ord!=null?'<span class="lpm-ord">'+r.ord+'</span> ':''}${r.pol} <span class="muted">${r.pol_ctr||''}</span></span><span class="lpm-meta">${etd(r.etd)} ${tags}</span></div>`;
+  });
+  h+=`</div><div class="lpm-ft"><span class="lpm-who">기록자 <input id="lpm-user" value="${(localStorage.getItem('lb_user')||'').replace(/"/g,'&quot;')}" placeholder="이름(선택)" maxlength="20"></span>`;
+  if(ovr)h+=`<button class="lpm-reset" onclick="pickLastPort('${vk}','')">↺ 자동으로 되돌리기</button>`;
+  h+=`<button onclick="closeLastPort()">닫기</button></div></div>`;
+  const m=$('lpm');m.innerHTML=h;m.style.display='flex';
+}
+function closeLastPort(){$('lpm').style.display='none';}
+function pickLastPort(vk,port){
+  if(!VOYROT) buildVoyRot();
+  const auto=lastPortOf(VOYROT[vk]||[],lastBasis), autoPol=auto?auto.pol:'(none)';
+  const oldV=LASTOVR[vk]?LASTOVR[vk]:autoPol+' (auto)';
+  const newV=port?port:autoPol+' (auto)';
+  if(oldV===newV){ closeLastPort(); return; }
+  // 변경 전 영어 확인 (실수 방지)
+  if(!confirm(`Change LAST PORT of ${vk.replace('|',' / ')}\n\n   from :  ${oldV}\n   to      :  ${newV}\n\nProceed?`)) return;
+  const who=lbUser(), name=vk.replace('|',' / ');
+  saveOverride(vk,port,who).then(j=>{
+    if(j&&j.ok){
+      if(port){LASTOVR[vk]=port; toast(`✔ ${name} 라스트포트 → ${port} 지정${who?' · 기록 '+who:''}`);}
+      else {delete LASTOVR[vk]; toast(`↺ ${name} 자동으로 되돌렸습니다`);}
+      closeLastPort(); apply();
+    } else toast('저장 실패: '+((j&&j.error)||'서버 오류'));
+  }).catch(e=>toast('저장 실패 — 8077 서버(http://…:8077/loadboard)에서 열어야 저장됩니다'));
+}
+// ── 변경내역 + 되돌리기 (공유 로그) ──
+function openHistory(){
+  const m=$('lpm');
+  m.innerHTML=`<div class="lpm-bd"><div class="lpm-hd">라스트포트 변경내역<span class="lpm-x" onclick="closeLastPort()">✕</span></div>`
+   +`<div class="lpm-sub">최근 수동 변경(공유). <b>↩</b> 누르면 그 변경 <b>이전 값</b>으로 되돌립니다.</div><div class="lpm-list" id="lph-list">불러오는 중…</div></div>`;
+  m.style.display='flex';
+  fetch('/api/loadboard/lastport/log').then(r=>r.json()).then(j=>{
+    const list=$('lph-list');
+    if(!j||!j.ok){list.textContent='불러오기 실패';return;}
+    if(!j.log.length){list.textContent='변경내역이 없습니다';return;}
+    list.innerHTML=j.log.map(e=>{
+      const revertTo=(e.old&&e.old!=='(auto)')?e.old:'';           // 이전값(자동이면 해제)
+      const label=revertTo||'자동';
+      return `<div class="lph-row"><div><b>${e.voy_key.replace('|',' / ')}</b> <span class="muted">${e.old} → ${e.new}</span>`
+        +`<div class="lph-meta">${e.at} · ${e.by||'-'}</div></div>`
+        +`<button class="lph-undo" onclick="undoTo('${e.voy_key}','${revertTo}','${label}')">↩ ${label}</button></div>`;
+    }).join('');
+  }).catch(()=>{$('lph-list').textContent='서버 연결 실패 — 8077에서 여세요';});
+}
+function undoTo(vk,port,label){
+  if(!confirm(`Revert LAST PORT of ${vk.replace('|',' / ')} to  ${label} ?`)) return;
+  const who=lbUser();
+  saveOverride(vk,port,who).then(j=>{
+    if(j&&j.ok){ if(port)LASTOVR[vk]=port; else delete LASTOVR[vk]; toast(`↩ ${vk.replace('|',' / ')} → ${label} 되돌림`); closeLastPort(); apply(); }
+    else toast('되돌리기 실패');
+  }).catch(()=>toast('되돌리기 실패 — 8077에서 여세요'));
+}
+
+const ctrName=c=>CTR_KR[c]?`${c} ${CTR_KR[c]}`:c;
 function renderRoutes(){$('routes').innerHTML=ALL_ROUTES.map(r=>`<label class="dp-item"><input type="checkbox" class="rt" value="${r}" checked>${r}</label>`).join('');}
 function renderCtrs(){$('ctrs').innerHTML=CTRS.map(c=>`<label class="dp-item"><input type="checkbox" class="ck" value="${c}" ${selCtr.has(c)?'checked':''}>${c}<span class="muted">${ctrPorts[c].size}</span></label>`).join('');}
 function renderPorts(){
@@ -287,8 +487,14 @@ function renderPorts(){
 }
 function renderTeams(){$('teams').innerHTML=TEAMS.map(t=>`<label class="dp-item"><input type="checkbox" class="tm" value="${t}" ${selTeam.has(t)?'checked':''}>${T_TEAM(t)}</label>`).join('');}
 function renderHaul(){$('hauls').innerHTML=HAULS.map(h=>`<label class="dp-item"><input type="checkbox" class="hl" value="${h}" ${selHaul.has(h)?'checked':''}>${T('h_'+h)}</label>`).join('');}
+function renderWkList(kind,q){ q=(q||'').trim().toLowerCase();
+  const cur=kind==='f'?wkFrom:wkTo, el=kind==='f'?$('weeks-f'):$('weeks-t');
+  el.innerHTML=weeks.map(w=>{const lab=wkLabel(w);
+    if(q&&!(lab.toLowerCase().includes(q)||String(w).includes(q)))return '';
+    return `<div class="dp-item wkopt${w===cur?' sel':''}" data-w="${w}">${lab}</div>`;}).join('');}
 function labels(){
   const A=T('all'),N=T('none');
+  $('lab-wf').textContent=wkBtn(wkFrom);$('lab-wt').textContent=wkBtn(wkTo);
   const nr=document.querySelectorAll('.rt:checked').length;
   $('lab-rt').textContent=nr===ALL_ROUTES.length?A:(nr===0?N:String(nr));
   $('lab-ctr').textContent=selCtr.size===CTRS.length?A:(selCtr.size===0?N:String(selCtr.size));
@@ -300,8 +506,8 @@ function labels(){
 }
 function setLang(l){LANG=l;document.documentElement.lang=l;
   document.querySelectorAll('[data-i]').forEach(el=>el.textContent=T(el.dataset.i));
-  $('mt-x').textContent=T('mt_x');$('mt-i').textContent=T('mt_i');$('lang').textContent=T('langbtn');
-  renderTeams();renderHaul();apply();}
+  $('lang').textContent=T('langbtn');
+  renderTeams();renderHaul();renderWkList('f');renderWkList('t');apply();}
 function selRoutes(){return new Set([...document.querySelectorAll('.rt:checked')].map(c=>c.value));}
 // ★ROB/Own Slot 집계: ROB는 그 기항지 시점의 누적 재선량이라 한 항차의 POL 행을 여러 개 더하면 중복 계산.
 //   → 그룹 내 항차마다 행이 1개뿐일 때(=선적지·항로를 좁힌 조회)만 합계·소석률을 낸다. Own Slot은 항차당 1회만 가산.
@@ -310,43 +516,91 @@ function aggr(rows){
   rows.forEach(x=>{const k=x.vessel+'|'+x.voyage;if(k in own)dup=true;else own[k]=x.own_slot||0;});
   const o=Object.values(own).reduce((a,b)=>a+b,0);
   return{b:rows.reduce((a,x)=>a+bsaOf(x),0),l:rows.reduce((a,x)=>a+liftOf(x),0),s:rows.reduce((a,x)=>a+(x.surplus||0),0),
-         r:rows.reduce((a,x)=>a+(x.rob||0),0),o:o,u:!dup};
+         r:rows.reduce((a,x)=>a+robOf(x),0),o:o,u:!dup};
 }
 const aggUtil=a=>(a.u&&a.o)?Math.round(a.r/a.o*100):null;
-// 총계·소계행의 ROB·소석률 셀
-function aggCells(a){
-  if(!a.u)return `<td class="dim" title="${T('rob_na')}">–</td><td class="dim" title="${T('rob_na')}">–</td>`;
-  const u=aggUtil(a);
-  return `<td>${fmt(a.r)}</td><td>${u==null?'–':u+'%'}</td>`;
-}
+// 집계행 셀: ROB·소석률·잉여선복이 컬럼상 떨어져 있어 각각 별도 셀로 생성(u=false면 중복계산 위험→'–')
+function aggRobCell(a){ return a.u?`<td>${fmt(a.r)}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
+function aggUtilCell(a){ if(!a.u)return `<td class="dim" title="${T('rob_na')}">–</td>`; const u=aggUtil(a); return `<td>${u==null?'–':u+'%'}</td>`; }
+function aggSlackCell(a){ return a.u?`<td>${fmt((a.o||0)-(a.r||0))}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
 
 function apply(){
   labels();
-  const rs=selRoutes();const wf=parseInt($('wf').value)||-1,wt=parseInt($('wt').value)||99;
-  const rows=ALL.filter(r=>rs.has(r.route)&&selCtr.has(r.pol_ctr||'ETC')&&selPort.has(r.pol)&&selHaul.has(r._haul)&&r.week>=wf&&r.week<=wt&&(showSkip||r.skp!=='Y')&&(!showLast||r._isLast));
-  // ★필터가 SHK/DCB(심천)로만 좁혀지면 픽업/EIR 컬럼 표시(그 항구만 데이터 있음)
-  const pmActive = rows.length>0 && rows.every(r=>r.pol==='SHK'||r.pol==='DCB');
-  if(pmActive && PICKMAP===null && !_pickLoading) loadPickup();   // 로드 완료 시 apply() 재호출
-  render(rows, pmActive ? (PICKMAP||'loading') : null);
+  LASTMAP=computeLastMap(lastBasis);
+  const rs=selRoutes();const _lo=Math.min(wkFrom,wkTo),_hi=Math.max(wkFrom,wkTo);
+  if(viewMode==='voyage'){ applyVoyage(rs,_lo,_hi); return; }
+  const isLast=r=>LASTMAP[r.vessel+'|'+r.voyage]===r.pol;
+  const rows=ALL.filter(r=>rs.has(r.route)&&selCtr.has(r.pol_ctr||'ETC')&&selPort.has(r.pol)&&selHaul.has(r._haul)&&r.week>=_lo&&r.week<=_hi&&(showSkip||r.skp!=='Y')&&(!showLast||isLast(r)));
+  const pmActive=rows.length>0&&rows.every(r=>r.pol==='SHK'||r.pol==='DCB');
+  if(pmActive&&PICKMAP===null&&!_pickLoading)loadPickup();
+  render(rows, pmActive?(PICKMAP||'loading'):null);
+}
+// 항차별: 필터에 걸리는 calling port를 가진 항차의 '전체 로테이션'을 보여줌
+function applyVoyage(rs,_lo,_hi){
+  if(!VOYROT) buildVoyRot();
+  const qual=new Set();
+  ALL.forEach(r=>{ if(rs.has(r.route)&&selCtr.has(r.pol_ctr||'ETC')&&selPort.has(r.pol)&&selHaul.has(r._haul)&&r.week>=_lo&&r.week<=_hi) qual.add(r.vessel+'|'+r.voyage); });
+  const voys=[...qual].map(k=>{
+    const rot=(VOYROT[k]||[]).filter(r=>showSkip||r.skp!=='Y');
+    const load=rot.filter(r=>r.role!=='dis'); const first=rot[0]||{};
+    return {k, rot, route:(load[0]||first).route||'', vsl:k.split('|')[0], voy:k.split('|')[1],
+            own:(load[0]||first).own_slot, etd0:first.etd||'9999', week0:(first.week||0)};
+  }).filter(v=>v.rot.length);
+  voys.sort((a,b)=> a.week0-b.week0 || (a.route<b.route?-1:a.route>b.route?1:0) || (a.etd0<b.etd0?-1:1));
+  renderVoyage(voys);
+}
+function renderVoyage(voys){
+  const loadAll=[]; voys.forEach(v=>v.rot.forEach(r=>{if(r.role!=='dis')loadAll.push(r);}));
+  const sm=aggr(loadAll);
+  $('s_bsa').textContent=fmt(sm.b);$('s_lift').textContent=fmt(sm.l);
+  $('s_achv').textContent=sm.b?Math.round(sm.l/sm.b*100)+'%':'–';
+  $('s_own').textContent=fmt(sm.o);$('s_surp').textContent='–';$('s_util').textContent='–';
+  $('s_util').parentElement.title='';
+  $('s_voy').textContent=voys.length;
+  let cnt=0; voys.forEach(v=>cnt+=v.rot.length); $('s_cnt').textContent=cnt;
+  if(!voys.length){$('wrap').innerHTML=`<div class="empty">${T('empty')}</div>`;$('s_voy').textContent='0';return;}
+  const maxS=Math.max(1,...loadAll.map(r=>Math.abs(r.surplus||0)));
+  let h=`<table class="board grid voyage">
+    <thead><tr><th>${T('c_ord')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('ownslot')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th><th>${T('c_slack')}</th></tr></thead><tbody>`;
+  let blk=0;
+  voys.forEach(v=>{
+    blk^=1;const bcls=blk?' blk1':'';const lastPol=LASTMAP[v.k];
+    v.rot.forEach((r,i)=>{
+      const first=i===0, isDis=r.role==='dis';
+      const av=achvOf(r),aC=achvCls(av);
+      const uv=utilOf(r);const uw=Math.max(0,Math.min(100,uv||0));
+      const ust=`background:linear-gradient(to right,#d7e6fb ${uw}%,transparent ${uw}%)`;
+      const sC=r.surplus<0?'neg surplus':'surplus';
+      const bw=Math.round(Math.abs(r.surplus||0)/maxS*50),bar=r.surplus>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
+      const isLastP=showLast&&lastPol&&r.pol===lastPol&&!isDis;
+      const cls='leaf'+bcls+(first?' vstart':'')+(r.skp==='Y'?' skprow':'')+(isLastP?' lastrow':'');
+      const slk=(r.own_slot||0)-robOf(r);            // 잉여선복 = Own Slot − ROB
+      h+=`<tr class="${cls}">`
+       + `<td class="dim">${r.ord!=null?r.ord:''}</td>`
+       + `<td class="l gk">${first?v.route:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${v.k}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${v.vsl} / ${v.voy}`:''}</td>`
+       + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
+       + `<td>${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))}</td><td>${isDis?'<span class="dim">–</span>':fmt(liftOf(r))}</td><td class="${aC}">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
+       + `<td class="gk own">${first?fmt(v.own):''}</td><td>${fmt(robOf(r))}</td>`
+       + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td></tr>`;
+    });
+  });
+  $('wrap').innerHTML=h+'</tbody></table>';
 }
 
 function pickCells(r, PMAP){
-  if(!PMAP) return '<td class="c dim pk1">…</td><td class="c dim">…</td><td class="c dim">…</td><td class="c dim">…</td>';
+  if(!PMAP) return '<td class="dim pk1">…</td><td class="dim">…</td><td class="dim">…</td><td class="dim">…</td>';
   const p=PMAP[r.vessel+'|'+r.voyage];
-  if(!p) return '<td class="c dim pk1">–</td><td class="c dim">–</td><td class="c dim">–</td><td class="c dim">–</td>';
-  // 픽업률 = 픽업/부킹(확정) — ≤100%로 직관적(스냅샷 pct는 픽업/BSA라 과부킹시 100%초과)
-  const pct = p.booked>0 ? Math.round(p.picked*100/p.booked) : null;
+  if(!p) return '<td class="dim pk1">–</td><td class="dim">–</td><td class="dim">–</td><td class="dim">–</td>';
+  const pct=p.booked>0?Math.round(p.picked*100/p.booked):null;
   const pcol=pct==null?'#999':(pct>=90?'#0a7d33':(pct<50?'#c0392b':'#333'));
-  return `<td class="c pk1">${p.eir?fmt(p.eir):'–'}</td>`
-       + `<td class="c">${fmt(p.picked)}</td>`
-       + `<td class="c" style="color:${p.notp>0?'#c47f0a':'#bbb'}">${fmt(p.notp)}</td>`
-       + `<td class="c" style="font-weight:600;color:${pcol}">${pct==null?'–':pct+'%'}</td>`;
+  return `<td class="pk1">${p.eir?fmt(p.eir):'–'}</td><td>${fmt(p.picked)}</td>`
+       + `<td style="color:${p.notp>0?'#c47f0a':'#bbb'}">${fmt(p.notp)}</td>`
+       + `<td style="font-weight:600;color:${pcol}">${pct==null?'–':pct+'%'}</td>`;
 }
-function render(rows, PM){
-  const pmShow = PM!==null && PM!==undefined;          // 픽업/EIR 컬럼 표시(SHK/DCB만)
-  const PMAP = (pmShow && PM!=='loading') ? PM : null;  // 픽업 데이터 준비됨
-  const NC = 8 + (pmShow?4:0);
-  const emptyPC = pmShow ? '<td class="pk1"></td><td></td><td></td><td></td>' : '';
+function render(rows,PM){
+  const pmShow=PM!==null&&PM!==undefined;
+  const PMAP=(pmShow&&PM!=='loading')?PM:null;
+  const emptyPC=pmShow?'<td class="pk1"></td><td></td><td></td><td></td>':'';
   const sm=aggr(rows);
   $('s_bsa').textContent=fmt(sm.b);$('s_lift').textContent=fmt(sm.l);
   $('s_achv').textContent=sm.b?Math.round(sm.l/sm.b*100)+'%':'–';
@@ -360,75 +614,70 @@ function render(rows, PM){
     (((tree[r.week]=tree[r.week]||{})[r.route]=tree[r.week][r.route]||{})[vk]=tree[r.week][r.route][vk]||[]).push(r);});
   $('s_voy').textContent=voySet.size;
   const maxS=Math.max(1,...rows.map(r=>Math.abs(r.surplus||0)));
-  let h=`<table class="board${showSub?'':' nosub'}">
-    <thead><tr><th class="l">${T('c_pol')}</th><th>${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
-  if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td>${aggCells(sm)}<td>${fmt(sm.s)}</td>${emptyPC}</tr>`;
+  let h=`<table class="board grid${showSub?'':' nosub'}">
+    <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('ownslot')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th><th>${T('c_slack')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
+  if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td class="l"></td><td class="l"></td><td class="l"></td><td class="l"></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td>${fmt(sm.o)}</td>${aggRobCell(sm)}${aggUtilCell(sm)}<td>${fmt(sm.s)}</td>${aggSlackCell(sm)}${emptyPC}</tr>`;
+  let blk=0, lastWk=null, lastRt=null;
   Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
-    const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
-    const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
-    h+=showSub
-      ? `<tr class="bw" data-lvl="wk" data-key="${wk}" data-wk="${wk}"><td class="l"><span class="tg">▼</span>${wk}${T('week')} <span class="cnt">${nv}${T('voy')}</span></td><td></td><td>${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td>${aggCells(a)}<td>${fmt(a.s)}</td>${emptyPC}</tr>`
-      : `<tr class="bw" data-lvl="wk" data-key="${wk}" data-wk="${wk}"><td class="l" colspan="${NC}"><span class="tg">▼</span>${wk}${T('week')} <span class="cnt">${nv}${T('voy')}</span></td></tr>`;
     Object.keys(tree[wk]).sort().forEach(rt=>{
-      const rk=wk+'|'+rt;const rtRows=[];Object.values(tree[wk][rt]).forEach(x=>rtRows.push(...x));const ra=aggr(rtRows);
-      h+=`<tr class="br" data-lvl="rt" data-key="${rk}" data-wk="${wk}" data-rt="${rk}"><td colspan="${NC}"><span class="tg">▼</span>${rt}<span class="agg">${Object.keys(tree[wk][rt]).length}${T('voy')} · BSA ${fmt(ra.b)} · Lift ${fmt(ra.l)}${aggUtil(ra)==null?'':` · ROB ${fmt(ra.r)} · ${T('c_util')} ${aggUtil(ra)}%`} · ${T('c_surp')} ${fmt(ra.s)}</span></td></tr>`;
       Object.keys(tree[wk][rt]).sort().forEach(vk=>{
-        const arr=tree[wk][rt][vk];const vkk=rk+'|'+vk;const [vsl,voy]=vk.split('|');
-        const own=arr[0].own_slot;const eds=arr.map(x=>x.etd).filter(Boolean).sort();
-        const er=eds.length?(etd(eds[0])+(eds.length>1?'~'+etd(eds[eds.length-1]):'')):'';
-        h+=`<tr class="bv" data-lvl="vy" data-key="${vkk}" data-wk="${wk}" data-rt="${rk}" data-vy="${vkk}"><td colspan="${NC}"><span class="tg">▼</span><b>${vsl} / ${voy}</b><span class="meta">ETD ${er} · ${arr.length} ${T('pol_n')}</span><span class="own">${T('ownslot')} ${fmt(own)} TEU</span></td></tr>`;
-        arr.forEach(r=>{
+        const arr=tree[wk][rt][vk];const [vsl,voy]=vk.split('|');const own=arr[0].own_slot;
+        blk^=1;const bcls=blk?' blk1':'';
+        arr.forEach((r,i)=>{
+          const first=i===0;
           const av=achvOf(r),aC=achvCls(av),sC=r.surplus<0?'neg surplus':'surplus';
           const bw=Math.round(Math.abs(r.surplus||0)/maxS*50),bar=r.surplus>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
-          const uw=Math.max(0,Math.min(100,r.util_pct||0));
+          const uv=utilOf(r);const uw=Math.max(0,Math.min(100,uv||0));
           const ust=`background:linear-gradient(to right,#d7e6fb ${uw}%,transparent ${uw}%)`;
           const aw=Math.max(0,Math.min(100,av||0));
           const acol=av==null?'transparent':(av>100?'#f7d7d7':(av<80?'#fbe6c4':'#e3edfb'));
           const ast=`background:linear-gradient(to right,${acol} ${aw}%,transparent ${aw}%)`;
-          h+=`<tr class="leaf" data-wk="${wk}" data-rt="${rk}" data-vy="${vkk}">
-            <td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span></td><td class="c dim">${etd(r.etd)}</td>
-            <td>${fmt(bsaOf(r))}</td><td>${fmt(liftOf(r))}</td><td class="${aC}" style="${ast}">${av==null?'–':av+'%'}</td>
-            <td>${fmt(r.rob)}</td><td style="${ust}">${r.util_pct==null?'–':r.util_pct+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td>${pmShow?pickCells(r,PMAP):''}</tr>`;
+          const showWk=first&&wk!==lastWk, showRt=first&&(wk!==lastWk||rt!==lastRt);
+          if(first){lastWk=wk;lastRt=rt;}
+          const isLastP=showLast&&LASTMAP[vk]===r.pol;   // 주차별 라스트 마크(#4)
+          const slk=(r.own_slot||0)-robOf(r);            // 잉여선복 = Own Slot − ROB(#3, 토글반영)
+          h+=`<tr class="leaf${bcls}${showWk?' wkstart':(first?' vstart':'')}${isLastP?' lastrow':''}">`
+           + `<td class="l gk">${showWk?wk:''}</td><td class="l gk">${showRt?rt:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${vsl}|${voy}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${vsl} / ${voy}`:''}</td>`
+           + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
+           + `<td>${fmt(bsaOf(r))}</td><td>${fmt(liftOf(r))}</td><td class="${aC}" style="${ast}">${av==null?'–':av+'%'}</td>`
+           + `<td class="gk own">${first?fmt(own):''}</td><td>${fmt(robOf(r))}</td>`
+           + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(r.surplus)}${bar}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${pmShow?pickCells(r,PMAP):''}</tr>`;
         });
       });
     });
+    if(showSub){
+      const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
+      const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
+      h+=`<tr class="subrow"><td class="l">${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td>${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td>${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}<td>${fmt(a.s)}</td>${aggSlackCell(a)}${emptyPC}</tr>`;
+    }
   });
   $('wrap').innerHTML=h+'</tbody></table>';
-  vis();
 }
 
-function arrow(tr,c){const t=tr.querySelector('.tg');if(t)t.textContent=c?'▸':'▼';}
-function vis(){
-  document.querySelectorAll('.board tbody tr').forEach(tr=>{
-    const lv=tr.dataset.lvl;let show;
-    if(lv==='wk')show=true;
-    else if(lv==='rt')show=!cW.has(tr.dataset.wk);
-    else if(lv==='vy')show=!cW.has(tr.dataset.wk)&&!cR.has(tr.dataset.rt);
-    else show=!cW.has(tr.dataset.wk)&&!cR.has(tr.dataset.rt)&&!cV.has(tr.dataset.vy);
-    tr.style.display=show?'':'none';});
-  document.querySelectorAll('tr.bw').forEach(b=>arrow(b,cW.has(b.dataset.key)));
-  document.querySelectorAll('tr.br').forEach(b=>arrow(b,cR.has(b.dataset.key)));
-  document.querySelectorAll('tr.bv').forEach(b=>arrow(b,cV.has(b.dataset.key)));
-}
-$('wrap').addEventListener('click',e=>{const b=e.target.closest('tr.bw,tr.br,tr.bv');if(!b)return;
-  const lv=b.dataset.lvl,k=b.dataset.key,S=lv==='wk'?cW:lv==='rt'?cR:cV;S.has(k)?S.delete(k):S.add(k);vis();});
-function setDepth(level){cW.clear();cR.clear();cV.clear();
-  if(level>=1)document.querySelectorAll('tr.br').forEach(b=>cR.add(b.dataset.key));
-  if(level>=2)document.querySelectorAll('tr.bw').forEach(b=>cW.add(b.dataset.key));vis();}
-$('b-exp').onclick=()=>setDepth(0);$('b-rt').onclick=()=>setDepth(1);$('b-wk').onclick=()=>setDepth(2);
-function setMT(m){MT_MODE=m;$('mt-x').classList.toggle('on',m==='excl');$('mt-i').classList.toggle('on',m==='incl');apply();}
-$('mt-x').onclick=()=>setMT('excl');$('mt-i').onclick=()=>setMT('incl');
+function setAchv(m){achvMode=m;$('achv-all').classList.toggle('on',m==='all');$('achv-laden').classList.toggle('on',m==='laden');apply();}
+function setUtil(m){utilMode=m;$('util-all').classList.toggle('on',m==='all');$('util-laden').classList.toggle('on',m==='laden');apply();}
+$('achv-all').onclick=()=>setAchv('all');$('achv-laden').onclick=()=>setAchv('laden');
+$('util-all').onclick=()=>setUtil('all');$('util-laden').onclick=()=>setUtil('laden');
 $('lang').onclick=()=>setLang(LANG==='ko'?'en':'ko');
 $('b-sub').onclick=()=>{showSub=!showSub;$('b-sub').classList.toggle('on',showSub);apply();};
 $('b-skp').onclick=()=>{showSkip=!showSkip;$('b-skp').classList.toggle('on',showSkip);apply();};
-$('b-last').onclick=()=>{showLast=!showLast;$('b-last').classList.toggle('on',showLast);apply();};
+$('b-last').onclick=()=>{showLast=!showLast;$('b-last').classList.toggle('on',showLast);$('lbseg').style.display=showLast?'inline-flex':'none';apply();};
+$('b-hist').onclick=openHistory;
+// 화면 모드 (주차별/항차별)
+$('mode-week').onclick=()=>{viewMode='week';$('mode-week').classList.add('on');$('mode-voy').classList.remove('on');apply();};
+$('mode-voy').onclick=()=>{viewMode='voyage';$('mode-voy').classList.add('on');$('mode-week').classList.remove('on');apply();};
+// 라스트포트 기준 (중국/동남아)
+$('lb-cn').onclick=()=>{lastBasis='cn';$('lb-cn').classList.add('on');$('lb-sea').classList.remove('on');apply();};
+$('lb-sea').onclick=()=>{lastBasis='sea';$('lb-sea').classList.add('on');$('lb-cn').classList.remove('on');apply();};
 
+// 드롭다운
 document.querySelectorAll('.dd-btn').forEach(btn=>btn.addEventListener('click',e=>{
   const dd=btn.parentElement,open=dd.classList.contains('open');
   document.querySelectorAll('.dd').forEach(d=>d.classList.remove('open'));
   if(!open)dd.classList.add('open');e.stopPropagation();}));
 document.addEventListener('click',e=>{if(!e.target.closest('.dd'))document.querySelectorAll('.dd').forEach(d=>d.classList.remove('open'));});
 
+// 전체/해제 토글 링크 (코크핏식 — 하나라도 켜져있으면 모두 해제, 아니면 모두 선택)
 document.querySelector('.bar').addEventListener('click',e=>{
   const a=e.target.closest('a.tgl');if(!a)return;e.stopPropagation();
   const f=a.dataset.f;
@@ -439,21 +688,50 @@ document.querySelector('.bar').addEventListener('click',e=>{
   else if(f==='haul'){const on=selHaul.size<HAULS.length;selHaul.clear();if(on)HAULS.forEach(h=>selHaul.add(h));renderHaul();}
   apply();
 });
+// 항로
 $('routes').addEventListener('change',apply);
+// 국가 → 포트 연동
 $('ctrs').addEventListener('change',e=>{if(!e.target.classList.contains('ck'))return;
   const c=e.target.value;e.target.checked?selCtr.add(c):selCtr.delete(c);
+  // 국가 켤 때 해당 포트 기본 선택
   if(e.target.checked)[...ctrPorts[c]].forEach(p=>selPort.add(p));
   renderPorts();apply();});
+// 포트
 $('teams').addEventListener('change',e=>{if(!e.target.classList.contains('tm'))return;
   e.target.checked?selTeam.add(e.target.value):selTeam.delete(e.target.value);apply();});
 $('hauls').addEventListener('change',e=>{if(!e.target.classList.contains('hl'))return;
   e.target.checked?selHaul.add(e.target.value):selHaul.delete(e.target.value);apply();});
 $('ports').addEventListener('change',e=>{if(!e.target.classList.contains('pk'))return;
   e.target.checked?selPort.add(e.target.value):selPort.delete(e.target.value);apply();});
-['wf','wt'].forEach(id=>{$(id).addEventListener('change',apply);$(id).addEventListener('keydown',e=>{if(e.key==='Enter')apply();});});
+// 주차(시작~종료 범위, 각 드롭다운 검색)
+$('weeks-f').addEventListener('click',e=>{const it=e.target.closest('.wkopt');if(!it)return;wkFrom=+it.dataset.w;$('dd-wf').classList.remove('open');renderWkList('f');renderWkList('t');apply();});
+$('weeks-t').addEventListener('click',e=>{const it=e.target.closest('.wkopt');if(!it)return;wkTo=+it.dataset.w;$('dd-wt').classList.remove('open');renderWkList('f');renderWkList('t');apply();});
+$('wf-search').addEventListener('input',e=>renderWkList('f',e.target.value));
+$('wt-search').addEventListener('input',e=>renderWkList('t',e.target.value));
 
-renderRoutes();renderCtrs();renderPorts();renderTeams();renderHaul();
-$('wf').value=22;$('wt').value=25;
+// ── pages(github.io) 전용: 라스트포트 수동지정/변경내역/공유는 사내(8077) 서버 전용 ──
+window._apply=apply;                                   // 전역 픽업 폴링이 재렌더 호출
+function fetchOverrides(){ return Promise.resolve(); } // pages: 공유 오버라이드 read 없음(스코프 미적용)
+function openLastPort(){ toast('라스트포트 수동 지정은 사내망(8077)에서만 가능합니다.'); }
+function openHistory(){ toast('변경내역은 사내망(8077)에서만 볼 수 있습니다.'); }
+window.openLastPort=openLastPort;   // 렌더 행의 인라인 onclick(전역 스코프)이 boot 내부 함수를 찾도록
+renderRoutes();renderCtrs();renderPorts();renderTeams();renderHaul();renderWkList('f');renderWkList('t');
+// 초기 상태 → DOM 동기화 (강제/저장된 viewMode·showLast·lastBasis 반영. 중국/동남아 토글은 라스트 ON일 때 노출)
+$('mode-week').classList.toggle('on',viewMode==='week');
+$('mode-voy').classList.toggle('on',viewMode==='voyage');
+$('b-last').classList.toggle('on',showLast);
+$('lbseg').style.display=showLast?'inline-flex':'none';
+$('lb-cn').classList.toggle('on',lastBasis==='cn');
+$('lb-sea').classList.toggle('on',lastBasis==='sea');
 apply();
-} // end boot
+fetchOverrides().then(()=>apply());   // 공유 시트의 수동 라스트포트 반영(서버 있을 때만)
+$('lpm').addEventListener('click',e=>{if(e.target.id==='lpm')closeLastPort();}); // 배경 클릭=닫기
+
+// 상단(제목·필터·요약바) 고정 높이 측정 → 컬럼헤더가 그 아래 붙도록 --topH 갱신(필터바 줄바꿈·언어토글 대응)
+function setTopH(){const h=$('topbar').offsetHeight;document.documentElement.style.setProperty('--topH',h+'px');}
+setTopH();
+if(window.ResizeObserver)new ResizeObserver(setTopH).observe($('topbar'));
+window.addEventListener('resize',setTopH);
+
+}
 </script></body></html>
