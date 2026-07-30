@@ -616,8 +616,15 @@ function applyVoyage(rs,_lo,_hi){
   const voys=[...qual].map(k=>{
     const rot=(VOYROT[k]||[]).filter(r=>showSkip||r.skp!=='Y');
     const load=rot.filter(r=>r.role!=='dis'); const first=rot[0]||{};
+    // ★정렬주차 = 현재 주차범위(_lo~_hi) 안의 가장 이른 주차 (주차별과 동일한 순서로 맞춤).
+    //   먼 과거 origin(수입항차)이 맨위로 튀는 문제 해결 — 화면에 뜨는 이유(현재주 기항)로 정렬.
+    const inRng=rot.map(r=>r.week).filter(w=>w!=null&&w>=_lo&&w<=_hi);
+    const sortWk=inRng.length?Math.min.apply(null,inRng):(first.week||9999);
+    // 정렬주차 안의 가장 이른 ETD (주차별 동률처리와 유사)
+    const inEtd=rot.filter(r=>r.week===sortWk&&r.etd).map(r=>r.etd);
+    const etdKey=inEtd.length?inEtd.sort()[0]:(first.etd||'9999');
     return {k, rot, route:(load[0]||first).route||'', vsl:k.split('|')[0], voy:k.split('|')[1],
-            own:(load[0]||first).own_slot, etd0:first.etd||'9999', week0:(first.week||0)};
+            own:(load[0]||first).own_slot, etd0:etdKey, week0:sortWk};
   }).filter(v=>v.rot.length);
   voys.sort((a,b)=> a.week0-b.week0 || (a.route<b.route?-1:a.route>b.route?1:0) || (a.etd0<b.etd0?-1:1));
   renderVoyage(voys);
