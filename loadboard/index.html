@@ -412,7 +412,7 @@ function buildVoyRot(){
 
 // ── 라스트포트 수동 오버라이드 (공유 Google Sheet, 8077 서버 /api/loadboard/lastport 경유) ──
 //   서버 없는 환경(file:// 더블클릭)에선 fetch 실패 → 조용히 무시(자동 라스트만 동작).
-function lbUser(){ const el=$('lpm-user'); let u=el?el.value.trim():''; if(!u)u=localStorage.getItem('lb_user')||''; if(u)localStorage.setItem('lb_user',u); return u; }
+function lbUser(){ if(window.LB_LOGIN_ID) return window.LB_LOGIN_ID; const el=$('lpm-user'); let u=el?el.value.trim():''; if(!u)u=localStorage.getItem('lb_user')||''; if(u)localStorage.setItem('lb_user',u); return u; }
 function fetchOverrides(){
   return fetch('/api/loadboard/lastport').then(r=>r.json()).then(j=>{
     if(j&&j.ok){ LASTOVR={}; const o=j.overrides||{}; Object.keys(o).forEach(k=>LASTOVR[k]=o[k].last_port); }
@@ -784,9 +784,38 @@ $('wt-search').addEventListener('input',e=>renderWkList('t',e.target.value));
 
 // ── pages(github.io) 전용: 라스트포트 수동지정/변경내역/공유는 사내(8077) 서버 전용 ──
 window._apply=apply;                                   // 전역 픽업 폴링이 재렌더 호출
-function fetchOverrides(){ return Promise.resolve(); } // pages: 라스트포트 오버라이드는 8077 전용(조회 미표시)
-function openLastPort(){ toast('라스트포트 수동 지정은 사내망(8077)에서만 가능합니다.'); }
-function openHistory(){ toast('변경내역은 사내망(8077)에서만 볼 수 있습니다.'); }
+// ── 라스트포트 오버라이드: pages는 구글 로그인으로 공유시트(Sheet1) 직접 read/write (openLastPort=gen 인라인 팝업) ──
+function fetchOverrides(){
+  if(!(window.gapi&&gapi.client&&gapi.client.sheets)) return Promise.resolve();
+  return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'Sheet1!A:D'})
+    .then(r=>{ LASTOVR={}; (r.result.values||[]).slice(1).forEach(row=>{ if(row[0]&&row[1])LASTOVR[row[0]]=row[1]; }); })
+    .catch(e=>{ console.warn('override read 실패', e); });
+}
+function saveOverride(vk,port,who){
+  if(!(window.gapi&&gapi.client&&gapi.client.sheets)) return Promise.resolve({ok:false,error:'sheets 미로드(재로그인 필요)'});
+  const now=_rmkNow(), row=[[vk,port||'',who||'',now]];
+  return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'Sheet1!A:D'})
+    .then(r=>{ const vals=r.result.values||[]; let idx=-1,old=''; for(let i=1;i<vals.length;i++){ if((vals[i]||[])[0]===vk){idx=i;old=(vals[i]||[])[1]||'';break;} }
+      const w=idx>=0
+        ? gapi.client.sheets.spreadsheets.values.update({spreadsheetId:RMK_SHEET_ID,range:'Sheet1!A'+(idx+1)+':D'+(idx+1),valueInputOption:'RAW',resource:{values:row}})
+        : gapi.client.sheets.spreadsheets.values.append({spreadsheetId:RMK_SHEET_ID,range:'Sheet1!A:D',valueInputOption:'RAW',insertDataOption:'INSERT_ROWS',resource:{values:row}});
+      return w.then(()=>gapi.client.sheets.spreadsheets.values.append({spreadsheetId:RMK_SHEET_ID,range:'log!A:E',valueInputOption:'RAW',insertDataOption:'INSERT_ROWS',resource:{values:[[now,vk,old||'(auto)',port||'(auto)',who||'']]}}).catch(()=>{}))
+       .then(()=>({ok:true,rec:{last_port:port||'',set_by:who||'',set_at:now}}));
+    }).catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||String(e)}));
+}
+function openHistory(){
+  const m=$('lpm');
+  m.innerHTML=`<div class="lpm-bd"><div class="lpm-hd">라스트포트 변경내역<span class="lpm-x" onclick="closeLastPort()">✕</span></div><div class="lpm-sub">최근 수동 변경(공유). ↩ 이전 값으로 되돌립니다.</div><div class="lpm-list" id="lph-list">불러오는 중…</div></div>`;
+  m.style.display='flex';
+  if(!(window.gapi&&gapi.client&&gapi.client.sheets)){ $('lph-list').textContent='시트 미로드 — 재로그인 필요'; return; }
+  gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'log!A:E'}).then(r=>{
+    const rows=(r.result.values||[]).slice(1).map(x=>({at:x[0]||'',voy_key:x[1]||'',old:x[2]||'',new:x[3]||'',by:x[4]||''})).reverse().slice(0,80);
+    const list=$('lph-list'); if(!rows.length){ list.textContent='변경내역이 없습니다'; return; }
+    list.innerHTML=rows.map(e=>{ const revertTo=(e.old&&e.old!=='(auto)')?e.old:''; const label=revertTo||'자동';
+      return `<div class="lph-row"><div><b>${e.voy_key.replace(/\|/g,' / ')}</b> <span class="muted">${e.old} → ${e.new}</span><div class="lph-meta">${e.at} · ${e.by||'-'}</div></div><button class="lph-undo" onclick="undoTo('${e.voy_key}','${revertTo}','${label}')">↩ ${label}</button></div>`;
+    }).join('');
+  }).catch(()=>{ $('lph-list').textContent='변경내역 로드 실패'; });
+}
 // ── 리마크: pages는 구글 로그인으로 공유시트 직접 read/write (spreadsheets 스코프, 작성자=로그인ID) ──
 function _rmkNow(){ const d=new Date(),p=n=>('0'+n).slice(-2); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 function fetchRemarks(){
@@ -805,7 +834,9 @@ function saveRemark(vk,text,who){
     }).then(()=>({ok:true,rec:{at:now}}))
     .catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||String(e)}));
 }
-window.openLastPort=openLastPort; window.editRemark=editRemark;   // 인라인 onclick(전역)용 (editRemark=gen 인라인)
+// 인라인 onclick(전역)용 — boot 내부 함수를 전역 노출(pages는 boot 래핑이라 필수)
+window.openLastPort=openLastPort; window.closeLastPort=closeLastPort; window.pickLastPort=pickLastPort;
+window.undoTo=undoTo; window.openHistory=openHistory; window.editRemark=editRemark;
 renderRoutes();renderCtrs();renderPorts();renderTeams();renderHaul();renderWkList('f');renderWkList('t');
 // 초기 상태 → DOM 동기화 (강제/저장된 viewMode·showLast·lastBasis 반영. 중국/동남아 토글은 라스트 ON일 때 노출)
 $('mode-week').classList.toggle('on',viewMode==='week');
