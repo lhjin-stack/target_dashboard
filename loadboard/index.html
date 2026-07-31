@@ -154,7 +154,7 @@ function _gapiInit(){ gapi.load('client', async()=>{ await gapi.client.init({});
   await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
   try{ await gapi.client.load('https://sheets.googleapis.com/$discovery/rest?version=v4'); }catch(e){ console.warn('sheets 로드 실패', e); }
   _gapiReady=true; _maybeEnableLogin(); }); }
-const TOK_KEY='lb_tok2';   // 스코프 확장(spreadsheets/email) → 기존 토큰 무효화 재로그인 유도
+const TOK_KEY='lb_tok3';   // 스코프 확장(spreadsheets/email) → 기존 토큰 무효화 재로그인 유도. lb_tok3=drive만 받은 반쪽 토큰 무효화(시트 권한 재동의 강제)
 function _saveTok(r){ try{ localStorage.setItem(TOK_KEY, JSON.stringify({t:r.access_token, exp:Date.now()+((r.expires_in||3500)*1000)})); }catch(e){} }
 function _loadTok(){ try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); if(o&&o.t&&o.exp>Date.now()+60000) return o.t; }catch(e){} return null; }
 function _clearTok(){ try{ localStorage.removeItem(TOK_KEY); }catch(e){} }
@@ -170,7 +170,7 @@ function _maybeEnableLogin(){ if(!(_gapiReady&&_gisReady))return;
 function _showLoginError(m){ const e=document.getElementById('gerr'); if(e)e.textContent=m||''; }
 function requestSignIn(){ if(!_tokenClient){_showLoginError('구글 SDK 로딩 중 — 잠시 후 다시 시도하세요.');return;}
   _showLoginError(''); document.getElementById('gstat').textContent='데이터 불러오는 중…';
-  _tokenClient.requestAccessToken({prompt:''}); }
+  _tokenClient.requestAccessToken({prompt:'consent'}); }   // consent 강제: 시트(spreadsheets) 권한을 확실히 재동의받아 반쪽 토큰 방지
 async function fetchDriveJson(filename){
   let fid=_driveFileCache[filename];
   if(!fid){ const r=await gapi.client.drive.files.list({
