@@ -250,7 +250,8 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
     <input type="text" id="wt-search" class="ddsearch" placeholder="27 · 7월 …"><div class="ddscroll" id="weeks-t"></div></div></div>
   <span class="sep"></span>
   <div class="dd" id="dd-rt"><button class="dd-btn" id="btn-rt"><span data-i="f_route">항로</span> <span class="v" id="lab-rt">전체</span> <span class="ar">▾</span></button>
-    <div class="dd-panel" id="pan-rt"><div class="ddhd"><span data-i="sel_route">항로 선택</span> <a class="tgl" data-f="rt" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="routes"></div></div></div>
+    <div class="dd-panel" id="pan-rt"><div class="ddhd"><span data-i="sel_route">항로 선택</span> <a class="tgl" data-f="rt" data-i="toggle">전체/해제</a></div>
+    <input type="text" id="rt-search" class="ddsearch" placeholder="AIS · NKT …"><div class="ddscroll" id="routes"></div></div></div>
   <div class="dd" id="dd-ctr"><button class="dd-btn" id="btn-ctr"><span data-i="f_ctr">선적지 국가</span> <span class="v" id="lab-ctr">전체</span> <span class="ar">▾</span></button>
     <div class="dd-panel" id="pan-ctr"><div class="ddhd"><span data-i="sel_ctr">국가 선택</span> <a class="tgl" data-f="ctr" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="ctrs"></div></div></div>
   <div class="dd" id="dd-pol"><button class="dd-btn" id="btn-pol"><span data-i="f_port">선적지 포트</span> <span class="v" id="lab-pol">전체</span> <span class="ar">▾</span></button>
@@ -788,6 +789,8 @@ $('weeks-f').addEventListener('click',e=>{const it=e.target.closest('.wkopt');if
 $('weeks-t').addEventListener('click',e=>{const it=e.target.closest('.wkopt');if(!it)return;wkTo=+it.dataset.w;$('dd-wt').classList.remove('open');renderWkList('f');renderWkList('t');apply();});
 $('wf-search').addEventListener('input',e=>renderWkList('f',e.target.value));
 $('wt-search').addEventListener('input',e=>renderWkList('t',e.target.value));
+// 항로 검색: 체크상태 보존 위해 재렌더 없이 텍스트 매칭으로 표시/숨김
+$('rt-search').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#routes .dp-item').forEach(it=>{it.style.display=it.textContent.toLowerCase().includes(q)?'':'none';});});
 
 // ── pages(github.io) 전용: 라스트포트 수동지정/변경내역/공유는 사내(8077) 서버 전용 ──
 window._apply=apply;                                   // 전역 픽업 폴링이 재렌더 호출
