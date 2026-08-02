@@ -802,31 +802,36 @@ $('rt-search').addEventListener('focus',e=>{e.target.value='';document.querySele
 // ── pages(github.io) 전용: 라스트포트 수동지정/변경내역/공유는 사내(8077) 서버 전용 ──
 window._apply=apply;                                   // 전역 픽업 폴링이 재렌더 호출
 // ── 라스트포트 오버라이드: pages는 구글 로그인으로 공유시트(Sheet1) 직접 read/write (openLastPort=gen 인라인 팝업) ──
+// ★시트 접근은 discovery 문서(gapi.client.sheets)에 의존하지 않고 gapi.client.request(저수준+토큰)로.
+//   (discovery가 브라우저에서 부분 로드되면 values.update/append가 undefined→TypeError 나던 버그 회피)
+const _SHEETS_BASE='https://sheets.googleapis.com/v4/spreadsheets/'+RMK_SHEET_ID+'/values/';
+function _sheetsReady(){ return !!(window.gapi&&gapi.client&&gapi.client.request); }
+function _sheetsGet(range){ return gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)}).then(r=>r.result||{}); }
+function _sheetsUpdate(range,values){ return gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range),method:'PUT',params:{valueInputOption:'RAW'},body:{values:values}}); }
+function _sheetsAppend(range,values){ return gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)+':append',method:'POST',params:{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'},body:{values:values}}); }
 function fetchOverrides(){
-  if(!(window.gapi&&gapi.client&&gapi.client.sheets)) return Promise.resolve();
-  return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'Sheet1!A:D'})
-    .then(r=>{ LASTOVR={}; (r.result.values||[]).slice(1).forEach(row=>{ if(row[0]&&row[1])LASTOVR[row[0]]=row[1]; }); })
+  if(!_sheetsReady()) return Promise.resolve();
+  return _sheetsGet('Sheet1!A:D')
+    .then(res=>{ LASTOVR={}; (res.values||[]).slice(1).forEach(row=>{ if(row[0]&&row[1])LASTOVR[row[0]]=row[1]; }); })
     .catch(e=>{ console.warn('override read 실패', e); });
 }
 function saveOverride(vk,port,who){
-  if(!(window.gapi&&gapi.client&&gapi.client.sheets)) return Promise.resolve({ok:false,error:'sheets 미로드(재로그인 필요)'});
+  if(!_sheetsReady()) return Promise.resolve({ok:false,error:'로그인 필요(gapi 미로드)'});
   const now=_rmkNow(), row=[[vk,port||'',who||'',now]];
-  return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'Sheet1!A:D'})
-    .then(r=>{ const vals=r.result.values||[]; let idx=-1,old=''; for(let i=1;i<vals.length;i++){ if((vals[i]||[])[0]===vk){idx=i;old=(vals[i]||[])[1]||'';break;} }
-      const w=idx>=0
-        ? gapi.client.sheets.spreadsheets.values.update({spreadsheetId:RMK_SHEET_ID,range:'Sheet1!A'+(idx+1)+':D'+(idx+1),valueInputOption:'RAW',resource:{values:row}})
-        : gapi.client.sheets.spreadsheets.values.append({spreadsheetId:RMK_SHEET_ID,range:'Sheet1!A:D',valueInputOption:'RAW',insertDataOption:'INSERT_ROWS',resource:{values:row}});
-      return w.then(()=>gapi.client.sheets.spreadsheets.values.append({spreadsheetId:RMK_SHEET_ID,range:'log!A:E',valueInputOption:'RAW',insertDataOption:'INSERT_ROWS',resource:{values:[[now,vk,old||'(auto)',port||'(auto)',who||'']]}}).catch(()=>{}))
+  return _sheetsGet('Sheet1!A:D')
+    .then(res=>{ const vals=res.values||[]; let idx=-1,old=''; for(let i=1;i<vals.length;i++){ if((vals[i]||[])[0]===vk){idx=i;old=(vals[i]||[])[1]||'';break;} }
+      const w=idx>=0 ? _sheetsUpdate('Sheet1!A'+(idx+1)+':D'+(idx+1),row) : _sheetsAppend('Sheet1!A:D',row);
+      return w.then(()=>_sheetsAppend('log!A:E',[[now,vk,old||'(auto)',port||'(auto)',who||'']]).catch(()=>{}))
        .then(()=>({ok:true,rec:{last_port:port||'',set_by:who||'',set_at:now}}));
-    }).catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||String(e)}));
+    }).catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||String(e)}));
 }
 function openHistory(){
   const m=$('lpm');
   m.innerHTML=`<div class="lpm-bd"><div class="lpm-hd">라스트포트 변경내역<span class="lpm-x" onclick="closeLastPort()">✕</span></div><div class="lpm-sub">최근 수동 변경(공유). ↩ 이전 값으로 되돌립니다.</div><div class="lpm-list" id="lph-list">불러오는 중…</div></div>`;
   m.style.display='flex';
-  if(!(window.gapi&&gapi.client&&gapi.client.sheets)){ $('lph-list').textContent='시트 미로드 — 재로그인 필요'; return; }
-  gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'log!A:E'}).then(r=>{
-    const rows=(r.result.values||[]).slice(1).map(x=>({at:x[0]||'',voy_key:x[1]||'',old:x[2]||'',new:x[3]||'',by:x[4]||''})).reverse().slice(0,80);
+  if(!_sheetsReady()){ $('lph-list').textContent='로그인 필요'; return; }
+  _sheetsGet('log!A:E').then(res=>{
+    const rows=(res.values||[]).slice(1).map(x=>({at:x[0]||'',voy_key:x[1]||'',old:x[2]||'',new:x[3]||'',by:x[4]||''})).reverse().slice(0,80);
     const list=$('lph-list'); if(!rows.length){ list.textContent='변경내역이 없습니다'; return; }
     list.innerHTML=rows.map(e=>{ const revertTo=(e.old&&e.old!=='(auto)')?e.old:''; const label=revertTo||'자동';
       return `<div class="lph-row"><div><b>${e.voy_key.replace(/\|/g,' / ')}</b> <span class="muted">${e.old} → ${e.new}</span><div class="lph-meta">${e.at} · ${e.by||'-'}</div></div><button class="lph-undo" onclick="undoTo('${e.voy_key}','${revertTo}','${label}')">↩ ${label}</button></div>`;
@@ -836,20 +841,20 @@ function openHistory(){
 // ── 리마크: pages는 구글 로그인으로 공유시트 직접 read/write (spreadsheets 스코프, 작성자=로그인ID) ──
 function _rmkNow(){ const d=new Date(),p=n=>('0'+n).slice(-2); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 function fetchRemarks(){
-  if(!(window.gapi&&gapi.client&&gapi.client.sheets)) return Promise.resolve();
-  return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'remark!A:D'})
-    .then(r=>{ const m={}; (r.result.values||[]).slice(1).forEach(row=>{ if(row[0]&&row[1])m[row[0]]={remark:row[1],by:row[2]||'',at:row[3]||''}; }); REMARKS=m; })
+  if(!_sheetsReady()) return Promise.resolve();
+  return _sheetsGet('remark!A:D')
+    .then(res=>{ const m={}; (res.values||[]).slice(1).forEach(row=>{ if(row[0]&&row[1])m[row[0]]={remark:row[1],by:row[2]||'',at:row[3]||''}; }); REMARKS=m; })
     .catch(e=>{ console.warn('remark read 실패', e); });
 }
 function saveRemark(vk,text,who){
-  if(!(window.gapi&&gapi.client&&gapi.client.sheets)) return Promise.resolve({ok:false,error:'sheets 미로드(재로그인 필요)'});
+  if(!_sheetsReady()) return Promise.resolve({ok:false,error:'로그인 필요(gapi 미로드)'});
   const now=_rmkNow(), row=[[vk,text||'',who||'',now]];
-  return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:RMK_SHEET_ID,range:'remark!A:D'})
-    .then(r=>{ const vals=r.result.values||[]; let idx=-1; for(let i=1;i<vals.length;i++){ if((vals[i]||[])[0]===vk){idx=i;break;} }
-      if(idx>=0) return gapi.client.sheets.spreadsheets.values.update({spreadsheetId:RMK_SHEET_ID,range:'remark!A'+(idx+1)+':D'+(idx+1),valueInputOption:'RAW',resource:{values:row}});
-      return gapi.client.sheets.spreadsheets.values.append({spreadsheetId:RMK_SHEET_ID,range:'remark!A:D',valueInputOption:'RAW',insertDataOption:'INSERT_ROWS',resource:{values:row}});
+  return _sheetsGet('remark!A:D')
+    .then(res=>{ const vals=res.values||[]; let idx=-1; for(let i=1;i<vals.length;i++){ if((vals[i]||[])[0]===vk){idx=i;break;} }
+      if(idx>=0) return _sheetsUpdate('remark!A'+(idx+1)+':D'+(idx+1),row);
+      return _sheetsAppend('remark!A:D',row);
     }).then(()=>({ok:true,rec:{at:now}}))
-    .catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||String(e)}));
+    .catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||String(e)}));
 }
 // 인라인 onclick(전역)용 — boot 내부 함수를 전역 노출(pages는 boot 래핑이라 필수)
 window.openLastPort=openLastPort; window.closeLastPort=closeLastPort; window.pickLastPort=pickLastPort;
