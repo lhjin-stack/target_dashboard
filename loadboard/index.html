@@ -239,7 +239,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
 <div id="topbar"><header style="position:relative"><button id="lang" class="langbtn">EN</button>
 <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><h1><span style="color:#dc2626">Max</span> ROB Dashboard <span class="muted" id="genlab" style="font-size:12px">· Loadable Space (UISCBS114) </span></h1>
 <span class="mtseg modeseg"><button id="mode-week" class="on" data-i="m_week">주차별</button><button id="mode-voy" data-i="m_voy">항차별</button></span></div>
-<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA)·소석률(ROB/Own Slot) = 각각 ALL/Laden 토글</b> · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot·Loadable Space=총계 고정</div></header>
+<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA)·소석률(ROB/Own Slot) = 각각 ALL/Laden 토글</b> · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot=총계 고정</div></header>
 <div class="bar">
   <span class="flab" data-i="f_week">주차</span>
   <div class="dd" id="dd-wf"><button class="dd-btn" id="btn-wf"><span class="v" id="lab-wf">–</span> <span class="ar">▾</span></button>
@@ -333,7 +333,13 @@ const utilOf=r=>{const o=r.own_slot||0;return o?Math.round(robOf(r)/o*1000)/10:n
 // Loadable Space: ERP LDR_SPC_QTY = BSA − 직전까지 누적적재 + 누적양하 (= BSA − ROB + 이 항 적재). MT 포함 총계 기준.
 //   Laden = 그 MT분을 되돌림 → surplus + (현재 재선 MT=rob_mty) − (이 항에서 실은 MT=lift_mty).
 //   예) KDB 2605W NBO: -208 + 404(SHA서 실어 SHK까지 가는 공컨) − 0 = 196.
-const surpOf=r=>(utilMode==='all')?(r.surplus||0):((r.surplus||0)+(r.rob_mty||0)-(r.lift_mty||0));
+//   ★dis행(양하·경유)은 lift_mty가 0으로만 들어옴 — 같은 기항이 방향 전환(W>E, N>S) 뒤 다음 항차코드에선
+//   적출항으로 다시 잡히므로, (선명|포트|ETD)로 그 load행의 lift_mty를 회수해 보정한다.
+//   예) KDB 2605W NSA(dis) ← 2605E NSA(load) lift_mty 158 → laden Loadable 199(과대) 아닌 41.
+const _MTYL={};
+ALL.forEach(r=>{const k=r.vessel+'|'+r.pol+'|'+r.etd; if(_MTYL[k]===undefined)_MTYL[k]=r.lift_mty||0;});
+const mtyLoadOf=r=>r.role==='dis'?(_MTYL[r.vessel+'|'+r.pol+'|'+r.etd]||0):(r.lift_mty||0);
+const surpOf=r=>(utilMode==='all')?(r.surplus||0):((r.surplus||0)+(r.rob_mty||0)-mtyLoadOf(r));
 // ── 주차: 데이터 ETD로 주 시작(일요일) 도출 → "M월 W주차 (Wxx)" 라벨(하드코딩 앵커 불필요, 연도 롤오버 안전) ──
 const weeks=[...new Set(ALL.map(r=>r.week).filter(w=>w!=null))].sort((a,b)=>a-b);
 const weekStart={};
