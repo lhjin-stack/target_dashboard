@@ -122,6 +122,10 @@ table.board.grid{table-layout:auto;width:auto;max-width:100%}
 .board.grid tbody tr.wkstart td{border-top:2px solid #5b7bb0}
 .board.grid tbody tr.subrow td{background:#eef2f8;font-weight:600;color:#3a4a66;border-top:1px solid #cbd6e8}
 .board.grid.nosub tr.subrow{display:none}
+.board.grid tbody tr.wkhdr td{background:#e8eef7;font-weight:600;color:#2a3a58;border-top:2px solid #5b7bb0;cursor:pointer;user-select:none}
+.board.grid tbody tr.wkhdr.open td{background:#dbe6f5}
+.board.grid tbody tr.wkhdr:hover td{background:#d3e0f2}
+.board.grid tbody tr.wkhdr .wktog{display:inline-block;width:12px;color:#5b7bb0;font-size:10px}
 .board.grid tbody tr.leaf:hover td{background:#eef4ff}
 #b-sub.on,#b-skp.on,#b-last.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 .langbtn{position:absolute;top:12px;right:16px;font-weight:700}
@@ -349,10 +353,12 @@ const wkBtn=w=>{ const d=weekStart[w]; return d?`${d.getUTCMonth()+1}/${Math.cei
 const _today=(()=>{const n=new Date();return Date.UTC(n.getFullYear(),n.getMonth(),n.getDate());})();
 let _curW=weeks[0]; weeks.forEach(w=>{const s=weekStart[w];if(s&&_today>=s.getTime()&&_today<s.getTime()+604800000)_curW=w;});
 const _lastS=weekStart[weeks[weeks.length-1]]; if(_lastS&&_today>=_lastS.getTime()+604800000)_curW=weeks[weeks.length-1];
-// 기본 범위 = 현재주 ~ +7주(데이터에 있는 마지막). from/to 각각 존재 주차.
+// 기본 범위 = 현재주 ~ +3주(초기 렌더 경량화). 더 보려면 주차 필터로 확대.
 let wkFrom=_curW;
-const _cand=weeks.filter(w=>w>=_curW&&w<=_curW+7);
+const _cand=weeks.filter(w=>w>=_curW&&w<=_curW+3);
 let wkTo=_cand.length?_cand[_cand.length-1]:_curW;
+// 주차 아코디언: 펼쳐진 주차 집합. 기본 현재주만 펼침 → 접속 시 나머지 주차는 헤더(소계)만 렌더.
+let _expandWk=new Set([_curW]);
 
 const ctrPorts={};
 ALL.forEach(r=>{const c=r.pol_ctr||'ETC';(ctrPorts[c]=ctrPorts[c]||new Set()).add(r.pol);});
@@ -709,8 +715,15 @@ function render(rows,PM){
   let h=`<table class="board grid${showSub?'':' nosub'}">
     <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th>${T('c_bsa')}</th><th>${T('c_lift')}</th><th>${T('c_achv')}</th><th>${T('ownslot')}</th><th>${T('c_rob')}</th><th>${T('c_util')}</th><th>${T('c_surp')}</th><th>${T('c_slack')}</th><th class="l">${T('c_rmk')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
   if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td class="l"></td><td class="l"></td><td class="l"></td><td class="l"></td><td>${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td>${fmt(sm.o)}</td>${aggRobCell(sm)}${aggUtilCell(sm)}<td>${fmt(sm.s)}</td>${aggSlackCell(sm)}<td class="l"></td>${emptyPC}</tr>`;
-  let blk=0, lastWk=null, lastRt=null;
+  let blk=0;
   Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
+    // 주차 헤더(항상 표시·클릭 시 펼침/접힘) = 소계 + 아코디언 토글. 기본 접힘(현재주만 펼침)으로 초기 렌더 경량화(렉 방지).
+    const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
+    const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
+    const exp=_expandWk.has(wk);
+    h+=`<tr class="wkhdr${exp?' open':''}" onclick="toggleWk(${wk})"><td class="l"><span class="wktog">${exp?'▾':'▸'}</span> ${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td>${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td>${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}<td>${fmt(a.s)}</td>${aggSlackCell(a)}<td class="l"></td>${emptyPC}</tr>`;
+    if(!exp) return;   // 접힌 주차는 상세행 미생성(초기/재렌더 부하 급감)
+    let lastRt=null;
     Object.keys(tree[wk]).sort().forEach(rt=>{
       Object.keys(tree[wk][rt]).sort().forEach(vk=>{
         const arr=tree[wk][rt][vk];const [vsl,voy]=vk.split('|');const own=arr[0].own_slot;
@@ -724,12 +737,12 @@ function render(rows,PM){
           const aw=Math.max(0,Math.min(100,av||0));
           const acol=av==null?'transparent':(av>100?'#f7d7d7':(av<80?'#fbe6c4':'#e3edfb'));
           const ast=`background:linear-gradient(to right,${acol} ${aw}%,transparent ${aw}%)`;
-          const showWk=first&&wk!==lastWk, showRt=first&&(wk!==lastWk||rt!==lastRt);
-          if(first){lastWk=wk;lastRt=rt;}
+          const showRt=first&&rt!==lastRt;
+          if(first){lastRt=rt;}
           const isLastP=showLast&&LASTMAP[vk]===r.pol;   // 주차별 라스트 마크(#4)
           const slk=(r.own_slot||0)-robOf(r);            // 잉여선복 = Own Slot − ROB(#3, 토글반영)
-          h+=`<tr class="leaf${bcls}${showWk?' wkstart':(first?' vstart':'')}${isLastP?' lastrow':''}">`
-           + `<td class="l gk">${showWk?wk:''}</td><td class="l gk">${showRt?rt:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${vsl}|${voy}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${vsl} / ${voy}`:''}</td>`
+          h+=`<tr class="leaf${bcls}${first?' vstart':''}${isLastP?' lastrow':''}">`
+           + `<td class="l gk"></td><td class="l gk">${showRt?rt:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${vsl}|${voy}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${vsl} / ${voy}`:''}</td>`
            + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
            + `<td>${fmt(bsaOf(r))}</td><td>${fmt(liftOf(r))}</td><td class="${aC}" style="${ast}">${av==null?'–':av+'%'}</td>`
            + `<td class="gk own">${first?fmt(own):''}</td><td>${fmt(robOf(r))}</td>`
@@ -737,14 +750,11 @@ function render(rows,PM){
         });
       });
     });
-    if(showSub){
-      const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
-      const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
-      h+=`<tr class="subrow"><td class="l">${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td>${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td>${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}<td>${fmt(a.s)}</td>${aggSlackCell(a)}<td class="l"></td>${emptyPC}</tr>`;
-    }
   });
   $('wrap').innerHTML=h+'</tbody></table>';
 }
+// 주차 헤더 클릭 → 펼침/접힘 토글 후 재렌더(apply로 통일: pages 픽업/PM도 자동 반영).
+function toggleWk(wk){ wk=+wk; if(_expandWk.has(wk))_expandWk.delete(wk); else _expandWk.add(wk); apply(); }
 
 function setAchv(m){achvMode=m;$('achv-all').classList.toggle('on',m==='all');$('achv-laden').classList.toggle('on',m==='laden');apply();}
 function setUtil(m){utilMode=m;$('util-all').classList.toggle('on',m==='all');$('util-laden').classList.toggle('on',m==='laden');apply();}
@@ -864,7 +874,7 @@ function saveRemark(vk,text,who){
 }
 // 인라인 onclick(전역)용 — boot 내부 함수를 전역 노출(pages는 boot 래핑이라 필수)
 window.openLastPort=openLastPort; window.closeLastPort=closeLastPort; window.pickLastPort=pickLastPort;
-window.undoTo=undoTo; window.openHistory=openHistory; window.editRemark=editRemark;
+window.undoTo=undoTo; window.openHistory=openHistory; window.editRemark=editRemark; window.toggleWk=toggleWk;
 renderRoutes();renderCtrs();renderPorts();renderTeams();renderHaul();renderWkList('f');renderWkList('t');
 // 초기 상태 → DOM 동기화 (강제/저장된 viewMode·showLast·lastBasis 반영. 중국/동남아 토글은 라스트 ON일 때 노출)
 $('mode-week').classList.toggle('on',viewMode==='week');
