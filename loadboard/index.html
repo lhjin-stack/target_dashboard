@@ -822,9 +822,10 @@ window._apply=apply;                                   // 전역 픽업 폴링�
 //   (discovery가 브라우저에서 부분 로드되면 values.update/append가 undefined→TypeError 나던 버그 회피)
 const _SHEETS_BASE='https://sheets.googleapis.com/v4/spreadsheets/'+RMK_SHEET_ID+'/values/';
 function _sheetsReady(){ return !!(window.gapi&&gapi.client&&gapi.client.request); }
-function _sheetsGet(range){ return gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)}).then(r=>r.result||{}); }
-function _sheetsUpdate(range,values){ return gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range),method:'PUT',params:{valueInputOption:'RAW'},body:{values:values}}); }
-function _sheetsAppend(range,values){ return gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)+':append',method:'POST',params:{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'},body:{values:values}}); }
+// ★gapi.client.request 반환은 .then은 있어도 .catch 없는 유사-thenable → Promise.resolve로 감싸 진짜 Promise화(.catch 사용 가능).
+function _sheetsGet(range){ return Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)})).then(r=>r.result||{}); }
+function _sheetsUpdate(range,values){ return Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range),method:'PUT',params:{valueInputOption:'RAW'},body:{values:values}})); }
+function _sheetsAppend(range,values){ return Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)+':append',method:'POST',params:{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'},body:{values:values}})); }
 function fetchOverrides(){
   if(!_sheetsReady()) return Promise.resolve();
   return _sheetsGet('Sheet1!A:D')
