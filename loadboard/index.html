@@ -615,7 +615,7 @@ const aggUtil=a=>(a.u&&a.o)?Math.round(a.r/a.o*100):null;
 // 집계행 셀: ROB·소석률·잉여선복이 컬럼상 떨어져 있어 각각 별도 셀로 생성(u=false면 중복계산 위험→'–')
 function aggRobCell(a){ return a.u?`<td>${fmt(a.r)}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
 function aggUtilCell(a){ if(!a.u)return `<td class="dim" title="${T('rob_na')}">–</td>`; const u=aggUtil(a); return `<td>${u==null?'–':u+'%'}</td>`; }
-function aggSlackCell(a){ return a.u?`<td>${fmt((a.o||0)-(a.r||0))}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
+function aggSlackCell(a){ return a.u?`<td>${fmt((a.s||0)-(a.r||0))}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
 // 소석률(Loadable Space) 집계 = ΣROB / ΣLoadable Space (ROB 중복계산 위험 그룹은 '–')
 function aggUtil2Cell(a){ if(!a.u)return `<td class="dim" title="${T('rob_na')}">–</td>`; return `<td>${a.s>0?Math.round(a.r/a.s*100)+'%':'–'}</td>`; }
 
@@ -676,7 +676,7 @@ function renderVoyage(voys){
       const bw=Math.round(Math.abs(sv)/maxS*50),bar=sv>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
       const isLastP=showLast&&lastPol&&r.pol===lastPol&&!isDis;
       const cls='leaf'+bcls+(first?' vstart':'')+(r.skp==='Y'?' skprow':'')+(isLastP?' lastrow':'');
-      const slk=(r.own_slot||0)-robOf(r);            // 잉여선복 = Own Slot − ROB
+      const slk=surpOf(r)-robOf(r);                  // 잉여선복 = Loadable Space − ROB
       h+=`<tr class="${cls}">`
        + `<td class="dim">${r.ord!=null?r.ord:''}</td>`
        + `<td class="l gk">${first?v.route:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${v.k}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${v.vsl} / ${v.voy}`:''}</td>`
@@ -744,7 +744,7 @@ function render(rows,PM){
           const showRt=first&&rt!==lastRt;
           if(first){lastRt=rt;}
           const isLastP=showLast&&LASTMAP[vk]===r.pol;   // 주차별 라스트 마크(#4)
-          const slk=(r.own_slot||0)-robOf(r);            // 잉여선복 = Own Slot − ROB(#3, 토글반영)
+          const slk=surpOf(r)-robOf(r);                  // 잉여선복 = Loadable Space − ROB(#3, 토글반영)
           h+=`<tr class="leaf${bcls}${first?' vstart':''}${isLastP?' lastrow':''}">`
            + `<td class="l gk"></td><td class="l gk">${showRt?rt:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${vsl}|${voy}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${vsl} / ${voy}`:''}</td>`
            + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
