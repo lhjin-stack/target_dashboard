@@ -90,6 +90,8 @@ table.board{border-collapse:collapse;width:100%;table-layout:fixed;background:#f
   position:sticky;top:var(--topH,0px);z-index:5;text-align:right}
 #topbar{position:sticky;top:0;z-index:30;background:#fff}
 .board thead th.l{text-align:left}
+/* 컬럼명 부제(괄호부) — 줄바꿔 작게: 컬럼 폭이 괄호 때문에 불필요하게 넓어지는 것 방지 */
+.chsub{display:block;font-size:9.5px;font-weight:400;color:#8794aa;line-height:1.2;margin-top:1px}
 .board tbody td{text-align:right}
 .board tbody td.l{text-align:left}.board tbody td.c{text-align:center}
 tr.bw td{background:#d9e4f2;font-weight:700;color:#21375b;cursor:pointer;text-align:right;padding:8px 12px}
@@ -243,7 +245,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
 <div id="topbar"><header style="position:relative"><button id="lang" class="langbtn">EN</button>
 <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><h1><span style="color:#dc2626">Max</span> ROB Dashboard <span class="muted" id="genlab" style="font-size:12px">· Loadable Space (UISCBS114) </span></h1>
 <span class="mtseg modeseg"><button id="mode-week" class="on" data-i="m_week">주차별</button><button id="mode-voy" data-i="m_voy">항차별</button></span></div>
-<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA)·소석률(Own Slot)=ROB/Own Slot·소석률(Loadable Space)=ROB/Loadable Space = 각각 ALL/Laden 토글</b> · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot=총계 고정</div></header>
+<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA) · 소석률(ROB/Own Slot, ROB/Loadable Space) = 각각 ALL/Laden 토글</b> · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot=총계 고정</div></header>
 <div class="bar">
   <span class="flab" data-i="f_week">주차</span>
   <div class="dd" id="dd-wf"><button class="dd-btn" id="btn-wf"><span class="v" id="lab-wf">–</span> <span class="ar">▾</span></button>
@@ -305,7 +307,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
   s_bsa:'BSA 합',s_lift:'Lifting 합',s_achv:'평균 달성률',s_surp:'총 Loadable Space',s_own:'총 Own Slot',s_util:'평균 소석률',s_voy:'항차',s_cnt:'행',
   rob_na:'항차당 적출항이 2개 이상이라 ROB 합산 시 중복 계산됨(선적지·항로를 좁히면 표시)',
-  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률(Own Slot)',f_util:'소석률',c_util2:'소석률(Loadable Space)',c_surp:'Loadable Space',c_slack:'잉여선복',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',c_rmk:'Remark',
+  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률<span class="chsub">(Own Slot)</span>',f_util:'소석률',c_util2:'소석률<span class="chsub">(Loadable Space)</span>',c_surp:'Loadable Space',c_slack:'잉여선복',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',c_rmk:'Remark',
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
@@ -315,7 +317,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
   s_bsa:'Total BSA',s_lift:'Total Lifting',s_achv:'Avg Achv',s_surp:'Total Loadable Space',s_own:'Total Own Slot',s_util:'Avg Util%',s_voy:'Voyages',s_cnt:'Rows',
   rob_na:'A voyage has 2+ origin ports here, so summing ROB double-counts (narrow origin/route to show)',
-  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%(Own Slot)',f_util:'Util%',c_util2:'Util%(Loadable Space)',c_surp:'Loadable Space',c_slack:'Surplus',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',c_rmk:'Remark',
+  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%<span class="chsub">(Own Slot)</span>',f_util:'Util%',c_util2:'Util%<span class="chsub">(Loadable Space)</span>',c_surp:'Loadable Space',c_slack:'Surplus',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',c_rmk:'Remark',
   total:'TOTAL',week:'W',voy:'voy',pol_n:'POLs',ownslot:'Own Slot',empty:'No matching data',
   t_o:'OBT (Overseas)',t_e:'EST (Export)',t_i:'IST (Import)',t_j:'JBT (Japan)',f_haul:'Head/Back',sel_haul:'Select Head/Back',h_head:'Head Haul',h_back:'Back Haul',langbtn:'한국어'}};
 const T=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ko[k]||k;
@@ -670,8 +672,7 @@ function renderVoyage(voys){
     v.rot.forEach((r,i)=>{
       const first=i===0, isDis=r.role==='dis';
       const av=achvOf(r),aC=achvCls(av);
-      const uv=utilOf(r);const uw=Math.max(0,Math.min(100,uv||0));const uv2=utilLdOf(r);
-      const ust=`background:linear-gradient(to right,#d7e6fb ${uw}%,transparent ${uw}%)`;
+      const uv=utilOf(r);const uv2=utilLdOf(r);   // 소석률 셀은 값만(퍼센트바 없음)
       const sv=surpOf(r),sC=sv<0?'neg surplus':'surplus';
       const bw=Math.round(Math.abs(sv)/maxS*50),bar=sv>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
       const isLastP=showLast&&lastPol&&r.pol===lastPol&&!isDis;
@@ -683,7 +684,7 @@ function renderVoyage(voys){
        + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
        + `<td>${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))}</td><td>${isDis?'<span class="dim">–</span>':fmt(liftOf(r))}</td><td class="${aC}">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
        + `<td class="gk own">${first?fmt(v.own):''}</td><td>${fmt(robOf(r))}</td>`
-       + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(sv)}${bar}</td><td>${uv2==null?'<span class="dim">–</span>':uv2+'%'}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}</tr>`;
+       + `<td>${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(sv)}${bar}</td><td>${uv2==null?'<span class="dim">–</span>':uv2+'%'}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}</tr>`;
     });
   });
   $('wrap').innerHTML=h+'</tbody></table>';
@@ -736,8 +737,7 @@ function render(rows,PM){
           const first=i===0;
           const av=achvOf(r),sv=surpOf(r),aC=achvCls(av),sC=sv<0?'neg surplus':'surplus';
           const bw=Math.round(Math.abs(sv)/maxS*50),bar=sv>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
-          const uv=utilOf(r);const uw=Math.max(0,Math.min(100,uv||0));const uv2=utilLdOf(r);
-          const ust=`background:linear-gradient(to right,#d7e6fb ${uw}%,transparent ${uw}%)`;
+          const uv=utilOf(r);const uv2=utilLdOf(r);   // 소석률 셀은 값만(퍼센트바 없음)
           const aw=Math.max(0,Math.min(100,av||0));
           const acol=av==null?'transparent':(av>100?'#f7d7d7':(av<80?'#fbe6c4':'#e3edfb'));
           const ast=`background:linear-gradient(to right,${acol} ${aw}%,transparent ${aw}%)`;
@@ -750,7 +750,7 @@ function render(rows,PM){
            + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
            + `<td>${fmt(bsaOf(r))}</td><td>${fmt(liftOf(r))}</td><td class="${aC}" style="${ast}">${av==null?'–':av+'%'}</td>`
            + `<td class="gk own">${first?fmt(own):''}</td><td>${fmt(robOf(r))}</td>`
-           + `<td style="${ust}">${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(sv)}${bar}</td><td>${uv2==null?'<span class="dim">–</span>':uv2+'%'}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${pmShow?pickCells(r,PMAP):''}</tr>`;
+           + `<td>${uv==null?'–':uv+'%'}</td><td class="${sC}">${fmt(sv)}${bar}</td><td>${uv2==null?'<span class="dim">–</span>':uv2+'%'}</td><td${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${pmShow?pickCells(r,PMAP):''}</tr>`;
         });
       });
     });
