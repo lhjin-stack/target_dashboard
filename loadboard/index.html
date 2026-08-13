@@ -129,23 +129,20 @@ table.board.grid{table-layout:auto;width:auto;max-width:100%}
 .board.grid tbody tr.wkhdr:hover td{background:#d3e0f2}
 .board.grid tbody tr.wkhdr .wktog{display:inline-block;width:12px;color:#5b7bb0;font-size:10px}
 .board.grid tbody tr.leaf:hover td{background:#eef4ff}
-/* ── 컬럼 그룹 파스텔 ── g1=BSA·Lifting·달성률 / g2=Own Slot·ROB·소석률 / g3=Loadable·소석률·잉여선복
+/* ── 컬럼 그룹 파스텔 ── g1=BSA·Loadable Space·Lifting·달성률 / g2=Own Slot·ROB·소석률·잉여선복
    본문은 leaf 행에만(집계·주차헤더는 자기 색 유지), 라스트/호버 강조는 아래에서 다시 덮어써 보존. */
-.board thead th.g1{background:#f2e5d6}.board thead th.g2{background:#e2eeda}.board thead th.g3{background:#dde8f6}
+.board thead th.g1{background:#f2e5d6}.board thead th.g2{background:#e2eeda}
 .board.grid tbody tr.leaf td.g1{background:#fdf8f2}
 .board.grid tbody tr.leaf td.g2{background:#f7fbf4}
-.board.grid tbody tr.leaf td.g3{background:#f5f9fe}
 .board.grid tbody tr.leaf.blk1 td.g1{background:#faf1e5}
 .board.grid tbody tr.leaf.blk1 td.g2{background:#eff7ea}
-.board.grid tbody tr.leaf.blk1 td.g3{background:#ebf3fc}
-.board.grid tbody tr.leaf.lastrow td.g1,.board.grid tbody tr.leaf.lastrow td.g2,.board.grid tbody tr.leaf.lastrow td.g3{background:#fff6e0}
-.board.grid tbody tr.leaf.skprow td.g1,.board.grid tbody tr.leaf.skprow td.g2,.board.grid tbody tr.leaf.skprow td.g3{background:#f4f5f7}
-.board.grid tbody tr.leaf:hover td.g1,.board.grid tbody tr.leaf:hover td.g2,.board.grid tbody tr.leaf:hover td.g3{background:#eef4ff}
+.board.grid tbody tr.leaf.lastrow td.g1,.board.grid tbody tr.leaf.lastrow td.g2{background:#fff6e0}
+.board.grid tbody tr.leaf.skprow td.g1,.board.grid tbody tr.leaf.skprow td.g2{background:#f4f5f7}
+.board.grid tbody tr.leaf:hover td.g1,.board.grid tbody tr.leaf:hover td.g2{background:#eef4ff}
 /* 그룹 경계 세로선(모든 행 공통) */
 .board th.gs.g1,.board td.gs.g1{border-left:2px solid #d9bd9d}
 .board th.gs.g2,.board td.gs.g2{border-left:2px solid #b2d2a2}
-.board th.gs.g3,.board td.gs.g3{border-left:2px solid #a9c6e6}
-.board th.gend,.board td.gend{border-left:2px solid #a9c6e6}
+.board th.gend,.board td.gend{border-left:2px solid #b2d2a2}
 #b-sub.on,#b-skp.on,#b-last.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 .langbtn{position:absolute;top:12px;right:16px;font-weight:700}
 
@@ -262,7 +259,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
 <div id="topbar"><header style="position:relative"><button id="lang" class="langbtn">EN</button>
 <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><h1><span style="color:#dc2626">Max</span> ROB Dashboard <span class="muted" id="genlab" style="font-size:12px">· Loadable Space (UISCBS114) </span></h1>
 <span class="mtseg modeseg"><button id="mode-week" class="on" data-i="m_week">주차별</button><button id="mode-voy" data-i="m_voy">항차별</button></span></div>
-<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA) · 소석률(ROB/Own Slot, ROB/Loadable Space) = 각각 ALL/Laden 토글</b> · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot=총계 고정</div></header>
+<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA) · 소석률(ROB/Own Slot) = 각각 ALL/Laden 토글</b> · 잉여선복 = Own Slot − ROB · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot=총계 고정</div></header>
 <div class="bar">
   <span class="flab" data-i="f_week">주차</span>
   <div class="dd" id="dd-wf"><button class="dd-btn" id="btn-wf"><span class="v" id="lab-wf">–</span> <span class="ar">▾</span></button>
@@ -287,7 +284,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
   <span class="sep"></span>
   <span class="vlab" data-i="viewopt">보기옵션</span>
   <span class="flab" data-i="c_achv">달성률</span><span class="mtseg" title="달성률(Lifting/BSA) 공컨 포함 · ALL=MT+Laden, Laden=laden만"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button></span>
-  <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot · ROB/Loadable Space) 공컨 포함 · ALL=MT+Laden ROB, Laden=laden ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button></span>
+  <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 포함 · ALL=MT+Laden ROB, Laden=laden ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button></span>
   <button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button>
   <span class="mtseg lbseg" id="lbseg" style="display:none"><button id="lb-cn" class="on" data-i="lb_cn">중국</button><button id="lb-sea" data-i="lb_sea">동남아</button></span>
   <button id="b-hist" data-i="f_hist" title="변경내역">🕘 변경내역</button>
@@ -324,7 +321,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
   s_bsa:'BSA 합',s_lift:'Lifting 합',s_achv:'평균 달성률',s_surp:'총 Loadable Space',s_own:'총 Own Slot',s_util:'평균 소석률',s_voy:'항차',s_cnt:'행',
   rob_na:'항차당 적출항이 2개 이상이라 ROB 합산 시 중복 계산됨(선적지·항로를 좁히면 표시)',
-  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률<span class="chsub">(Own Slot)</span>',f_util:'소석률',c_util2:'소석률<span class="chsub">(Loadable Space)</span>',c_surp:'Loadable Space',c_slack:'잉여선복',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',c_rmk:'Remark',
+  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률<span class="chsub">(Own Slot)</span>',f_util:'소석률',c_surp:'Loadable Space',c_slack:'잉여선복<span class="chsub">(Own Slot−ROB)</span>',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',c_rmk:'Remark',
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
@@ -334,7 +331,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
   s_bsa:'Total BSA',s_lift:'Total Lifting',s_achv:'Avg Achv',s_surp:'Total Loadable Space',s_own:'Total Own Slot',s_util:'Avg Util%',s_voy:'Voyages',s_cnt:'Rows',
   rob_na:'A voyage has 2+ origin ports here, so summing ROB double-counts (narrow origin/route to show)',
-  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%<span class="chsub">(Own Slot)</span>',f_util:'Util%',c_util2:'Util%<span class="chsub">(Loadable Space)</span>',c_surp:'Loadable Space',c_slack:'Surplus',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',c_rmk:'Remark',
+  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%<span class="chsub">(Own Slot)</span>',f_util:'Util%',c_surp:'Loadable Space',c_slack:'Surplus<span class="chsub">(Own Slot−ROB)</span>',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',c_rmk:'Remark',
   total:'TOTAL',week:'W',voy:'voy',pol_n:'POLs',ownslot:'Own Slot',empty:'No matching data',
   t_o:'OBT (Overseas)',t_e:'EST (Export)',t_i:'IST (Import)',t_j:'JBT (Japan)',f_haul:'Head/Back',sel_haul:'Select Head/Back',h_head:'Head Haul',h_back:'Back Haul',langbtn:'한국어'}};
 const T=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ko[k]||k;
@@ -363,8 +360,8 @@ const _MTYL={};
 ALL.forEach(r=>{const k=r.vessel+'|'+r.pol+'|'+r.etd; if(_MTYL[k]===undefined)_MTYL[k]=r.lift_mty||0;});
 const mtyLoadOf=r=>r.role==='dis'?(_MTYL[r.vessel+'|'+r.pol+'|'+r.etd]||0):(r.lift_mty||0);
 const surpOf=r=>(utilMode==='all')?(r.surplus||0):((r.surplus||0)+(r.rob_mty||0)-mtyLoadOf(r));
-// 소석률(Loadable Space) = ROB / Loadable Space. Loadable≤0(=이미 만재·초과)면 비율 의미 없음 → '–'.
-const utilLdOf=r=>{const s=surpOf(r);return s>0?Math.round(robOf(r)/s*1000)/10:null;};
+// 잉여선복 = Own Slot − ROB (자선슬롯 대비 남은 여유. 음수=자선슬롯 초과 적재)
+const slackOf=r=>(r.own_slot||0)-robOf(r);
 // ── 주차: 데이터 ETD로 주 시작(일요일) 도출 → "M월 W주차 (Wxx)" 라벨(하드코딩 앵커 불필요, 연도 롤오버 안전) ──
 const weeks=[...new Set(ALL.map(r=>r.week).filter(w=>w!=null))].sort((a,b)=>a-b);
 const weekStart={};
@@ -631,12 +628,11 @@ function aggr(rows){
          r:rows.reduce((a,x)=>a+robOf(x),0),o:o,u:!dup};
 }
 const aggUtil=a=>(a.u&&a.o)?Math.round(a.r/a.o*100):null;
-// 집계행 셀: ROB·소석률·잉여선복이 컬럼상 떨어져 있어 각각 별도 셀로 생성(u=false면 중복계산 위험→'–')
+// 집계행 셀: ROB·소석률·잉여선복이 각각 별도 셀(u=false면 ROB 중복계산 위험→'–')
 function aggRobCell(a){ return a.u?`<td>${fmt(a.r)}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
 function aggUtilCell(a){ if(!a.u)return `<td class="dim" title="${T('rob_na')}">–</td>`; const u=aggUtil(a); return `<td>${u==null?'–':u+'%'}</td>`; }
-function aggSlackCell(a){ return a.u?`<td>${fmt((a.s||0)-(a.r||0))}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
-// 소석률(Loadable Space) 집계 = ΣROB / ΣLoadable Space (ROB 중복계산 위험 그룹은 '–')
-function aggUtil2Cell(a){ if(!a.u)return `<td class="dim" title="${T('rob_na')}">–</td>`; return `<td>${a.s>0?Math.round(a.r/a.s*100)+'%':'–'}</td>`; }
+// 잉여선복 집계 = ΣOwn Slot(항차당 1회) − ΣROB
+function aggSlackCell(a){ return a.u?`<td>${fmt((a.o||0)-(a.r||0))}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
 
 function apply(){
   labels();
@@ -682,26 +678,26 @@ function renderVoyage(voys){
   if(!voys.length){$('wrap').innerHTML=`<div class="empty">${T('empty')}</div>`;$('s_voy').textContent='0';return;}
   const maxS=Math.max(1,...loadAll.map(r=>Math.abs(surpOf(r))));
   let h=`<table class="board grid voyage">
-    <thead><tr><th>${T('c_ord')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g3 gs">${T('c_surp')}</th><th class="g3">${T('c_util2')}</th><th class="g3">${T('c_slack')}</th><th class="l gend">${T('c_rmk')}</th></tr></thead><tbody>`;
+    <thead><tr><th>${T('c_ord')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_surp')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g2">${T('c_slack')}</th><th class="l gend">${T('c_rmk')}</th></tr></thead><tbody>`;
   let blk=0;
   voys.forEach(v=>{
     blk^=1;const bcls=blk?' blk1':'';const lastPol=LASTMAP[v.k];
     v.rot.forEach((r,i)=>{
       const first=i===0, isDis=r.role==='dis';
       const av=achvOf(r),aC=achvCls(av);
-      const uv=utilOf(r);const uv2=utilLdOf(r);   // 소석률 셀은 값만(퍼센트바 없음)
+      const uv=utilOf(r);   // 소석률 셀은 값만(퍼센트바 없음)
       const sv=surpOf(r),sC=sv<0?'neg surplus':'surplus';
       const bw=Math.round(Math.abs(sv)/maxS*50),bar=sv>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
       const isLastP=showLast&&lastPol&&r.pol===lastPol&&!isDis;
       const cls='leaf'+bcls+(first?' vstart':'')+(r.skp==='Y'?' skprow':'')+(isLastP?' lastrow':'');
-      const slk=surpOf(r)-robOf(r);                  // 잉여선복 = Loadable Space − ROB
+      const slk=slackOf(r);                          // 잉여선복 = Own Slot − ROB
       h+=`<tr class="${cls}">`
        + `<td class="dim">${r.ord!=null?r.ord:''}</td>`
        + `<td class="l gk">${first?v.route:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${v.k}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${v.vsl} / ${v.voy}`:''}</td>`
        + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
-       + `<td class="g1 gs">${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))}</td><td class="g1">${isDis?'<span class="dim">–</span>':fmt(liftOf(r))}</td><td class="${aC} g1">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
+       + `<td class="g1 gs">${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))}</td><td class="${sC} g1">${fmt(sv)}${bar}</td><td class="g1">${isDis?'<span class="dim">–</span>':fmt(liftOf(r))}</td><td class="${aC} g1">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
        + `<td class="gk own g2 gs">${first?fmt(v.own):''}</td><td class="g2">${fmt(robOf(r))}</td>`
-       + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="${sC} g3 gs">${fmt(sv)}${bar}</td><td class="g3">${uv2==null?'<span class="dim">–</span>':uv2+'%'}</td><td class="g3"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}</tr>`;
+       + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}</tr>`;
     });
   });
   $('wrap').innerHTML=h+'</tbody></table>';
@@ -735,15 +731,15 @@ function render(rows,PM){
   $('s_voy').textContent=voySet.size;
   const maxS=Math.max(1,...rows.map(r=>Math.abs(surpOf(r))));
   let h=`<table class="board grid${showSub?'':' nosub'}">
-    <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g3 gs">${T('c_surp')}</th><th class="g3">${T('c_util2')}</th><th class="g3">${T('c_slack')}</th><th class="l gend">${T('c_rmk')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
-  if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td class="l"></td><td class="l"></td><td class="l"></td><td class="l"></td><td class="gs g1">${fmt(sm.b)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td class="gs g2">${fmt(sm.o)}</td>${aggRobCell(sm)}${aggUtilCell(sm)}<td class="gs g3">${fmt(sm.s)}</td>${aggUtil2Cell(sm)}${aggSlackCell(sm)}<td class="l gend"></td>${emptyPC}</tr>`;
+    <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_surp')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g2">${T('c_slack')}</th><th class="l gend">${T('c_rmk')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
+  if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td class="l"></td><td class="l"></td><td class="l"></td><td class="l"></td><td class="gs g1">${fmt(sm.b)}</td><td>${fmt(sm.s)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td class="gs g2">${fmt(sm.o)}</td>${aggRobCell(sm)}${aggUtilCell(sm)}${aggSlackCell(sm)}<td class="l gend"></td>${emptyPC}</tr>`;
   let blk=0;
   Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
     // 주차 헤더(항상 표시·클릭 시 펼침/접힘) = 소계 + 아코디언 토글. 기본 접힘(현재주만 펼침)으로 초기 렌더 경량화(렉 방지).
     const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
     const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
     const exp=_expandWk.has(wk);
-    h+=`<tr class="wkhdr${exp?' open':''}" onclick="toggleWk(${wk})"><td class="l"><span class="wktog">${exp?'▾':'▸'}</span> ${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td class="gs g1">${fmt(a.b)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td class="gs g2">${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}<td class="gs g3">${fmt(a.s)}</td>${aggUtil2Cell(a)}${aggSlackCell(a)}<td class="l gend"></td>${emptyPC}</tr>`;
+    h+=`<tr class="wkhdr${exp?' open':''}" onclick="toggleWk(${wk})"><td class="l"><span class="wktog">${exp?'▾':'▸'}</span> ${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td class="gs g1">${fmt(a.b)}</td><td>${fmt(a.s)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td class="gs g2">${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}${aggSlackCell(a)}<td class="l gend"></td>${emptyPC}</tr>`;
     if(!exp) return;   // 접힌 주차는 상세행 미생성(초기/재렌더 부하 급감)
     let lastRt=null;
     Object.keys(tree[wk]).sort().forEach(rt=>{
@@ -754,7 +750,7 @@ function render(rows,PM){
           const first=i===0;
           const av=achvOf(r),sv=surpOf(r),aC=achvCls(av),sC=sv<0?'neg surplus':'surplus';
           const bw=Math.round(Math.abs(sv)/maxS*50),bar=sv>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
-          const uv=utilOf(r);const uv2=utilLdOf(r);   // 소석률 셀은 값만(퍼센트바 없음)
+          const uv=utilOf(r);   // 소석률 셀은 값만(퍼센트바 없음)
           const aw=Math.max(0,Math.min(100,av||0));
           const acol=av==null?'transparent':(av>100?'#f7d7d7':(av<80?'#fbe6c4':'#e3edfb'));
           // 그라데이션 꼬리색 = 그 행의 g1 그룹 배경(안 그러면 달성률 칸만 흰색으로 튐)
@@ -762,13 +758,13 @@ function render(rows,PM){
           const showRt=first&&rt!==lastRt;
           if(first){lastRt=rt;}
           const isLastP=showLast&&LASTMAP[vk]===r.pol;   // 주차별 라스트 마크(#4)
-          const slk=surpOf(r)-robOf(r);                  // 잉여선복 = Loadable Space − ROB(#3, 토글반영)
+          const slk=slackOf(r);                          // 잉여선복 = Own Slot − ROB(토글반영)
           h+=`<tr class="leaf${bcls}${first?' vstart':''}${isLastP?' lastrow':''}">`
            + `<td class="l gk"></td><td class="l gk">${showRt?rt:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${vsl}|${voy}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${vsl} / ${voy}`:''}</td>`
            + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
-           + `<td class="g1 gs">${fmt(bsaOf(r))}</td><td class="g1">${fmt(liftOf(r))}</td><td class="${aC} g1" style="${ast}">${av==null?'–':av+'%'}</td>`
+           + `<td class="g1 gs">${fmt(bsaOf(r))}</td><td class="${sC} g1">${fmt(sv)}${bar}</td><td class="g1">${fmt(liftOf(r))}</td><td class="${aC} g1" style="${ast}">${av==null?'–':av+'%'}</td>`
            + `<td class="gk own g2 gs">${first?fmt(own):''}</td><td class="g2">${fmt(robOf(r))}</td>`
-           + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="${sC} g3 gs">${fmt(sv)}${bar}</td><td class="g3">${uv2==null?'<span class="dim">–</span>':uv2+'%'}</td><td class="g3"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${pmShow?pickCells(r,PMAP):''}</tr>`;
+           + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${pmShow?pickCells(r,PMAP):''}</tr>`;
         });
       });
     });
