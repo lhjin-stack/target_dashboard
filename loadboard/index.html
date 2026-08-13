@@ -283,7 +283,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
     <div class="dd-panel" id="pan-haul"><div class="ddhd"><span data-i="sel_haul">Head/Back 선택</span> <a class="tgl" data-f="haul" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="hauls"></div></div></div>
   <span class="sep"></span>
   <span class="vlab" data-i="viewopt">보기옵션</span>
-  <span class="flab" data-i="c_achv">달성률</span><span class="mtseg" title="달성률(Lifting/BSA) 공컨 포함 · ALL=MT+Laden, Laden=laden만"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button></span>
+  <span class="flab" data-i="f_achv">달성률</span><span class="mtseg" title="달성률(Lifting/BSA) 공컨 포함 · ALL=MT+Laden, Laden=laden만"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button></span>
   <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 포함 · ALL=MT+Laden ROB, Laden=laden ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button></span>
   <button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button>
   <span class="mtseg lbseg" id="lbseg" style="display:none"><button id="lb-cn" class="on" data-i="lb_cn">중국</button><button id="lb-sea" data-i="lb_sea">동남아</button></span>
@@ -321,7 +321,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
   s_bsa:'BSA 합',s_lift:'Lifting 합',s_achv:'평균 달성률',s_surp:'총 Loadable Space',s_own:'총 Own Slot',s_util:'평균 소석률',s_voy:'항차',s_cnt:'행',
   rob_na:'항차당 적출항이 2개 이상이라 ROB 합산 시 중복 계산됨(선적지·항로를 좁히면 표시)',
-  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률',c_rob:'ROB',c_util:'소석률<span class="chsub">(Own Slot)</span>',f_util:'소석률',c_surp:'Loadable Space',c_slack:'잉여선복<span class="chsub">(Own Slot−ROB)</span>',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',c_rmk:'Remark',
+  c_wk:'주',c_vsl:'선명 / 항차',c_pol:'POL / 국가',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'달성률<span class="chsub">(Lifting/BSA)</span>',f_achv:'달성률',c_rob:'ROB',c_util:'소석률<span class="chsub">(Own Slot)</span>',f_util:'소석률',c_surp:'Loadable Space',c_slack:'잉여선복<span class="chsub">(Own Slot−ROB)</span>',c_eir:'EIR',c_pick:'픽업',c_notpick:'미픽업',c_pick_pct:'픽업%',c_rmk:'Remark',
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
@@ -331,7 +331,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
   s_bsa:'Total BSA',s_lift:'Total Lifting',s_achv:'Avg Achv',s_surp:'Total Loadable Space',s_own:'Total Own Slot',s_util:'Avg Util%',s_voy:'Voyages',s_cnt:'Rows',
   rob_na:'A voyage has 2+ origin ports here, so summing ROB double-counts (narrow origin/route to show)',
-  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%',c_rob:'ROB',c_util:'Util%<span class="chsub">(Own Slot)</span>',f_util:'Util%',c_surp:'Loadable Space',c_slack:'Surplus<span class="chsub">(Own Slot−ROB)</span>',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',c_rmk:'Remark',
+  c_wk:'Wk',c_vsl:'Vessel / Voy',c_pol:'POL / Country',c_etd:'ETD',c_bsa:'BSA',c_lift:'Lifting',c_achv:'Achv%<span class="chsub">(Lifting/BSA)</span>',f_achv:'Achv%',c_rob:'ROB',c_util:'Util%<span class="chsub">(Own Slot)</span>',f_util:'Util%',c_surp:'Loadable Space',c_slack:'Surplus<span class="chsub">(Own Slot−ROB)</span>',c_eir:'EIR',c_pick:'Picked',c_notpick:'Not picked',c_pick_pct:'Pick%',c_rmk:'Remark',
   total:'TOTAL',week:'W',voy:'voy',pol_n:'POLs',ownslot:'Own Slot',empty:'No matching data',
   t_o:'OBT (Overseas)',t_e:'EST (Export)',t_i:'IST (Import)',t_j:'JBT (Japan)',f_haul:'Head/Back',sel_haul:'Select Head/Back',h_head:'Head Haul',h_back:'Back Haul',langbtn:'한국어'}};
 const T=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ko[k]||k;
