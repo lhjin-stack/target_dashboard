@@ -596,7 +596,7 @@ function rmkSave(key, text, cell){
 let CONFIRMS={};
 let WK_KEYS={};   // {week: [cfmKey,...]} — render() 시점 필터 반영된 그 주차 항차키(주차 헤더 일괄확인용)
 function cfmKey(r){ return r.vessel+'|'+r.voyage+'|'+(r.pol||''); }
-function _unconfDay(){ return new Date().getDay()>=3; }  // 수(3)~토(6)만 미확인 강조 — 월·화는 표시 안 함(매일 빨간건 피로도↑, 체크 자체는 요일무관 항상 가능)
+function _unconfDay(){ const d=new Date(); return d.getDay()===3||(d.getDay()===4&&d.getHours()<12); }  // 수요일 종일~목요일 오전(12시 전)만 미확인 강조. 체크 자체는 요일무관 항상 가능
 function cfmCell(r){
   const key=cfmKey(r), on=!!(CONFIRMS[key]&&CONFIRMS[key].checked);
   const tip=on&&CONFIRMS[key].by?`확인: ${CONFIRMS[key].by} (${CONFIRMS[key].at||''})`:'주재원 확인';
