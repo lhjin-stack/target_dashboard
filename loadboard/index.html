@@ -596,6 +596,7 @@ function rmkSave(key, text, cell){
 let CONFIRMS={};
 let WK_KEYS={};   // {week: [cfmKey,...]} — render() 시점 필터 반영된 그 주차 항차키(주차 헤더 일괄확인용)
 function cfmKey(r){ return r.vessel+'|'+r.voyage+'|'+(r.pol||''); }
+function _unconfDay(){ return new Date().getDay()>=3; }  // 수(3)~토(6)만 미확인 강조 — 월·화는 표시 안 함(매일 빨간건 피로도↑, 체크 자체는 요일무관 항상 가능)
 function cfmCell(r){
   const key=cfmKey(r), on=!!(CONFIRMS[key]&&CONFIRMS[key].checked);
   const tip=on&&CONFIRMS[key].by?`확인: ${CONFIRMS[key].by} (${CONFIRMS[key].at||''})`:'주재원 확인';
@@ -743,7 +744,7 @@ function renderVoyage(voys){
       const sv=surpOf(r),sC=sv<0?'neg surplus':'surplus';
       const bw=Math.round(Math.abs(sv)/maxS*50),bar=sv>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
       const isLastP=showLast&&lastPol&&r.pol===lastPol&&!isDis;
-      const unconf=!(CONFIRMS[cfmKey(r)]&&CONFIRMS[cfmKey(r)].checked);
+      const unconf=_unconfDay()&&!(CONFIRMS[cfmKey(r)]&&CONFIRMS[cfmKey(r)].checked);
       const cls='leaf'+bcls+(first?' vstart':'')+(r.skp==='Y'?' skprow':'')+(isLastP?' lastrow':'')+(unconf?' unconf':'');
       const slk=slackOf(r);                          // 잉여선복 = Own Slot − ROB
       h+=`<tr class="${cls}">`
@@ -816,7 +817,7 @@ function render(rows,PM){
           if(first){lastRt=rt;}
           const isLastP=showLast&&LASTMAP[vk]===r.pol;   // 주차별 라스트 마크(#4)
           const slk=slackOf(r);                          // 잉여선복 = Own Slot − ROB(토글반영)
-          h+=`<tr class="leaf${bcls}${first?' vstart':''}${isLastP?' lastrow':''}${(CONFIRMS[cfmKey(r)]&&CONFIRMS[cfmKey(r)].checked)?'':' unconf'}">`
+          h+=`<tr class="leaf${bcls}${first?' vstart':''}${isLastP?' lastrow':''}${(!_unconfDay()||(CONFIRMS[cfmKey(r)]&&CONFIRMS[cfmKey(r)].checked))?'':' unconf'}">`
            + `<td class="l gk"></td><td class="l gk">${showRt?rt:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${vsl}|${voy}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${vsl} / ${voy}`:''}</td>`
            + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
            + `<td class="g1 gs">${fmt(bsaOf(r))}</td><td class="${sC} g1">${fmt(sv)}${bar}</td><td class="g1">${fmt(liftOf(r))}</td><td class="${aC} g1" style="${ast}">${av==null?'–':av+'%'}</td>`
