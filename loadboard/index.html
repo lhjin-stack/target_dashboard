@@ -51,11 +51,13 @@ td.vsl.vclick:hover{text-decoration:underline;color:#1d4ed8}
 .lph-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 11px;border-bottom:1px solid #f0f2f5;font-size:13px}
 .lph-meta{font-size:11px;color:var(--mut);margin-top:2px}
 .lph-undo{font-size:12px;color:#b26a00;white-space:nowrap;padding:4px 9px}
-.board .rmk{min-width:300px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .rmk{min-width:var(--rmkW,340px);max-width:var(--rmkW,340px);width:var(--rmkW,340px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.colres{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;user-select:none}
+.colres:hover,.colres.on{background:#5b7bb0}
 .board .rmk-edit{cursor:text}
 .board .rmk-edit:hover{background:#eef4ff}
 .board td.rmk-editing{white-space:nowrap}
-.rmk-in{width:230px;padding:3px 7px;font-size:12px;text-align:left;border:1px solid #1d4ed8;border-radius:5px}
+.rmk-in{width:calc(var(--rmkW,340px) - 118px);min-width:170px;padding:3px 7px;font-size:12px;text-align:left;border:1px solid #1d4ed8;border-radius:5px}
 .rmk-save{margin-left:5px;padding:3px 10px;font-size:12px;background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 .rmk-cancel{margin-left:3px;padding:3px 8px;font-size:12px;color:#888}
 .rmk-del{margin-left:3px;padding:3px 8px;font-size:12px;color:#c0392b;border-color:#e3b4ad}
@@ -592,6 +594,37 @@ function rmkSave(key, text, cell){
     cell.classList.remove('rmk-editing','rmk-saving'); cell.innerHTML=rmkInner(key);
   }).catch(e=>{ toast('리마크 저장 실패 — 8077 서버에서 열어야 저장됩니다'); cell.classList.remove('rmk-editing','rmk-saving'); cell.innerHTML=rmkInner(key); });
 }
+// ── Remark 컬럼 폭 조절 — 리마크가 길어 뒤가 잘리는 문제. 폭은 localStorage 유지 ──
+const RMK_W_DEF=340, RMK_W_MIN=160, RMK_W_MAX=1000;
+function _rmkW(){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rmkW'))||RMK_W_DEF; }
+function setRmkW(px, save){
+  const w=Math.max(RMK_W_MIN, Math.min(RMK_W_MAX, Math.round(px)));
+  document.documentElement.style.setProperty('--rmkW', w+'px');
+  if(save){ try{ localStorage.setItem('lb_rmk_w', w); }catch(e){} }
+  return w;
+}
+try{ const s=parseInt(localStorage.getItem('lb_rmk_w')||'',10); if(s) setRmkW(s,false); }catch(e){}
+// thead 는 render()마다 새로 그려지므로 핸들에 직접 바인딩하지 않고 document 위임
+document.addEventListener('mousedown', e=>{
+  const h=e.target&&e.target.closest?e.target.closest('.colres'):null; if(!h) return;
+  e.preventDefault(); e.stopPropagation();
+  const x0=e.clientX, w0=h.parentElement.getBoundingClientRect().width;
+  h.classList.add('on');
+  const mv=ev=>setRmkW(w0+(ev.clientX-x0), false);
+  const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
+                 h.classList.remove('on'); setRmkW(_rmkW(), true); };
+  document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+});
+// 더블클릭 = 지금 보이는 리마크 중 제일 긴 것에 맞춤(잘림 0) ↔ 이미 맞춰져 있으면 기본폭
+document.addEventListener('dblclick', e=>{
+  const h=e.target&&e.target.closest?e.target.closest('.colres'):null; if(!h) return;
+  e.preventDefault(); e.stopPropagation();
+  let need=RMK_W_DEF;
+  document.querySelectorAll('.board td.rmk').forEach(td=>{ need=Math.max(need, td.scrollWidth+26); });
+  const cur=_rmkW();
+  setRmkW(Math.abs(cur-Math.min(need,RMK_W_MAX))<4 ? RMK_W_DEF : need, true);
+});
+
 // ── 주재원 확인(체크박스): 리마크와 같은 원장 시트에 confirm 탭. 제한 없음 — 로그인한 누구나 체크 ──
 let CONFIRMS={};
 let WK_KEYS={};   // {week: [cfmKey,...]} — render() 시점 필터 반영된 그 주차 항차키(주차 헤더 일괄확인용)
@@ -733,7 +766,7 @@ function renderVoyage(voys){
   if(!voys.length){$('wrap').innerHTML=`<div class="empty">${T('empty')}</div>`;$('s_voy').textContent='0';return;}
   const maxS=Math.max(1,...loadAll.map(r=>Math.abs(surpOf(r))));
   let h=`<table class="board grid voyage">
-    <thead><tr><th>${T('c_ord')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_surp')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g2">${T('c_slack')}</th><th class="l gend">${T('c_rmk')}</th><th class="l">${T('c_cfm')}</th></tr></thead><tbody>`;
+    <thead><tr><th>${T('c_ord')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_surp')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g2">${T('c_slack')}</th><th class="l gend rmk">${T('c_rmk')}<span class="colres" title="드래그: 폭 조절 · 더블클릭: 내용에 맞추기 ↔ 기본폭"></span></th><th class="l">${T('c_cfm')}</th></tr></thead><tbody>`;
   let blk=0;
   voys.forEach(v=>{
     blk^=1;const bcls=blk?' blk1':'';const lastPol=LASTMAP[v.k];
@@ -787,7 +820,7 @@ function render(rows,PM){
   $('s_voy').textContent=voySet.size;
   const maxS=Math.max(1,...rows.map(r=>Math.abs(surpOf(r))));
   let h=`<table class="board grid${showSub?'':' nosub'}">
-    <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_surp')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g2">${T('c_slack')}</th><th class="l gend">${T('c_rmk')}</th><th class="l">${T('c_cfm')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
+    <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_surp')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g2">${T('c_slack')}</th><th class="l gend rmk">${T('c_rmk')}<span class="colres" title="드래그: 폭 조절 · 더블클릭: 내용에 맞추기 ↔ 기본폭"></span></th><th class="l">${T('c_cfm')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
   if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td class="l"></td><td class="l"></td><td class="l"></td><td class="l"></td><td class="gs g1">${fmt(sm.b)}</td><td>${fmt(sm.s)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td class="gs g2">${fmt(sm.o)}</td>${aggRobCell(sm)}${aggUtilCell(sm)}${aggSlackCell(sm)}<td class="l gend"></td><td class="l"></td>${emptyPC}</tr>`;
   let blk=0;
   Object.keys(tree).map(Number).sort((a,b)=>a-b).forEach(wk=>{
