@@ -54,6 +54,8 @@ td.vsl.vclick:hover{text-decoration:underline;color:#1d4ed8}
 .board .rmk{min-width:var(--rmkW,340px);max-width:var(--rmkW,340px);width:var(--rmkW,340px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .colres{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;user-select:none}
 .colres:hover,.colres.on{background:#5b7bb0}
+body.rmkwrap .board td.rmk{white-space:normal;word-break:break-word;overflow:visible;text-overflow:clip}
+body.rmkwrap .board td.rmk-editing{white-space:nowrap}
 .board .rmk-edit{cursor:text}
 .board .rmk-edit:hover{background:#eef4ff}
 .board td.rmk-editing{white-space:nowrap}
@@ -151,7 +153,7 @@ table.board.grid{table-layout:auto;width:auto;max-width:100%}
 .board th.gs.g1,.board td.gs.g1{border-left:2px solid #d9bd9d}
 .board th.gs.g2,.board td.gs.g2{border-left:2px solid #b2d2a2}
 .board th.gend,.board td.gend{border-left:2px solid #b2d2a2}
-#b-sub.on,#b-skp.on,#b-last.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+#b-sub.on,#b-skp.on,#b-last.on,#b-rmkw.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 .langbtn{position:absolute;top:12px;right:16px;font-weight:700}
 
 .board .pk1{border-left:2px solid #cbd6e8}
@@ -293,7 +295,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
   <span class="vlab" data-i="viewopt">보기옵션</span>
   <span class="flab" data-i="f_achv">달성률</span><span class="mtseg" title="달성률(Lifting/BSA) 공컨 포함 · ALL=MT+Laden, Laden=laden만"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button></span>
   <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 포함 · ALL=MT+Laden ROB, Laden=laden ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button></span>
-  <button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button>
+  <button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button><button id="b-rmkw" data-i="f_rmkw" title="리마크가 컬럼 폭보다 길면 줄을 바꿔 전체 내용을 보여줌(행 높이가 늘어남). 끄면 한 줄 + 말줄임">리마크 줄바꿈</button>
   <span class="mtseg lbseg" id="lbseg" style="display:none"><button id="lb-cn" class="on" data-i="lb_cn">중국</button><button id="lb-sea" data-i="lb_sea">동남아</button></span>
   <button id="b-hist" data-i="f_hist" title="변경내역">🕘 변경내역</button>
   <span class="flab" style="margin-left:auto">자료=드라이브</span><button id="logoutBtn" onclick="logout()">로그아웃</button>
@@ -323,7 +325,7 @@ let LANG='ko', showSub=false, showSkip=false, showLast=false;   // showSkip=fals
 let viewMode='week';    // 'week'=주차별(적출항) / 'voyage'=항차별(전 기항지 로테이션)
 let lastBasis='cn';     // 라스트포트 기준: 'cn'=중국발(마지막 CN 적출항) / 'sea'=동남아발(마지막 적출항)
 const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항로',f_ctr:'선적지 국가',f_port:'선적지 포트',
-  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',
+  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',f_rmkw:'리마크 줄바꿈',
   m_week:'주차별',m_voy:'항차별',c_ord:'순번',lb_cn:'중국',lb_sea:'동남아',f_hist:'🕘 변경내역',sel_route:'항로 선택',sel_ctr:'국가 선택',
   sel_port:'포트 선택',sel_team:'영업주체 선택',sel_wf:'시작 주차',sel_wt:'종료 주차',toggle:'전체/해제',all:'전체',none:'없음',
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
@@ -333,7 +335,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
-  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',
+  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',f_rmkw:'Wrap remark',
   m_week:'By Week',m_voy:'By Voyage',c_ord:'Seq',lb_cn:'China',lb_sea:'SE Asia',f_hist:'🕘 History',sel_route:'Select Route',sel_ctr:'Select Country',
   sel_port:'Select Port',sel_team:'Select Team',sel_wf:'From week',sel_wt:'To week',toggle:'All/None',all:'All',none:'None',
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
@@ -870,6 +872,14 @@ function setUtil(m){utilMode=m;$('util-all').classList.toggle('on',m==='all');$(
 $('achv-all').onclick=()=>setAchv('all');$('achv-laden').onclick=()=>setAchv('laden');
 $('util-all').onclick=()=>setUtil('all');$('util-laden').onclick=()=>setUtil('laden');
 $('lang').onclick=()=>setLang(LANG==='ko'?'en':'ko');
+let rmkWrap=true;
+try{ const _v=localStorage.getItem('lb_rmk_wrap'); if(_v!==null) rmkWrap=(_v==='1'); }catch(e){}
+function applyRmkWrap(){ document.body.classList.toggle('rmkwrap',rmkWrap);
+  const b=$('b-rmkw'); if(b)b.classList.toggle('on',rmkWrap); }
+$('b-rmkw').onclick=()=>{ rmkWrap=!rmkWrap;
+  try{ localStorage.setItem('lb_rmk_wrap', rmkWrap?'1':'0'); }catch(e){}
+  applyRmkWrap(); };
+applyRmkWrap();
 $('b-sub').onclick=()=>{showSub=!showSub;$('b-sub').classList.toggle('on',showSub);apply();};
 $('b-skp').onclick=()=>{showSkip=!showSkip;$('b-skp').classList.toggle('on',showSkip);apply();};
 $('b-last').onclick=()=>{showLast=!showLast;$('b-last').classList.toggle('on',showLast);$('lbseg').style.display=showLast?'inline-flex':'none';apply();};
