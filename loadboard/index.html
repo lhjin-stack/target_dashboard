@@ -629,7 +629,6 @@ document.addEventListener('dblclick', e=>{
 
 // ── 주재원 확인(체크박스): 리마크와 같은 원장 시트에 confirm 탭. 제한 없음 — 로그인한 누구나 체크 ──
 let CONFIRMS={};
-let WK_KEYS={};   // {week: [cfmKey,...]} — render() 시점 필터 반영된 그 주차 항차키(주차 헤더 일괄확인용)
 function cfmKey(r){ return r.vessel+'|'+r.voyage+'|'+(r.pol||''); }
 function _unconfDay(){ const d=new Date(); return d.getDay()===3||(d.getDay()===4&&d.getHours()<12); }  // 수요일 종일~목요일 오전(12시 전)만 미확인 강조. 체크 자체는 요일무관 항상 가능
 function cfmCell(r){
@@ -655,26 +654,6 @@ function toggleConfirm(key, el){
       toast(checked?`✔ 확인 완료${who?' · '+who:''}`:'확인 해제');
     } else { el.checked=!checked; toast('저장 실패: '+((j&&j.error)||'서버 오류')); }
   }).catch(()=>{ el.disabled=false; el.checked=!checked; toast('저장 실패 — 8077 서버에서 열어야 저장됩니다'); });
-}
-// 주차 헤더 체크박스 — 그 주차에 현재 필터로 보이는 항차 전체를 한 번에 확인/해제
-function bulkSaveConfirm(keys, checked, who){
-  return fetch('/api/loadboard/confirm/bulk',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({voy_keys:keys, checked:checked, set_by:who||''})}).then(r=>r.json());
-}
-function bulkConfirmWeek(wk, el){
-  const keys=WK_KEYS[wk]||[];
-  if(!keys.length){ el.checked=!el.checked; return; }
-  const checked=el.checked, who=remarkAuthor();
-  el.disabled=true;
-  bulkSaveConfirm(keys, checked, who).then(j=>{
-    el.disabled=false;
-    if(j&&j.ok){
-      const at=(j.rec&&j.rec.at)||'';
-      keys.forEach(k=>{ if(checked)CONFIRMS[k]={checked:true,by:who,at}; else delete CONFIRMS[k]; });
-      toast(`✔ ${wk}${T('week')} ${keys.length}건 ${checked?'일괄 확인':'일괄 해제'}${who?' · '+who:''}`);
-      window._apply();
-    } else { el.checked=!checked; toast('일괄 저장 실패: '+((j&&j.error)||'서버 오류')); }
-  }).catch(()=>{ el.disabled=false; el.checked=!checked; toast('일괄 저장 실패 — 8077 서버에서 열어야 저장됩니다'); });
 }
 const ctrName=c=>CTR_KR[c]?`${c} ${CTR_KR[c]}`:c;
 function renderRoutes(){$('routes').innerHTML=ALL_ROUTES.map(r=>`<label class="dp-item"><input type="checkbox" class="rt" value="${r}" checked>${r}</label>`).join('');}
@@ -816,7 +795,7 @@ function render(rows,PM){
   const smU=aggUtil(sm);$('s_util').textContent=smU==null?'–':smU+'%';
   $('s_util').parentElement.title=sm.u?'':T('rob_na');
   if(!rows.length){$('wrap').innerHTML=`<div class="empty">${T('empty')}</div>`;$('s_voy').textContent='0';return;}
-  const tree={};const voySet=new Set();WK_KEYS={};
+  const tree={};const voySet=new Set();
   rows.forEach(r=>{const vk=r.vessel+'|'+r.voyage;voySet.add(r.week+'|'+r.route+'|'+vk);
     (((tree[r.week]=tree[r.week]||{})[r.route]=tree[r.week][r.route]||{})[vk]=tree[r.week][r.route][vk]||[]).push(r);});
   $('s_voy').textContent=voySet.size;
@@ -830,9 +809,7 @@ function render(rows,PM){
     const wkRows=[];Object.values(tree[wk]).forEach(rt=>Object.values(rt).forEach(a=>wkRows.push(...a)));
     const a=aggr(wkRows);const nv=Object.values(tree[wk]).reduce((n,rt)=>n+Object.keys(rt).length,0);
     const exp=_expandWk.has(wk);
-    WK_KEYS[wk]=wkRows.map(cfmKey);
-    const wkAllOn=wkRows.length>0&&wkRows.every(r=>CONFIRMS[cfmKey(r)]&&CONFIRMS[cfmKey(r)].checked);
-    h+=`<tr class="wkhdr${exp?' open':''}" onclick="toggleWk(${wk})"><td class="l"><span class="wktog">${exp?'▾':'▸'}</span> ${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td class="gs g1">${fmt(a.b)}</td><td>${fmt(a.s)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td class="gs g2">${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}${aggSlackCell(a)}<td class="l gend"></td><td class="cfm" title="주차 전체 일괄 확인/해제"><input type="checkbox" ${wkAllOn?'checked':''} onclick="event.stopPropagation()" onchange="bulkConfirmWeek(${wk},this)"></td>${emptyPC}</tr>`;
+    h+=`<tr class="wkhdr${exp?' open':''}" onclick="toggleWk(${wk})"><td class="l"><span class="wktog">${exp?'▾':'▸'}</span> ${wk}${T('week')}</td><td class="l" colspan="2"><span class="cnt">${nv}${T('voy')}</span></td><td class="l"></td><td class="l"></td><td class="gs g1">${fmt(a.b)}</td><td>${fmt(a.s)}</td><td>${fmt(a.l)}</td><td>${a.b?Math.round(a.l/a.b*100)+'%':'–'}</td><td class="gs g2">${fmt(a.o)}</td>${aggRobCell(a)}${aggUtilCell(a)}${aggSlackCell(a)}<td class="l gend"></td><td class="cfm"></td>${emptyPC}</tr>`;
     if(!exp) return;   // 접힌 주차는 상세행 미생성(초기/재렌더 부하 급감)
     let lastRt=null;
     Object.keys(tree[wk]).sort().forEach(rt=>{
@@ -1012,27 +989,10 @@ function saveConfirm(vk,checked,who){
     }).then(()=>({ok:true,rec:{at:now}}))
     .catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||String(e)}));
 }
-function bulkSaveConfirm(keys,checked,who){
-  if(!_sheetsReady()) return Promise.resolve({ok:false,error:'로그인 필요(gapi 미로드)'});
-  const now=_rmkNow(), val=checked?'TRUE':'FALSE';
-  return _sheetsGet('confirm!A:D')
-    .then(res=>{
-      const vals=res.values||[]; const idxByKey={};
-      for(let i=1;i<vals.length;i++){ const k=(vals[i]||[])[0]; if(k)idxByKey[k]=i+1; }
-      const updates=[],appends=[];
-      keys.forEach(k=>{ const row=[k,val,who||'',now]; const idx=idxByKey[k];
-        if(idx) updates.push({range:'confirm!A'+idx+':D'+idx, values:[row]}); else appends.push(row); });
-      const p=[];
-      if(updates.length) p.push(_sheetsBatchUpdate(updates));
-      if(appends.length) p.push(_sheetsAppend('confirm!A:D',appends));
-      return Promise.all(p);
-    }).then(()=>({ok:true,rec:{at:now}}))
-    .catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||String(e)}));
-}
 // 인라인 onclick(전역)용 — boot 내부 함수를 전역 노출(pages는 boot 래핑이라 필수)
 window.openLastPort=openLastPort; window.closeLastPort=closeLastPort; window.pickLastPort=pickLastPort;
 window.undoTo=undoTo; window.openHistory=openHistory; window.editRemark=editRemark; window.toggleWk=toggleWk;
-window.toggleConfirm=toggleConfirm; window.bulkConfirmWeek=bulkConfirmWeek;
+window.toggleConfirm=toggleConfirm;
 renderRoutes();renderCtrs();renderPorts();renderTeams();renderHaul();renderWkList('f');renderWkList('t');
 // 초기 상태 → DOM 동기화 (강제/저장된 viewMode·showLast·lastBasis 반영. 중국/동남아 토글은 라스트 ON일 때 노출)
 $('mode-week').classList.toggle('on',viewMode==='week');
