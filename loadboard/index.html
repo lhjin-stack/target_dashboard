@@ -188,9 +188,41 @@ const TOK_KEY='lb_tok3';   // 스코프 확장(spreadsheets/email) → 기존 �
 function _saveTok(r){ try{ localStorage.setItem(TOK_KEY, JSON.stringify({t:r.access_token, exp:Date.now()+((r.expires_in||3500)*1000)})); }catch(e){} }
 function _loadTok(){ try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); if(o&&o.t&&o.exp>Date.now()+60000) return o.t; }catch(e){} return null; }
 function _clearTok(){ try{ localStorage.removeItem(TOK_KEY); }catch(e){} }
+/* ══ 무음 재발급(silent renew) ══
+   브라우저 OAuth는 리프레시 토큰이 없고 액세스 토큰 수명이 1시간뿐이다.
+   탭을 열어둔 채 1시간이 지나면 시트 쓰기(주재원 확인·리마크)가
+   401 "Request had invalid authentication credentials" 로 실패했다.
+   → ① 만료 2분 전 타이머로 prompt:'' 재발급(이미 동의받은 스코프라 화면 안 뜼)
+     ② 그래도 401이면 재발급 후 1회 재시도. 둘 다 실패해야 재로그인 안내. */
+let _renewMode=false, _renewWaiters=[], _keepAlive=null;
+function _renewDone(ok){ _renewMode=false; const w=_renewWaiters; _renewWaiters=[]; w.forEach(f=>{ try{ f(ok); }catch(e){} }); }
+function _tokenNearExpiry(){ try{ const o=JSON.parse(localStorage.getItem(TOK_KEY)||'null'); return !(o&&o.exp>Date.now()+120000); }catch(e){ return true; } }
+function renewToken(){
+  if(!_tokenClient) return Promise.resolve(false);
+  const p=new Promise(res=>{ _renewWaiters.push(res); });
+  if(!_renewMode){ _renewMode=true;
+    setTimeout(()=>{ if(_renewMode) _renewDone(false); }, 20000);   // 응답 없으면 대기 해제
+    try{ _tokenClient.requestAccessToken({prompt:''}); }catch(e){ _renewDone(false); } }
+  return p; }
+function _startKeepAlive(){ if(_keepAlive) return;
+  _keepAlive=setInterval(()=>{ if(_tokenNearExpiry()) renewToken(); }, 60000);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&_tokenNearExpiry()) renewToken(); }); }
+function _is401(e){ const c=(e&&(e.status||(e.result&&e.result.error&&e.result.error.code)))||0;
+  const m=String((e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||'');
+  return c===401 || /invalid authentication credentials|Invalid Credentials|UNAUTHENTICATED/i.test(m); }
+function withAuthRetry(fn){ return Promise.resolve().then(fn)
+  .catch(e=>{ if(!_is401(e)) throw e; return renewToken().then(ok=>{ if(!ok) throw e; return fn(); }); }); }
+function _errMsg(e){ if(_is401(e)) return '세션 만료 — 재로그인이 필요합니다(우측 상단 로그아웃 후 다시 로그인)';
+  return (e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||String(e); }
 function _gisInit(){ _tokenClient=google.accounts.oauth2.initTokenClient({
   client_id:OAUTH_CLIENT_ID, scope:OAUTH_SCOPE, hd:OAUTH_HD,
-  callback:async(resp)=>{ if(resp.error){_showLoginError('로그인 실패: '+(resp.error_description||resp.error));return;} _saveTok(resp); await onLoginSuccess(); }
+  callback:async(resp)=>{
+    if(_renewMode){   // 무음 재발급 응답 — 로그인 화면으로 되돌리지 않고 토큰만 갈아끼운다
+      const ok=!resp.error;
+      if(ok){ _saveTok(resp); try{ gapi.client.setToken({access_token:resp.access_token}); }catch(e){} }
+      else console.warn('무음 재발급 실패', resp.error);
+      _renewDone(ok); return; }
+    if(resp.error){_showLoginError('로그인 실패: '+(resp.error_description||resp.error));return;} _saveTok(resp); await onLoginSuccess(); }
 }); _gisReady=true; _maybeEnableLogin(); }
 function _maybeEnableLogin(){ if(!(_gapiReady&&_gisReady))return;
   const b=document.getElementById('loginBtn'); if(b){ b.disabled=false; document.getElementById('gstat').textContent=''; }
@@ -241,6 +273,7 @@ function _startPickPoll(){
   }, PICK_POLL_MS);
 }
 async function onLoginSuccess(){
+  _startKeepAlive();   // 탭을 열어둔 사이 토큰이 만료돼 저장이 401 나는 것 방지
   try{
     try{ const ui=await gapi.client.request({path:'https://www.googleapis.com/oauth2/v3/userinfo'});
          window.LB_LOGIN_ID=((ui.result&&ui.result.email)||'').split('@')[0]; }catch(e){ console.warn('userinfo 실패', e); }
@@ -919,9 +952,9 @@ window._apply=apply;                                   // 전역 픽업 폴링�
 const _SHEETS_BASE='https://sheets.googleapis.com/v4/spreadsheets/'+RMK_SHEET_ID+'/values/';
 function _sheetsReady(){ return !!(window.gapi&&gapi.client&&gapi.client.request); }
 // ★gapi.client.request 반환은 .then은 있어도 .catch 없는 유사-thenable → Promise.resolve로 감싸 진짜 Promise화(.catch 사용 가능).
-function _sheetsGet(range){ return Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)})).then(r=>r.result||{}); }
-function _sheetsUpdate(range,values){ return Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range),method:'PUT',params:{valueInputOption:'RAW'},body:{values:values}})); }
-function _sheetsAppend(range,values){ return Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)+':append',method:'POST',params:{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'},body:{values:values}})); }
+function _sheetsGet(range){ return withAuthRetry(()=>Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)}))).then(r=>r.result||{}); }
+function _sheetsUpdate(range,values){ return withAuthRetry(()=>Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range),method:'PUT',params:{valueInputOption:'RAW'},body:{values:values}}))); }
+function _sheetsAppend(range,values){ return withAuthRetry(()=>Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)+':append',method:'POST',params:{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'},body:{values:values}}))); }
 const _SHEETS_ROOT='https://sheets.googleapis.com/v4/spreadsheets/'+RMK_SHEET_ID;
 // 다건(주차 일괄확인) — 건별 GET/UPDATE 왕복 대신 읽기 1 + batchUpdate 1 + append 1로 처리
 function _sheetsBatchUpdate(data){ return Promise.resolve(gapi.client.request({path:_SHEETS_ROOT+'/values:batchUpdate',method:'POST',body:{valueInputOption:'RAW',data:data}})); }
@@ -939,7 +972,7 @@ function saveOverride(vk,port,who){
       const w=idx>=0 ? _sheetsUpdate('Sheet1!A'+(idx+1)+':D'+(idx+1),row) : _sheetsAppend('Sheet1!A:D',row);
       return w.then(()=>_sheetsAppend('log!A:E',[[now,vk,old||'(auto)',port||'(auto)',who||'']]).catch(()=>{}))
        .then(()=>({ok:true,rec:{last_port:port||'',set_by:who||'',set_at:now}}));
-    }).catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||String(e)}));
+    }).catch(e=>({ok:false,error:_errMsg(e)}));
 }
 function openHistory(){
   const m=$('lpm');
@@ -970,7 +1003,7 @@ function saveRemark(vk,text,who){
       if(idx>=0) return _sheetsUpdate('remark!A'+(idx+1)+':D'+(idx+1),row);
       return _sheetsAppend('remark!A:D',row);
     }).then(()=>({ok:true,rec:{at:now}}))
-    .catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||String(e)}));
+    .catch(e=>({ok:false,error:_errMsg(e)}));
 }
 // ── 주재원 확인: pages는 구글 로그인으로 공유시트 직접 read/write (제한 없음, 로그인한 누구나) ──
 function fetchConfirms(){
@@ -987,7 +1020,7 @@ function saveConfirm(vk,checked,who){
       if(idx>=0) return _sheetsUpdate('confirm!A'+(idx+1)+':D'+(idx+1),row);
       return _sheetsAppend('confirm!A:D',row);
     }).then(()=>({ok:true,rec:{at:now}}))
-    .catch(e=>({ok:false,error:(e&&e.result&&e.result.error&&e.result.error.message)||(e&&e.message)||String(e)}));
+    .catch(e=>({ok:false,error:_errMsg(e)}));
 }
 // 인라인 onclick(전역)용 — boot 내부 함수를 전역 노출(pages는 boot 래핑이라 필수)
 window.openLastPort=openLastPort; window.closeLastPort=closeLastPort; window.pickLastPort=pickLastPort;
