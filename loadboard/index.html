@@ -192,7 +192,7 @@ function _clearTok(){ try{ localStorage.removeItem(TOK_KEY); }catch(e){} }
    브라우저 OAuth는 리프레시 토큰이 없고 액세스 토큰 수명이 1시간뿐이다.
    탭을 열어둔 채 1시간이 지나면 시트 쓰기(주재원 확인·리마크)가
    401 "Request had invalid authentication credentials" 로 실패했다.
-   → ① 만료 2분 전 타이머로 prompt:'' 재발급(이미 동의받은 스코프라 화면 안 뜼)
+   → ① 만료 2분 전 타이머로 prompt:'' 재발급(이미 동의받은 스코프라 화면 안 뜼지 않음)
      ② 그래도 401이면 재발급 후 1회 재시도. 둘 다 실패해야 재로그인 안내. */
 let _renewMode=false, _renewWaiters=[], _keepAlive=null;
 function _renewDone(ok){ _renewMode=false; const w=_renewWaiters; _renewWaiters=[]; w.forEach(f=>{ try{ f(ok); }catch(e){} }); }
@@ -955,9 +955,6 @@ function _sheetsReady(){ return !!(window.gapi&&gapi.client&&gapi.client.request
 function _sheetsGet(range){ return withAuthRetry(()=>Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)}))).then(r=>r.result||{}); }
 function _sheetsUpdate(range,values){ return withAuthRetry(()=>Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range),method:'PUT',params:{valueInputOption:'RAW'},body:{values:values}}))); }
 function _sheetsAppend(range,values){ return withAuthRetry(()=>Promise.resolve(gapi.client.request({path:_SHEETS_BASE+encodeURIComponent(range)+':append',method:'POST',params:{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'},body:{values:values}}))); }
-const _SHEETS_ROOT='https://sheets.googleapis.com/v4/spreadsheets/'+RMK_SHEET_ID;
-// 다건(주차 일괄확인) — 건별 GET/UPDATE 왕복 대신 읽기 1 + batchUpdate 1 + append 1로 처리
-function _sheetsBatchUpdate(data){ return Promise.resolve(gapi.client.request({path:_SHEETS_ROOT+'/values:batchUpdate',method:'POST',body:{valueInputOption:'RAW',data:data}})); }
 function fetchOverrides(){
   if(!_sheetsReady()) return Promise.resolve();
   return _sheetsGet('Sheet1!A:D')
