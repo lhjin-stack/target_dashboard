@@ -330,7 +330,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
   <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 포함 · ALL=MT+Laden ROB, Laden=laden ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button></span>
   <button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button><button id="b-rmkw" data-i="f_rmkw" title="리마크가 컬럼 폭보다 길면 줄을 바꿔 전체 내용을 보여줌(행 높이가 늘어남). 끄면 한 줄 + 말줄임">리마크 줄바꿈</button>
   <span class="mtseg lbseg" id="lbseg" style="display:none"><button id="lb-cn" class="on" data-i="lb_cn">중국</button><button id="lb-sea" data-i="lb_sea">동남아</button></span>
-  <button id="b-hist" data-i="f_hist" title="변경내역">🕘 변경내역</button>
+  <button id="b-hist" data-i="f_hist" title="변경내역">🕘 변경내역</button><button id="b-csv" data-i="f_csv" title="현재 필터에 걸린 전 행을 CSV로 내려받기(접힌 주차 포함). 숫자는 서식 없는 원본값 — 엑셀에서 바로 계산 가능">⬇ CSV</button>
   <span class="flab" style="margin-left:auto">자료=드라이브</span><button id="logoutBtn" onclick="logout()">로그아웃</button>
 </div>
 <div class="summary" id="summary"><div><span data-i="s_bsa">BSA 합</span><b id="s_bsa">–</b></div><div><span data-i="s_lift">Lifting 합</span><b id="s_lift">–</b></div>
@@ -358,7 +358,7 @@ let LANG='ko', showSub=false, showSkip=false, showLast=false;   // showSkip=fals
 let viewMode='week';    // 'week'=주차별(적출항) / 'voyage'=항차별(전 기항지 로테이션)
 let lastBasis='cn';     // 라스트포트 기준: 'cn'=중국발(마지막 CN 적출항) / 'sea'=동남아발(마지막 적출항)
 const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항로',f_ctr:'선적지 국가',f_port:'선적지 포트',
-  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',f_rmkw:'리마크 줄바꿈',
+  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',f_rmkw:'리마크 줄바꿈',f_csv:'⬇ CSV',
   m_week:'주차별',m_voy:'항차별',c_ord:'순번',lb_cn:'중국',lb_sea:'동남아',f_hist:'🕘 변경내역',sel_route:'항로 선택',sel_ctr:'국가 선택',
   sel_port:'포트 선택',sel_team:'영업주체 선택',sel_wf:'시작 주차',sel_wt:'종료 주차',toggle:'전체/해제',all:'전체',none:'없음',
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
@@ -368,7 +368,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
-  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',f_rmkw:'Wrap remark',
+  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',f_rmkw:'Wrap remark',f_csv:'⬇ CSV',
   m_week:'By Week',m_voy:'By Voyage',c_ord:'Seq',lb_cn:'China',lb_sea:'SE Asia',f_hist:'🕘 History',sel_route:'Select Route',sel_ctr:'Select Country',
   sel_port:'Select Port',sel_team:'Select Team',sel_wf:'From week',sel_wt:'To week',toggle:'All/None',all:'All',none:'None',
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
@@ -877,6 +877,71 @@ function render(rows,PM){
 // 주차 헤더 클릭 → 펼침/접힘 토글 후 재렌더(apply로 통일: pages 픽업/PM도 자동 반영).
 function toggleWk(wk){ wk=+wk; if(_expandWk.has(wk))_expandWk.delete(wk); else _expandWk.add(wk); apply(); }
 
+// ── CSV 내려받기 ────────────────────────────────────────────────
+// 화면 필터(항로·국가·포트·주차·영업주체·MT모드·스킵·라스트포트)를 그대로 적용한 행 단위 원본값.
+//  ★접힌 주차도 포함한다 — 화면은 아코디언으로 감추지만 CSV엔 필터에 걸린 전 행이 들어간다.
+//  ★숫자는 서식 없는 원본값(콤마·% 없음) → 엑셀에서 바로 계산·피벗 가능.
+function _csvCell(v){ const s=(v==null?'':String(v));
+  return /[",\n\r]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function _csvRows(){
+  LASTMAP=computeLastMap(lastBasis);
+  const rs=selRoutes(), _lo=Math.min(wkFrom,wkTo), _hi=Math.max(wkFrom,wkTo);
+  const pass=r=>rs.has(r.route)&&selCtr.has(r.pol_ctr||'ETC')&&selPort.has(r.pol)&&selHaul.has(r._haul)&&r.week>=_lo&&r.week<=_hi;
+  if(viewMode!=='voyage'){
+    const isLast=r=>LASTMAP[r.vessel+'|'+r.voyage]===r.pol;
+    return ALL.filter(r=>pass(r)&&(showSkip||r.skp!=='Y')&&(!showLast||isLast(r)))
+      .slice().sort((a,b)=>(a.week-b.week)||(a.route<b.route?-1:a.route>b.route?1:0)
+        ||((a.vessel+a.voyage)<(b.vessel+b.voyage)?-1:1)||((a.ord||0)-(b.ord||0)));
+  }
+  // 항차별: 필터에 걸린 항차의 전 기항지(양하·경유 포함) — 화면과 동일
+  if(!VOYROT) buildVoyRot();
+  const qual=new Set(); ALL.forEach(r=>{ if(pass(r)) qual.add(r.vessel+'|'+r.voyage); });
+  const out=[];
+  [...qual].sort().forEach(k=>(VOYROT[k]||[]).filter(r=>showSkip||r.skp!=='Y').forEach(r=>out.push(r)));
+  return out;
+}
+function exportCsv(){
+  const rows=_csvRows(), ko=LANG==='ko';
+  if(!rows.length){ toast(ko?'내보낼 행이 없습니다':'Nothing to export'); return; }
+  const st=s=>String(s).replace(/<[^>]*>/g,'');          // 헤더 라벨의 <span class="chsub"> 제거
+  // 픽업/EIR 컬럼은 pages(구글 로그인)판에서 SHK/DCB 스냅샷이 올라온 경우에만. 8077판엔 PICKMAP 자체가 없다.
+  const pm=(typeof PICKMAP!=='undefined'&&PICKMAP&&PICKMAP!=='loading')?PICKMAP:null;
+  const head=[ko?'주차':'Week', st(T('c_ord')), ko?'구분':'Type', st(T('f_route')),
+    ko?'선명':'Vessel', ko?'항차':'Voyage', 'POL', ko?'국가':'Country', st(T('c_etd')),
+    ko?'스킵':'Skipped', ko?'라스트포트':'Last port',
+    st(T('c_bsa')), st(T('c_surp')), st(T('c_lift')), (ko?'달성률':'Achv')+'(%)',
+    st(T('ownslot')), st(T('c_rob')), (ko?'소석률':'Util')+'(%)', ko?'잉여선복':'Surplus',
+    'Remark', ko?'리마크 작성자':'Remark by', ko?'리마크 시각':'Remark at',
+    ko?'주재원 확인':'Confirmed', ko?'확인자':'Confirmed by', ko?'확인 시각':'Confirmed at'];
+  if(pm) head.push('EIR', ko?'픽업':'Picked', ko?'미픽업':'Not picked', ko?'픽업%':'Pick%');
+  const num=v=>(v==null||isNaN(v))?'':v;
+  const body=rows.map(r=>{
+    const key=rmkKey(r), rk=REMARKS[key]||{}, ck=CONFIRMS[key]||{}, isDis=r.role==='dis';
+    const line=[ r.week==null?'':r.week, r.ord==null?'':r.ord,
+      isDis?(ko?'양하':'Discharge'):(ko?'적재':'Load'), r.route||'',
+      r.vessel||'', r.voyage||'', r.pol||'', r.pol_ctr||'', r.etd||'',
+      r.skp==='Y'?'Y':'', (LASTMAP[r.vessel+'|'+r.voyage]===r.pol)?'Y':'',
+      isDis?'':num(bsaOf(r)), num(surpOf(r)), isDis?'':num(liftOf(r)), isDis?'':num(achvOf(r)),
+      num(r.own_slot), num(robOf(r)), num(utilOf(r)), num(slackOf(r)),
+      rk.remark||'', rk.by||'', rk.at||'',
+      ck.checked?'Y':'', ck.by||'', ck.at||'' ];
+    if(pm){ const p=pm[r.vessel+'|'+r.voyage]||{};
+      line.push(num(p.eir), num(p.picked), num(p.notp), (p.booked>0)?Math.round(p.picked*100/p.booked):''); }
+    return line;
+  });
+  const csv=[head].concat(body).map(a=>a.map(_csvCell).join(',')).join('\r\n');
+  const d=new Date(), p2=n=>('0'+n).slice(-2);
+  const stamp=`${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}`;
+  const lo=Math.min(wkFrom,wkTo), hi=Math.max(wkFrom,wkTo);
+  const name=`MaxROB_${viewMode==='voyage'?(ko?'항차별':'byVoyage'):(ko?'주차별':'byWeek')}_W${lo}-W${hi}_${stamp}.csv`;
+  // BOM 필수: 없으면 엑셀이 UTF-8로 안 읽어 한글이 깨진다
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast(ko?`⬇ ${rows.length.toLocaleString()}행 내려받기`:`⬇ ${rows.length.toLocaleString()} rows exported`);
+}
+
 function setAchv(m){achvMode=m;$('achv-all').classList.toggle('on',m==='all');$('achv-laden').classList.toggle('on',m==='laden');apply();}
 function setUtil(m){utilMode=m;$('util-all').classList.toggle('on',m==='all');$('util-laden').classList.toggle('on',m==='laden');apply();}
 $('achv-all').onclick=()=>setAchv('all');$('achv-laden').onclick=()=>setAchv('laden');
@@ -894,6 +959,7 @@ $('b-sub').onclick=()=>{showSub=!showSub;$('b-sub').classList.toggle('on',showSu
 $('b-skp').onclick=()=>{showSkip=!showSkip;$('b-skp').classList.toggle('on',showSkip);apply();};
 $('b-last').onclick=()=>{showLast=!showLast;$('b-last').classList.toggle('on',showLast);$('lbseg').style.display=showLast?'inline-flex':'none';apply();};
 $('b-hist').onclick=openHistory;
+$('b-csv').onclick=exportCsv;
 // 화면 모드 (주차별/항차별)
 $('mode-week').onclick=()=>{viewMode='week';$('mode-week').classList.add('on');$('mode-voy').classList.remove('on');apply();};
 $('mode-voy').onclick=()=>{viewMode='voyage';$('mode-voy').classList.add('on');$('mode-week').classList.remove('on');apply();};
