@@ -405,12 +405,22 @@ const mtyLoadOf=r=>r.role==='dis'?(_MTYL[r.vessel+'|'+r.pol+'|'+r.etd]||0):(r.li
 const surpOf=r=>(utilMode==='all')?(r.surplus||0):((r.surplus||0)+(r.rob_mty||0)-mtyLoadOf(r));
 // 잉여선복 = Own Slot − ROB (자선슬롯 대비 남은 여유. 음수=자선슬롯 초과 적재)
 const slackOf=r=>(r.own_slot||0)-robOf(r);
-// ── 주차: 데이터 ETD로 주 시작(일요일) 도출 → "M월 W주차 (Wxx)" 라벨(하드코딩 앵커 불필요, 연도 롤오버 안전) ──
+// ── 주차: 데이터 ETD로 주 시작(일요일) 도출 → "M월 N주차 (Wxx)" 라벨 ──
 const weeks=[...new Set(ALL.map(r=>r.week).filter(w=>w!=null))].sort((a,b)=>a-b);
 const weekStart={};
 ALL.forEach(r=>{ if(r.etd&&weekStart[r.week]===undefined){ const d=new Date(r.etd+'T00:00:00Z'); weekStart[r.week]=new Date(d.getTime()-d.getUTCDay()*86400000); } });
-const wkLabel=w=>{ const d=weekStart[w]; if(!d)return `W${w}`; const e=new Date(d.getTime()+6*86400000); const md=x=>`${x.getUTCMonth()+1}/${x.getUTCDate()}`; return `${d.getUTCMonth()+1}월 ${Math.ceil(d.getUTCDate()/7)}주차 (W${w}, ${md(d)}~${md(e)})`; };
-const wkBtn=w=>{ const d=weekStart[w]; return d?`${d.getUTCMonth()+1}/${Math.ceil(d.getUTCDate()/7)}·W${w}`:`W${w}`; };
+// ★달/주차는 회사 기준인 4-4-5 회계주차(분기 = 4주+4주+5주). 달력상 며칠인지로 세면 안 된다.
+//   예) W35(8/30~9/5)는 달력으론 8월이지만 회계상 9월 1주차 — 8월은 4주차까지(W31~W34),
+//       9월은 5주차까지(W35~W39, 9/27~10/3이 9월 5주차).
+const FY_W1 = Date.UTC(2026,0,4);     // FY2026 W1 시작(일요일). 회계연도 52주(364일) 주기
+function fiscalMW(ms){                // 주 시작일(UTC ms) → {m:회계월, n:그 달의 n번째 주}
+  let i = Math.round((ms - FY_W1)/604800000);
+  while(i < 0) i += 52; while(i >= 52) i -= 52;      // 앞/뒤 회계연도로 되감기
+  const q = Math.floor(i/13), w = i%13;              // 분기 안 13주 = 4+4+5
+  return { m: q*3 + (w<4?1:(w<8?2:3)), n: w<4?w+1:(w<8?w-3:w-7) };
+}
+const wkLabel=w=>{ const d=weekStart[w]; if(!d)return `W${w}`; const e=new Date(d.getTime()+6*86400000); const md=x=>`${x.getUTCMonth()+1}/${x.getUTCDate()}`; const f=fiscalMW(d.getTime()); return `${f.m}월 ${f.n}주차 (W${w}, ${md(d)}~${md(e)})`; };
+const wkBtn=w=>{ const d=weekStart[w]; if(!d)return `W${w}`; const f=fiscalMW(d.getTime()); return `${f.m}/${f.n}·W${w}`; };
 const _today=(()=>{const n=new Date();return Date.UTC(n.getFullYear(),n.getMonth(),n.getDate());})();
 let _curW=weeks[0]; weeks.forEach(w=>{const s=weekStart[w];if(s&&_today>=s.getTime()&&_today<s.getTime()+604800000)_curW=w;});
 const _lastS=weekStart[weeks[weeks.length-1]]; if(_lastS&&_today>=_lastS.getTime()+604800000)_curW=weeks[weeks.length-1];
@@ -663,7 +673,7 @@ document.addEventListener('dblclick', e=>{
 // ── 주재원 확인(체크박스): 리마크와 같은 원장 시트에 confirm 탭. 제한 없음 — 로그인한 누구나 체크 ──
 let CONFIRMS={};
 function cfmKey(r){ return r.vessel+'|'+r.voyage+'|'+(r.pol||''); }
-function _unconfDay(){ const d=new Date(); return d.getDay()===3||(d.getDay()===4&&d.getHours()<12); }  // 수요일 종일~목요일 오전(12시 전)만 미확인 강조. 체크 자체는 요일무관 항상 가능
+function _unconfDay(){ const d=new Date(); return d.getDay()===3; }  // 수요일에만 미확인 강조. 체크 자체는 요일무관 항상 가능
 function cfmCell(r){
   const key=cfmKey(r), on=!!(CONFIRMS[key]&&CONFIRMS[key].checked);
   const tip=on&&CONFIRMS[key].by?`확인: ${CONFIRMS[key].by} (${CONFIRMS[key].at||''})`:'주재원 확인';
