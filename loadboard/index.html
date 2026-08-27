@@ -302,7 +302,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
 <div id="topbar"><header style="position:relative"><button id="lang" class="langbtn">EN</button>
 <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><h1><span style="color:#dc2626">Max</span> ROB Dashboard <span class="muted" id="genlab" style="font-size:12px">· Loadable Space (UISCBS114) </span></h1>
 <span class="mtseg modeseg"><button id="mode-week" class="on" data-i="m_week">주차별</button><button id="mode-voy" data-i="m_voy">항차별</button></span></div>
-<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA) · 소석률(ROB/Own Slot) = 각각 ALL/Laden 토글</b> · 잉여선복 = Own Slot − ROB · ALL=공컨(MT)+Laden, Laden=laden만 · Own Slot=총계 고정</div></header>
+<div class="sub">전체 그리드 · 주차·항로·선명항차·Own Slot = 컬럼(항차 첫 행에만 표시) · <b>달성률(Lifting/BSA) · 소석률(ROB/Own Slot) = 각각 ALL/Laden/Empty 토글</b> · 잉여선복 = Own Slot − ROB · ALL=공컨(MT)+Laden, Laden=laden만, Empty=공컨(MT)만 · Own Slot=총계 고정</div></header>
 <div class="bar">
   <span class="flab" data-i="f_week">주차</span>
   <div class="dd" id="dd-wf"><button class="dd-btn" id="btn-wf"><span class="v" id="lab-wf">–</span> <span class="ar">▾</span></button>
@@ -326,8 +326,8 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
     <div class="dd-panel" id="pan-haul"><div class="ddhd"><span data-i="sel_haul">Head/Back 선택</span> <a class="tgl" data-f="haul" data-i="toggle">전체/해제</a></div><div class="ddscroll" id="hauls"></div></div></div>
   <span class="sep"></span>
   <span class="vlab" data-i="viewopt">보기옵션</span>
-  <span class="flab" data-i="f_achv">달성률</span><span class="mtseg" title="달성률(Lifting/BSA) 공컨 포함 · ALL=MT+Laden, Laden=laden만"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button></span>
-  <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 포함 · ALL=MT+Laden ROB, Laden=laden ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button></span>
+  <span class="flab" data-i="f_achv">달성률</span><span class="mtseg" title="달성률(Lifting/BSA) 공컨 기준 · ALL=MT+Laden, Laden=laden만, Empty=공컨(MT)만(영업주체 필터 무관)"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button><button id="achv-mty">Empty</button></span>
+  <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 기준 · ALL=MT+Laden ROB, Laden=laden ROB, Empty=공컨(MT) ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button><button id="util-mty">Empty</button></span>
   <button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button><button id="b-rmkw" data-i="f_rmkw" title="리마크가 컬럼 폭보다 길면 줄을 바꿔 전체 내용을 보여줌(행 높이가 늘어남). 끄면 한 줄 + 말줄임">리마크 줄바꿈</button>
   <span class="mtseg lbseg" id="lbseg" style="display:none"><button id="lb-cn" class="on" data-i="lb_cn">중국</button><button id="lb-sea" data-i="lb_sea">동남아</button></span>
   <button id="b-hist" data-i="f_hist" title="변경내역">🕘 변경내역</button><button id="b-csv" data-i="f_csv" title="현재 필터에 걸린 전 행을 CSV로 내려받기(접힌 주차 포함). 숫자는 서식 없는 원본값 — 엑셀에서 바로 계산 가능">⬇ CSV</button>
@@ -378,7 +378,8 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   total:'TOTAL',week:'W',voy:'voy',pol_n:'POLs',ownslot:'Own Slot',empty:'No matching data',
   t_o:'OBT (Overseas)',t_e:'EST (Export)',t_i:'IST (Import)',t_j:'JBT (Japan)',f_haul:'Head/Back',sel_haul:'Select Head/Back',h_head:'Head Haul',h_back:'Back Haul',langbtn:'한국어'}};
 const T=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ko[k]||k;
-// 달성률(Lifting/BSA) 토글: 'all'=MT+Laden / 'laden'=laden만(기본). 소석률(ROB/Own Slot) 토글: 'all'=MT+Laden ROB(기본) / 'laden'=laden ROB.
+// 달성률(Lifting/BSA) 토글: 'all'=MT+Laden / 'laden'=laden만(기본) / 'mty'=공컨(MT)만.
+// 소석률(ROB/Own Slot) 토글: 'all'=MT+Laden ROB(기본) / 'laden'=laden ROB / 'mty'=공컨(MT) ROB.
 let achvMode='laden', utilMode='all';
 // 영업주체(팀) 다중선택: O=OBT E=EST I=IST J=JBT. 기본 전체.
 const TEAMS=['o','e','i','j'];
@@ -387,11 +388,13 @@ const selTeam=new Set(TEAMS);
 // laden BSA/Lifting: 전체선택이면 클린 총계(r.bsa/r.lifting), 부분선택이면 선택 팀 합. 달성률 ALL이면 MT(bsa_mty/lift_mty) 가산.
 const bsaLaden=r=>selTeam.size===TEAMS.length?(r.bsa||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['bsa_'+t]||0):0),0);
 const liftLaden=r=>selTeam.size===TEAMS.length?(r.lifting||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['lift_'+t]||0):0),0);
-const bsaOf=r=>bsaLaden(r)+(achvMode==='all'?(r.bsa_mty||0):0);
-const liftOf=r=>liftLaden(r)+(achvMode==='all'?(r.lift_mty||0):0);
+const bsaOf=r=>achvMode==='mty'?(r.bsa_mty||0):bsaLaden(r)+(achvMode==='all'?(r.bsa_mty||0):0);
+const liftOf=r=>achvMode==='mty'?(r.lift_mty||0):liftLaden(r)+(achvMode==='all'?(r.lift_mty||0):0);
 const achvOf=r=>{const b=bsaOf(r);return b?Math.round(liftOf(r)/b*1000)/10:null;};
-// ROB/소석률: ALL=r.rob(MT포함) / Laden=r.rob_laden(있으면). rob_laden 미탑재 시 r.rob 폴백(데이터레이어 추가 전까지 ALL과 동일).
-const robOf=r=>(utilMode==='all')?(r.rob||0):(r.rob_laden!=null?r.rob_laden:(r.rob||0));
+// ROB/소석률: ALL=r.rob(MT포함) / Laden=r.rob_laden / Empty=r.rob_mty. 각 필드 미탑재 시 r.rob·차감값으로 폴백.
+const robOf=r=>utilMode==='all'?(r.rob||0)
+  :utilMode==='mty'?(r.rob_mty!=null?r.rob_mty:Math.max(0,(r.rob||0)-(r.rob_laden||0)))
+  :(r.rob_laden!=null?r.rob_laden:(r.rob||0));
 const utilOf=r=>{const o=r.own_slot||0;return o?Math.round(robOf(r)/o*1000)/10:null;};
 // Loadable Space: ERP LDR_SPC_QTY = BSA − 직전까지 누적적재 + 누적양하 (= BSA − ROB + 이 항 적재). MT 포함 총계 기준.
 //   Laden = 그 MT분을 되돌림 → surplus + (현재 재선 MT=rob_mty) − (이 항에서 실은 MT=lift_mty).
@@ -402,7 +405,8 @@ const utilOf=r=>{const o=r.own_slot||0;return o?Math.round(robOf(r)/o*1000)/10:n
 const _MTYL={};
 ALL.forEach(r=>{const k=r.vessel+'|'+r.pol+'|'+r.etd; if(_MTYL[k]===undefined)_MTYL[k]=r.lift_mty||0;});
 const mtyLoadOf=r=>r.role==='dis'?(_MTYL[r.vessel+'|'+r.pol+'|'+r.etd]||0):(r.lift_mty||0);
-const surpOf=r=>(utilMode==='all')?(r.surplus||0):((r.surplus||0)+(r.rob_mty||0)-mtyLoadOf(r));
+//   Empty 모드는 '공컨만의 적재가능공간'이라는 개념이 성립하지 않아 ALL(총계) 값을 그대로 쓴다.
+const surpOf=r=>(utilMode==='laden')?((r.surplus||0)+(r.rob_mty||0)-mtyLoadOf(r)):(r.surplus||0);
 // 잉여선복 = Own Slot − ROB (자선슬롯 대비 남은 여유. 음수=자선슬롯 초과 적재)
 const slackOf=r=>(r.own_slot||0)-robOf(r);
 // ── 주차: 데이터 ETD로 주 시작(일요일) 도출 → "M월 N주차 (Wxx)" 라벨 ──
@@ -954,10 +958,10 @@ function exportCsv(){
   toast(ko?`⬇ ${rows.length.toLocaleString()}행 내려받기`:`⬇ ${rows.length.toLocaleString()} rows exported`);
 }
 
-function setAchv(m){achvMode=m;$('achv-all').classList.toggle('on',m==='all');$('achv-laden').classList.toggle('on',m==='laden');apply();}
-function setUtil(m){utilMode=m;$('util-all').classList.toggle('on',m==='all');$('util-laden').classList.toggle('on',m==='laden');apply();}
-$('achv-all').onclick=()=>setAchv('all');$('achv-laden').onclick=()=>setAchv('laden');
-$('util-all').onclick=()=>setUtil('all');$('util-laden').onclick=()=>setUtil('laden');
+const MTMODES=['all','laden','mty'];
+function setAchv(m){achvMode=m;MTMODES.forEach(k=>$('achv-'+k).classList.toggle('on',m===k));apply();}
+function setUtil(m){utilMode=m;MTMODES.forEach(k=>$('util-'+k).classList.toggle('on',m===k));apply();}
+MTMODES.forEach(k=>{$('achv-'+k).onclick=()=>setAchv(k);$('util-'+k).onclick=()=>setUtil(k);});
 $('lang').onclick=()=>setLang(LANG==='ko'?'en':'ko');
 let rmkWrap=true;
 try{ const _v=localStorage.getItem('lb_rmk_wrap'); if(_v!==null) rmkWrap=(_v==='1'); }catch(e){}
