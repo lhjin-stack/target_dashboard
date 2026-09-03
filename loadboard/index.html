@@ -55,15 +55,18 @@ td.vsl.vclick:hover{text-decoration:underline;color:#1d4ed8}
 .colres{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;user-select:none}
 .colres:hover,.colres.on{background:#5b7bb0}
 body.rmkwrap .board td.rmk{white-space:normal;word-break:break-word;overflow:visible;text-overflow:clip}
-body.rmkwrap .board td.rmk-editing{white-space:nowrap}
+body.rmkwrap .board td.rmk-editing{white-space:normal}
 .board .rmk-edit{cursor:text}
 .board .rmk-edit:hover{background:#eef4ff}
-.board td.rmk-editing{white-space:nowrap}
-.rmk-in{width:calc(var(--rmkW,340px) - 118px);min-width:170px;padding:3px 7px;font-size:12px;text-align:left;border:1px solid #1d4ed8;border-radius:5px}
-.rmk-save{margin-left:5px;padding:3px 10px;font-size:12px;background:#1d4ed8;color:#fff;border-color:#1d4ed8}
-.rmk-cancel{margin-left:3px;padding:3px 8px;font-size:12px;color:#888}
-.rmk-del{margin-left:3px;padding:3px 8px;font-size:12px;color:#c0392b;border-color:#e3b4ad}
+.board td.rmk-editing{white-space:normal}
+.rmk-in{width:calc(var(--rmkW,340px) - 118px);min-width:170px;padding:3px 7px;font-size:12px;line-height:1.4;font-family:inherit;text-align:left;border:1px solid #1d4ed8;border-radius:5px;vertical-align:top;resize:vertical;overflow:hidden;max-height:180px}
+.rmk-save{margin-left:5px;padding:3px 10px;font-size:12px;background:#1d4ed8;color:#fff;border-color:#1d4ed8;vertical-align:top}
+.rmk-cancel{margin-left:3px;padding:3px 8px;font-size:12px;color:#888;vertical-align:top}
+.rmk-del{margin-left:3px;padding:3px 8px;font-size:12px;color:#c0392b;border-color:#e3b4ad;vertical-align:top}
 .rmk-by{font-size:10px;color:#8a94a6}
+body:not(.rmkwrap) .board td.rmk br.rmk-br{display:none}
+body.rmkwrap .board td.rmk .rmk-sep{display:none}
+.rmk-sep{color:#b7bfcc}
 .rmk-add{color:#c0c6d0;font-weight:700}
 .cfm{text-align:center!important;padding:0 4px!important}
 .cfm input[type=checkbox]{width:15px;height:15px;cursor:pointer;vertical-align:middle}
@@ -595,14 +598,16 @@ function fetchRemarks(){
 }
 // ★리마크 키 = 항차당 각 POL별 (선명|항차|POL). 모든 행에 개별 입력 가능.
 function rmkKey(r){ return r.vessel+'|'+r.voyage+'|'+(r.pol||''); }
+// 줄바꿈 저장분: 줄바꿈 ON=실제 개행(br) / OFF=' · ' 로 한 줄 유지 (CSS 로 택일)
+function rmkHtml(s){ return esc(s).replace(/\r?\n/g, '<span class="rmk-sep"> · </span><br class="rmk-br">'); }
 function rmkInner(key){
   const rk=REMARKS[key];
-  if(rk&&rk.remark) return `${esc(rk.remark)}${rk.by?` <span class="rmk-by">${esc(rk.by)}</span>`:''}`;
+  if(rk&&rk.remark) return `${rmkHtml(rk.remark)}${rk.by?` <span class="rmk-by">${esc(rk.by)}</span>`:''}`;
   return '<span class="rmk-add">＋</span>';
 }
 function rmkCell(r){
   const key=rmkKey(r), rk=REMARKS[key];
-  const tip=(rk&&rk.remark)?`${esc(rk.remark)}  (${esc(rk.by||'')} ${esc(rk.at||'')})`:'클릭해서 메모 입력';
+  const tip=(rk&&rk.remark)?`${esc(rk.remark)}  (${esc(rk.by||'')} ${esc(rk.at||'')})`:'클릭해서 메모 입력 (Shift+Enter 줄바꿈)';
   return `<td class="l rmk rmk-edit gend" onclick="editRemark('${esc(key)}',this)" title="${tip}">${rmkInner(key)}</td>`;
 }
 function saveRemark(key, text, who){
@@ -616,21 +621,30 @@ function remarkAuthor(){
   if(!u){ u=(prompt('작성자 이름 (최초 1회만, 이후 자동)','')||'').trim(); if(u)localStorage.setItem('lb_user',u); }
   return u;
 }
-// 빈칸 클릭 → 그 셀에서 바로 입력 → 저장(엔터/저장버튼)/취소(Esc·✕·바깥클릭). ★해당 셀만 갱신(전체 재렌더X=렉없음).
+// 빈칸 클릭 → 그 셀에서 바로 입력 → 저장(Enter/저장버튼)/취소(Esc·✕·바깥클릭). ★해당 셀만 갱신(전체 재렌더X=렉없음).
+// ★Shift+Enter = 줄바꿈(구글 시트와 동일). 그래서 input 이 아니라 textarea + 내용따라 높이 자동증가.
+function rmkFit(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight+2,180)+'px'; }
 function editRemark(key, cell){
   if(!cell||cell.querySelector('.rmk-in')) return;
   const cur=REMARKS[key]?REMARKS[key].remark:'';
   cell.classList.add('rmk-editing');
   const delBtn=cur?`<button class="rmk-del" type="button" title="리마크 삭제">삭제</button>`:'';
-  cell.innerHTML=`<input class="rmk-in" maxlength="200" value="${esc(cur)}"><button class="rmk-save" type="button">저장</button>${delBtn}<button class="rmk-cancel" type="button" title="취소(Esc)">✕</button>`;
-  const inp=cell.querySelector('.rmk-in'); inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
+  cell.innerHTML=`<textarea class="rmk-in" rows="1" maxlength="200" title="Enter=저장 · Shift+Enter=줄바꿈 · Esc=취소"></textarea><button class="rmk-save" type="button">저장</button>${delBtn}<button class="rmk-cancel" type="button" title="취소(Esc)">✕</button>`;
+  const inp=cell.querySelector('.rmk-in'); inp.value=cur; rmkFit(inp);
+  inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
   const revert=()=>{ cell.classList.remove('rmk-editing'); cell.innerHTML=rmkInner(key); };
   const save=()=>{ rmkSave(key, inp.value.trim(), cell); };
   cell.querySelector('.rmk-save').onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); save(); };
   cell.querySelector('.rmk-cancel').onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); revert(); };
   const db=cell.querySelector('.rmk-del'); if(db) db.onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); rmkSave(key,'',cell); };
   inp.onclick=e=>e.stopPropagation();
-  inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();save();} else if(e.key==='Escape'){e.preventDefault();revert();} };
+  inp.oninput=()=>rmkFit(inp);
+  // Enter=저장 / Shift(또는 Ctrl·Alt)+Enter=줄바꿈 / Esc=취소
+  inp.onkeydown=e=>{
+    if(e.key==='Enter'&&!e.shiftKey&&!e.ctrlKey&&!e.altKey){ e.preventDefault(); save(); }
+    else if(e.key==='Enter'){ setTimeout(()=>rmkFit(inp),0); }
+    else if(e.key==='Escape'){ e.preventDefault(); revert(); }
+  };
   inp.onblur=()=>setTimeout(()=>{ if(cell.querySelector('.rmk-in')&&!cell.classList.contains('rmk-saving'))revert(); },160); // 바깥클릭=취소
 }
 function rmkSave(key, text, cell){
