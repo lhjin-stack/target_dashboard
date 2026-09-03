@@ -118,7 +118,6 @@ tr.leaf:hover td{background:#eef4ff}
 .board td.bsacol{border-left:1px solid #f0f1f4}
 .neg{color:var(--red)}.warn{color:var(--orange);font-weight:700}.over{color:var(--red);font-weight:700}
 .surplus{font-weight:700}.muted{color:var(--mut);font-size:11px}.empty{padding:40px;text-align:center;color:var(--mut)}
-.sbar{display:inline-block;height:8px;background:var(--blue);border-radius:2px;vertical-align:middle;margin-left:6px;opacity:.5}
 tr.totalrow td{background:#c9d8ec;font-weight:800;color:#16233a;border-top:2px solid #8fa9cf}
 .board.nosub .totalrow,.board.nosub .agg{display:none}
 /* ── 평평 그리드(flat) ── */
@@ -629,7 +628,7 @@ function editRemark(key, cell){
   const cur=REMARKS[key]?REMARKS[key].remark:'';
   cell.classList.add('rmk-editing');
   const delBtn=cur?`<button class="rmk-del" type="button" title="리마크 삭제">삭제</button>`:'';
-  cell.innerHTML=`<textarea class="rmk-in" rows="1" maxlength="200" title="Enter=저장 · Shift+Enter=줄바꿈 · Esc=취소"></textarea><button class="rmk-save" type="button">저장</button>${delBtn}<button class="rmk-cancel" type="button" title="취소(Esc)">✕</button>`;
+  cell.innerHTML=`<textarea class="rmk-in" rows="1" maxlength="500" title="Enter=저장 · Shift+Enter=줄바꿈 · Esc=취소"></textarea><button class="rmk-save" type="button">저장</button>${delBtn}<button class="rmk-cancel" type="button" title="취소(Esc)">✕</button>`;
   const inp=cell.querySelector('.rmk-in'); inp.value=cur; rmkFit(inp);
   inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
   const revert=()=>{ cell.classList.remove('rmk-editing'); cell.innerHTML=rmkInner(key); };
@@ -808,7 +807,6 @@ function renderVoyage(voys){
   $('s_voy').textContent=voys.length;
   let cnt=0; voys.forEach(v=>cnt+=v.rot.length); $('s_cnt').textContent=cnt;
   if(!voys.length){$('wrap').innerHTML=`<div class="empty">${T('empty')}</div>`;$('s_voy').textContent='0';return;}
-  const maxS=Math.max(1,...loadAll.map(r=>Math.abs(surpOf(r))));
   let h=`<table class="board grid voyage">
     <thead><tr><th>${T('c_ord')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_surp')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g2">${T('c_slack')}</th><th class="l gend rmk">${T('c_rmk')}<span class="colres" title="드래그: 폭 조절 · 더블클릭: 내용에 맞추기 ↔ 기본폭"></span></th><th class="l">${T('c_cfm')}</th></tr></thead><tbody>`;
   let blk=0;
@@ -819,7 +817,6 @@ function renderVoyage(voys){
       const av=achvOf(r),aC=achvCls(av);
       const uv=utilOf(r);   // 소석률 셀은 값만(퍼센트바 없음)
       const sv=surpOf(r),sC=sv<0?'neg surplus':'surplus';
-      const bw=Math.round(Math.abs(sv)/maxS*50),bar=sv>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
       const isLastP=showLast&&lastPol&&r.pol===lastPol&&!isDis;
       const unconf=_unconfRow(r);
       const cls='leaf'+bcls+(first?' vstart':'')+(r.skp==='Y'?' skprow':'')+(isLastP?' lastrow':'')+(unconf?' unconf':'');
@@ -828,7 +825,7 @@ function renderVoyage(voys){
        + `<td class="dim">${r.ord!=null?r.ord:''}</td>`
        + `<td class="l gk">${first?v.route:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${v.k}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${v.vsl} / ${v.voy}`:''}</td>`
        + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
-       + `<td class="g1 gs">${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))}</td><td class="${sC} g1">${fmt(sv)}${bar}</td><td class="g1">${isDis?'<span class="dim">–</span>':fmt(liftOf(r))}</td><td class="${aC} g1">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
+       + `<td class="g1 gs">${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))}</td><td class="${sC} g1">${fmt(sv)}</td><td class="g1">${isDis?'<span class="dim">–</span>':fmt(liftOf(r))}</td><td class="${aC} g1">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
        + `<td class="gk own g2 gs">${first?fmt(v.own):''}</td><td class="g2">${fmt(robOf(r))}</td>`
        + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${cfmCell(r)}</tr>`;
     });
@@ -862,7 +859,6 @@ function render(rows,PM){
   rows.forEach(r=>{const vk=r.vessel+'|'+r.voyage;voySet.add(r.week+'|'+r.route+'|'+vk);
     (((tree[r.week]=tree[r.week]||{})[r.route]=tree[r.week][r.route]||{})[vk]=tree[r.week][r.route][vk]||[]).push(r);});
   $('s_voy').textContent=voySet.size;
-  const maxS=Math.max(1,...rows.map(r=>Math.abs(surpOf(r))));
   let h=`<table class="board grid${showSub?'':' nosub'}">
     <thead><tr><th class="l">${T('c_wk')}</th><th class="l">${T('f_route')}</th><th class="l">${T('c_vsl')}</th><th class="l">${T('c_pol')}</th><th class="l">${T('c_etd')}</th><th class="g1 gs">${T('c_bsa')}</th><th class="g1">${T('c_surp')}</th><th class="g1">${T('c_lift')}</th><th class="g1">${T('c_achv')}</th><th class="g2 gs">${T('ownslot')}</th><th class="g2">${T('c_rob')}</th><th class="g2">${T('c_util')}</th><th class="g2">${T('c_slack')}</th><th class="l gend rmk">${T('c_rmk')}<span class="colres" title="드래그: 폭 조절 · 더블클릭: 내용에 맞추기 ↔ 기본폭"></span></th><th class="l">${T('c_cfm')}</th>${pmShow?`<th class="pk1">${T('c_eir')}</th><th>${T('c_pick')}</th><th>${T('c_notpick')}</th><th>${T('c_pick_pct')}</th>`:''}</tr></thead><tbody>`;
   if(showSub)h+=`<tr class="totalrow"><td class="l">${T('total')}</td><td class="l"></td><td class="l"></td><td class="l"></td><td class="l"></td><td class="gs g1">${fmt(sm.b)}</td><td>${fmt(sm.s)}</td><td>${fmt(sm.l)}</td><td>${sm.b?Math.round(sm.l/sm.b*100)+'%':'–'}</td><td class="gs g2">${fmt(sm.o)}</td>${aggRobCell(sm)}${aggUtilCell(sm)}${aggSlackCell(sm)}<td class="l gend"></td><td class="l"></td>${emptyPC}</tr>`;
@@ -882,7 +878,6 @@ function render(rows,PM){
         arr.forEach((r,i)=>{
           const first=i===0;
           const av=achvOf(r),sv=surpOf(r),aC=achvCls(av),sC=sv<0?'neg surplus':'surplus';
-          const bw=Math.round(Math.abs(sv)/maxS*50),bar=sv>0?`<span class="sbar" style="width:${bw}px"></span>`:'';
           const uv=utilOf(r);   // 소석률 셀은 값만(퍼센트바 없음)
           const aw=Math.max(0,Math.min(100,av||0));
           const acol=av==null?'transparent':(av>100?'#f7d7d7':(av<80?'#fbe6c4':'#e3edfb'));
@@ -895,7 +890,7 @@ function render(rows,PM){
           h+=`<tr class="leaf${bcls}${first?' vstart':''}${isLastP?' lastrow':''}${_unconfRow(r)?' unconf':''}">`
            + `<td class="l gk"></td><td class="l gk">${showRt?rt:''}</td><td class="l gk vsl${first?' vclick':''}"${first?` onclick="openLastPort('${vsl}|${voy}')" title="클릭: 라스트포트 수동 지정"`:''}>${first?`${vsl} / ${voy}`:''}</td>`
            + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
-           + `<td class="g1 gs">${fmt(bsaOf(r))}</td><td class="${sC} g1">${fmt(sv)}${bar}</td><td class="g1">${fmt(liftOf(r))}</td><td class="${aC} g1" style="${ast}">${av==null?'–':av+'%'}</td>`
+           + `<td class="g1 gs">${fmt(bsaOf(r))}</td><td class="${sC} g1">${fmt(sv)}</td><td class="g1">${fmt(liftOf(r))}</td><td class="${aC} g1" style="${ast}">${av==null?'–':av+'%'}</td>`
            + `<td class="gk own g2 gs">${first?fmt(own):''}</td><td class="g2">${fmt(robOf(r))}</td>`
            + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${cfmCell(r)}${pmShow?pickCells(r,PMAP):''}</tr>`;
         });
