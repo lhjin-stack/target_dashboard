@@ -59,7 +59,14 @@ body.rmkwrap .board td.rmk-editing{white-space:normal}
 .board .rmk-edit{cursor:text}
 .board .rmk-edit:hover{background:#eef4ff}
 .board td.rmk-editing{white-space:normal}
-.rmk-in{width:calc(var(--rmkW,340px) - 118px);min-width:170px;padding:3px 7px;font-size:12px;line-height:1.4;font-family:inherit;text-align:left;border:1px solid #1d4ed8;border-radius:5px;vertical-align:top;resize:vertical;overflow:hidden;max-height:180px}
+.rmk-in{display:inline-block;width:calc(var(--rmkW,340px) - 118px);min-width:170px;min-height:21px;max-height:180px;overflow-y:auto;padding:3px 7px;font-size:12px;line-height:1.4;font-family:inherit;text-align:left;white-space:pre-wrap;word-break:break-word;background:#fff;border:1px solid #1d4ed8;border-radius:5px;vertical-align:top;outline:none}
+.rmkbar{position:fixed;z-index:400;display:none;align-items:center;gap:1px;padding:3px 5px;background:#1f2937;border-radius:7px;box-shadow:0 5px 16px rgba(0,0,0,.3);user-select:none}
+.rmkbar button{min-width:24px;height:24px;padding:0 5px;font-size:12px;line-height:1;color:#fff;background:transparent;border:0;border-radius:4px;cursor:pointer}
+.rmkbar button:hover{background:rgba(255,255,255,.18)}
+.rmkbar .sep{display:inline-block;width:1px;height:14px;background:rgba(255,255,255,.28);margin:0 4px}
+.rmkbar .sw{display:inline-block;width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,.65);vertical-align:middle}
+.rk-red{color:#c0392b}.rk-blue{color:#1d4ed8}.rk-black{color:#111827}
+.board td.rmk b{font-weight:700}.board td.rmk i{font-style:italic}
 .rmk-save{margin-left:5px;padding:3px 10px;font-size:12px;background:#1d4ed8;color:#fff;border-color:#1d4ed8;vertical-align:top}
 .rmk-cancel{margin-left:3px;padding:3px 8px;font-size:12px;color:#888;vertical-align:top}
 .rmk-del{margin-left:3px;padding:3px 8px;font-size:12px;color:#c0392b;border-color:#e3b4ad;vertical-align:top}
@@ -597,8 +604,109 @@ function fetchRemarks(){
 }
 // ★리마크 키 = 항차당 각 POL별 (선명|항차|POL). 모든 행에 개별 입력 가능.
 function rmkKey(r){ return r.vessel+'|'+r.voyage+'|'+(r.pol||''); }
-// 줄바꿈 저장분: 줄바꿈 ON=실제 개행(br) / OFF=' · ' 로 한 줄 유지 (CSS 로 택일)
-function rmkHtml(s){ return esc(s).replace(/\r?\n/g, '<span class="rmk-sep"> · </span><br class="rmk-br">'); }
+// ── 리마크 서식(굵게·기울임·밑줄·색) ─────────────────────────────────
+// 저장소가 구글시트 셀 한 칸(문자열)이라 서식은 본문에 표기로 같이 넣는다.
+//   [b]굵게[/b] [i]기울임[/i] [u]밑줄[/u] [c=red]빨강[/c] [c=blue] [c=black]
+// 표시는 esc() 로 HTML 을 전부 막은 뒤 이 표기만 태그로 바꾼다(외부 HTML 유입 0). CSV 는 표기를 뗀 평문.
+const RMK_COLORS={red:'#c0392b',blue:'#1d4ed8',black:'#111827'};
+const RMK_MAX=500;                                   // 평문 기준 글자수(표기 문자는 안 셈)
+const RMK_TAG=/\[(\/?)(b|i|u)\]|\[c=(red|blue|black)\]|\[\/c\]/g;
+function rmkPlain(s){ return String(s==null?'':s).replace(RMK_TAG,''); }
+// 표기 → HTML. nl=개행을 무엇으로 그릴지. 짝이 안 맞는 표기는 끝에서 자동으로 닫는다.
+function rmkMarkup(s, nl, edit){
+  s=String(s==null?'':s);
+  let out='', stack=[], last=0, m; RMK_TAG.lastIndex=0;
+  const put=t=>{ if(t) out+=esc(t).replace(/\r?\n/g, nl); };
+  while((m=RMK_TAG.exec(s))!==null){
+    put(s.slice(last,m.index)); last=RMK_TAG.lastIndex;
+    if(m[3]){ out+= edit?('<font color="'+RMK_COLORS[m[3]]+'">'):('<span class="rk-'+m[3]+'">');
+              stack.push(edit?'</font>':'</span>'); }
+    else if(m[0]==='[/c]'){ const t=stack[stack.length-1]; if(t==='</span>'||t==='</font>') out+=stack.pop(); }
+    else if(m[1]){ const c='</'+m[2]+'>'; if(stack[stack.length-1]===c) out+=stack.pop(); }
+    else { out+='<'+m[2]+'>'; stack.push('</'+m[2]+'>'); }
+  }
+  put(s.slice(last));
+  while(stack.length) out+=stack.pop();
+  return out;
+}
+// 표시용: 줄바꿈 ON=실제 개행(br) / OFF=' · ' 로 한 줄 유지 (CSS 로 택일)
+function rmkHtml(s){ return rmkMarkup(s, '<span class="rmk-sep"> · </span><br class="rmk-br">'); }
+// 편집창(HTML) → 표기. 팔레트 밖 색·굵기는 우리 3색/[b] 로 수렴시켜 외부 서식이 새는 걸 막는다.
+function _rmkColor(el){
+  const cm=/(?:^|\s)rk-(red|blue|black)(?:\s|$)/.exec(el.className||'');
+  if(cm) return cm[1];                               // 표시용 class 로 들어온 색도 표기로 되돌린다
+  const raw=((el.style&&el.style.color)||(el.getAttribute?el.getAttribute('color'):'')||'');
+  const c=raw.replace(/\s+/g,'').toLowerCase();
+  if(!c) return '';
+  for(const k in RMK_COLORS){
+    const h=RMK_COLORS[k].toLowerCase(), v=parseInt(h.slice(1),16);
+    if(c===h||c===k||c==='rgb('+((v>>16)&255)+','+((v>>8)&255)+','+(v&255)+')') return k;
+  }
+  return 'black';
+}
+function _rmkSer(node){
+  let out='';
+  node.childNodes.forEach(nd=>{
+    if(nd.nodeType===3){ out+=nd.nodeValue.replace(/\u00a0/g,' '); return; }
+    if(nd.nodeType!==1) return;
+    const tag=nd.tagName;
+    if(tag==='BR'){ out+='\n'; return; }
+    if(tag==='DIV'||tag==='P'||tag==='LI'||tag==='TR'){ if(out&&!/\n$/.test(out)) out+='\n'; out+=_rmkSer(nd); return; }
+    const st=nd.style||{}, dec=(st.textDecoration||st.textDecorationLine||'');
+    let pre='', post='';
+    if(tag==='B'||tag==='STRONG'||/^(bold|bolder|[6-9]00)$/.test(st.fontWeight||'')){ pre+='[b]'; post='[/b]'+post; }
+    if(tag==='I'||tag==='EM'||st.fontStyle==='italic'){ pre+='[i]'; post='[/i]'+post; }
+    if(tag==='U'||/underline/.test(dec)){ pre+='[u]'; post='[/u]'+post; }
+    const col=_rmkColor(nd);
+    if(col){ pre+='[c='+col+']'; post='[/c]'+post; }
+    const inner=_rmkSer(nd);
+    if(inner) out+=pre+inner+post;
+  });
+  return out;
+}
+// ── 드래그하면 선택 위에 뜨는 서식 버블(굵게/기울임/밑줄 · 빨강/파랑/검정 · 서식지우기) ──
+let _rmkEd=null;                                     // 지금 편집 중인 셀 입력창
+function _rmkBar(){
+  let b=document.getElementById('rmkbar');
+  if(b) return b;
+  b=document.createElement('div'); b.id='rmkbar'; b.className='rmkbar';
+  b.innerHTML='<button data-c="bold" title="굵게 (Ctrl+B)"><b>B</b></button>'
+    +'<button data-c="italic" title="기울임 (Ctrl+I)"><i>I</i></button>'
+    +'<button data-c="underline" title="밑줄 (Ctrl+U)"><u>U</u></button><span class="sep"></span>'
+    +Object.keys(RMK_COLORS).map(k=>'<button data-col="'+k+'" title="'+({red:'빨강',blue:'파랑',black:'검정'}[k])
+      +'"><span class="sw" style="background:'+RMK_COLORS[k]+'"></span></button>').join('')
+    +'<span class="sep"></span><button data-c="removeFormat" title="서식 지우기">✕</button>';
+  // ★mousedown 을 막아야 선택이 유지된다(포커스 뺏기면 서식이 안 먹고 편집창이 취소됨)
+  b.addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    const t=e.target.closest?e.target.closest('button'):null; if(!t) return;
+    if(t.dataset.col) rmkExec('foreColor', RMK_COLORS[t.dataset.col]); else rmkExec(t.dataset.c);
+  });
+  document.body.appendChild(b); return b;
+}
+function rmkBarHide(){ const b=document.getElementById('rmkbar'); if(b) b.style.display='none'; }
+function rmkBarShow(){
+  if(!_rmkEd) return rmkBarHide();
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount||sel.isCollapsed||!_rmkEd.contains(sel.anchorNode)) return rmkBarHide();
+  const r=sel.getRangeAt(0).getBoundingClientRect();
+  if(!r||(!r.width&&!r.height)) return rmkBarHide();
+  const b=_rmkBar(); b.style.display='flex';
+  const w=b.offsetWidth, h=b.offsetHeight;
+  let x=Math.round(r.left+r.width/2-w/2), y=Math.round(r.top-h-7);
+  x=Math.max(6,Math.min(x, window.innerWidth-w-6));
+  if(y<6) y=Math.round(r.bottom+7);
+  b.style.left=x+'px'; b.style.top=y+'px';
+}
+function rmkExec(cmd, val){
+  if(!_rmkEd||!cmd) return;
+  _rmkEd.focus();
+  try{ document.execCommand('styleWithCSS', false, false); }catch(e){}   // <b>/<i>/<u>·<font color> 로 통일
+  try{ document.execCommand(cmd, false, val||null); }catch(e){}
+  rmkBarShow();
+}
+document.addEventListener('selectionchange', ()=>{ if(_rmkEd) rmkBarShow(); });
+window.addEventListener('scroll', ()=>{ if(_rmkEd) rmkBarShow(); }, true);
 function rmkInner(key){
   const rk=REMARKS[key];
   if(rk&&rk.remark) return `${rmkHtml(rk.remark)}${rk.by?` <span class="rmk-by">${esc(rk.by)}</span>`:''}`;
@@ -606,7 +714,8 @@ function rmkInner(key){
 }
 function rmkCell(r){
   const key=rmkKey(r), rk=REMARKS[key];
-  const tip=(rk&&rk.remark)?`${esc(rk.remark)}  (${esc(rk.by||'')} ${esc(rk.at||'')})`:'클릭해서 메모 입력 (Shift+Enter 줄바꿈)';
+  const tip=(rk&&rk.remark)?`${esc(rmkPlain(rk.remark))}  (${esc(rk.by||'')} ${esc(rk.at||'')})`
+                           :'클릭해서 메모 입력 (드래그=서식 · Shift+Enter=줄바꿈)';
   return `<td class="l rmk rmk-edit gend" onclick="editRemark('${esc(key)}',this)" title="${tip}">${rmkInner(key)}</td>`;
 }
 function saveRemark(key, text, who){
@@ -621,32 +730,53 @@ function remarkAuthor(){
   return u;
 }
 // 빈칸 클릭 → 그 셀에서 바로 입력 → 저장(Enter/저장버튼)/취소(Esc·✕·바깥클릭). ★해당 셀만 갱신(전체 재렌더X=렉없음).
-// ★Shift+Enter = 줄바꿈(구글 시트와 동일). 그래서 input 이 아니라 textarea + 내용따라 높이 자동증가.
-function rmkFit(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight+2,180)+'px'; }
+// ★textarea 가 아니라 contenteditable — 드래그하면 서식 버블이 뜨고 Ctrl+B/I/U 도 먹는다.
+//   Enter=저장 / Shift+Enter=줄바꿈 / Esc=취소. 붙여넣기는 항상 평문(외부 서식 차단).
 function editRemark(key, cell){
   if(!cell||cell.querySelector('.rmk-in')) return;
   const cur=REMARKS[key]?REMARKS[key].remark:'';
   cell.classList.add('rmk-editing');
   const delBtn=cur?`<button class="rmk-del" type="button" title="리마크 삭제">삭제</button>`:'';
-  cell.innerHTML=`<textarea class="rmk-in" rows="1" maxlength="500" title="Enter=저장 · Shift+Enter=줄바꿈 · Esc=취소"></textarea><button class="rmk-save" type="button">저장</button>${delBtn}<button class="rmk-cancel" type="button" title="취소(Esc)">✕</button>`;
-  const inp=cell.querySelector('.rmk-in'); inp.value=cur; rmkFit(inp);
-  inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
-  const revert=()=>{ cell.classList.remove('rmk-editing'); cell.innerHTML=rmkInner(key); };
-  const save=()=>{ rmkSave(key, inp.value.trim(), cell); };
+  cell.innerHTML=`<div class="rmk-in" contenteditable="true" spellcheck="false" title="드래그=서식 버블 · Ctrl+B/I/U · Enter=저장 · Shift+Enter=줄바꿈 · Esc=취소"></div><button class="rmk-save" type="button">저장</button>${delBtn}<button class="rmk-cancel" type="button" title="취소(Esc)">✕</button>`;
+  const inp=cell.querySelector('.rmk-in');
+  inp.innerHTML=rmkMarkup(cur,'<br>',true);
+  _rmkEd=inp; inp.focus();
+  const _sel=window.getSelection(), _rg=document.createRange();      // 커서를 맨 뒤로
+  _rg.selectNodeContents(inp); _rg.collapse(false); _sel.removeAllRanges(); _sel.addRange(_rg);
+  const close=()=>{ if(_rmkEd===inp)_rmkEd=null; rmkBarHide(); };
+  const revert=()=>{ close(); cell.classList.remove('rmk-editing'); cell.innerHTML=rmkInner(key); };
+  const save=()=>{
+    let mk=_rmkSer(inp).replace(/^[\s\u00a0]+|[\s\u00a0]+$/g,'');
+    const len=rmkPlain(mk).trim().length;
+    if(!len) mk='';
+    if(len>RMK_MAX){ toast(`리마크는 ${RMK_MAX}자까지입니다 (현재 ${len}자)`); return; }
+    close(); rmkSave(key, mk, cell);
+  };
   cell.querySelector('.rmk-save').onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); save(); };
   cell.querySelector('.rmk-cancel').onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); revert(); };
-  const db=cell.querySelector('.rmk-del'); if(db) db.onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); rmkSave(key,'',cell); };
+  const db=cell.querySelector('.rmk-del'); if(db) db.onmousedown=e=>{ e.preventDefault(); e.stopPropagation(); close(); rmkSave(key,'',cell); };
   inp.onclick=e=>e.stopPropagation();
-  inp.oninput=()=>rmkFit(inp);
-  // Enter=저장 / Shift(또는 Ctrl·Alt)+Enter=줄바꿈 / Esc=취소
+  inp.onmouseup=()=>setTimeout(rmkBarShow,0);
+  // 붙여넣기·드롭은 무조건 평문으로(워드·시트에서 딸려오는 서식 차단)
+  inp.onpaste=e=>{ e.preventDefault();
+    const t=((e.clipboardData||window.clipboardData).getData('text/plain')||'').slice(0,RMK_MAX);
+    try{ document.execCommand('insertText',false,t); }catch(_){} };
+  inp.ondrop=e=>e.preventDefault();
   inp.onkeydown=e=>{
-    if(e.key==='Enter'&&!e.shiftKey&&!e.ctrlKey&&!e.altKey){ e.preventDefault(); save(); }
-    else if(e.key==='Enter'){ setTimeout(()=>rmkFit(inp),0); }
+    if(e.isComposing||e.keyCode===229) return;         // 한글 조합 중 Enter 는 글자 확정용 — 저장 아님
+    const mod=e.ctrlKey||e.metaKey;
+    const sc=mod&&!e.altKey ? ({KeyB:'bold',KeyI:'italic',KeyU:'underline'}[e.code]
+                             ||{b:'bold',i:'italic',u:'underline'}[(e.key||'').toLowerCase()]) : null;
+    if(sc){ e.preventDefault(); rmkExec(sc); return; }
+    if(e.key==='Enter'&&!e.shiftKey&&!mod&&!e.altKey){ e.preventDefault(); save(); }
+    else if(e.key==='Enter'){ e.preventDefault();
+      try{ document.execCommand('insertLineBreak'); }catch(_){ document.execCommand('insertHTML',false,'<br>'); } }
     else if(e.key==='Escape'){ e.preventDefault(); revert(); }
   };
-  inp.onblur=()=>setTimeout(()=>{ if(cell.querySelector('.rmk-in')&&!cell.classList.contains('rmk-saving'))revert(); },160); // 바깥클릭=취소
+  inp.onblur=()=>setTimeout(()=>{ if(cell.querySelector('.rmk-in')&&!cell.classList.contains('rmk-saving')&&document.activeElement!==inp)revert(); },160); // 바깥클릭=취소
 }
 function rmkSave(key, text, cell){
+  if(_rmkEd&&cell.contains(_rmkEd))_rmkEd=null; rmkBarHide();
   const who=remarkAuthor();
   cell.classList.add('rmk-saving');
   saveRemark(key, text, who).then(j=>{
@@ -948,7 +1078,7 @@ function exportCsv(){
       r.skp==='Y'?'Y':'', (LASTMAP[r.vessel+'|'+r.voyage]===r.pol)?'Y':'',
       isDis?'':num(bsaOf(r)), num(surpOf(r)), isDis?'':num(liftOf(r)), isDis?'':num(achvOf(r)),
       num(r.own_slot), num(robOf(r)), num(utilOf(r)), num(slackOf(r)),
-      rk.remark||'', rk.by||'', rk.at||'',
+      rmkPlain(rk.remark||''), rk.by||'', rk.at||'',
       ck.checked?'Y':'', ck.by||'', ck.at||'' ];
     if(pm){ const p=pm[r.vessel+'|'+r.voyage]||{};
       line.push(num(p.eir), num(p.picked), num(p.notp), (p.booked>0)?Math.round(p.picked*100/p.booked):''); }
