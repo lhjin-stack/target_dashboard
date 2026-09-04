@@ -15,7 +15,7 @@ button:hover{background:#f3f5f9}
 .mtseg button{border:0;border-radius:0;padding:5px 12px;background:#fff;font-weight:600}
 .mtseg button.on{background:#1d4ed8;color:#fff}
 .mtseg button+button{border-left:1px solid var(--bd)}
-.segoff{opacity:.45}
+.segoff{opacity:.45;pointer-events:none}
 .tssub{display:block;font-size:10px;font-weight:400;color:#8a94a6;line-height:1.15;letter-spacing:-.2px}
 .sep{width:1px;height:20px;background:var(--bd);margin:0 5px}
 .vlab{font-size:11px;font-weight:700;color:#3a4a66;background:#eef2f8;padding:3px 8px;border-radius:5px;margin-right:2px}
@@ -164,7 +164,7 @@ table.board.grid{table-layout:auto;width:auto;max-width:100%}
 .board th.gs.g1,.board td.gs.g1{border-left:2px solid #d9bd9d}
 .board th.gs.g2,.board td.gs.g2{border-left:2px solid #b2d2a2}
 .board th.gend,.board td.gend{border-left:2px solid #b2d2a2}
-#b-sub.on,#b-skp.on,#b-last.on,#b-rmkw.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+#b-sub.on,#b-skp.on,#b-last.on,#b-rmkw.on,#b-tssub.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 .langbtn{position:absolute;top:12px;right:16px;font-weight:700}
 
 .board .pk1{border-left:2px solid #cbd6e8}
@@ -1123,13 +1123,19 @@ function exportCsv(){
 }
 
 const MTMODES=['all','laden','mty'];
-function setAchv(m){achvMode=m;MTMODES.forEach(k=>$('achv-'+k).classList.toggle('on',m===k));apply();}
+function _achvUI(m){achvMode=m;MTMODES.forEach(k=>$('achv-'+k).classList.toggle('on',m===k));}
+function setAchv(m){_achvUI(m);apply();}
 function setUtil(m){utilMode=m;MTMODES.forEach(k=>$('util-'+k).classList.toggle('on',m===k));apply();}
 MTMODES.forEach(k=>{$('achv-'+k).onclick=()=>setAchv(k);$('util-'+k).onclick=()=>setUtil(k);});
 // 화물구분 [전체|Local|T/S] — BSA·Lifting·달성률에만 적용. 선택 시 달성률(공컨) 토글은 무효라 흐리게.
 const CGOMODES=['all','lcl','ts'];
+let _achvSaved=null;                                 // Local/T-S 로 들어갈 때의 달성률 모드 보관
 function setCgo(m, quiet){
   cgoMode=m; CGOMODES.forEach(k=>$('cgo-'+k).classList.toggle('on',m===k));
+  // Local/T-S 는 laden 기준이라 달성률(공컨) 토글이 무효 → 비활성 + 표시도 Laden 으로.
+  //   (예전엔 흐리기만 해서 눌리는 바람에 Empty 로 바뀐 줄 모르고 전체로 돌아오면 값이 0 으로 보였다)
+  if(m!=='all'){ if(_achvSaved===null) _achvSaved=achvMode; if(achvMode!=='laden') _achvUI('laden'); }
+  else if(_achvSaved!==null){ _achvUI(_achvSaved); _achvSaved=null; }
   $('achvseg').classList.toggle('segoff', m!=='all');
   $('b-tssub').classList.toggle('segoff', m==='ts');
   try{ localStorage.setItem('lb_cgo', m); }catch(e){}
