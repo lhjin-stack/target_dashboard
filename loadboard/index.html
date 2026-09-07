@@ -100,6 +100,13 @@ body.rmkwrap .board td.rmk .rmk-sep{display:none}
 .dp-item .muted{margin-left:auto;padding-left:12px}
 .summary{display:flex;gap:20px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--bd);flex-wrap:wrap}
 .summary div{font-size:12px;color:var(--mut)}.summary b{font-size:15px;color:var(--ink);margin-left:5px}
+.summary .misstile{padding:2px 10px;margin:-2px 0;border-radius:6px;background:#fff6e8;border:1px solid #f0d3a2;color:#a5641a;cursor:pointer;user-select:none}
+.summary .misstile b{color:#b4530f}
+.summary .misstile .msub{margin-left:7px;color:#a5641a}
+.summary .misstile .msub b{font-size:13px;margin-left:2px}
+.summary .misstile:hover{background:#ffeed6}
+.summary .misstile.on{background:#b4530f;border-color:#b4530f;color:#fff}
+.summary .misstile.on b,.summary .misstile.on .msub{color:#fff}
 .wrap{padding:0 0 70px}
 
 /* ── 표 ── */
@@ -346,7 +353,7 @@ function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.g
   <span class="flab" style="margin-left:auto">자료=드라이브</span><button id="logoutBtn" onclick="logout()">로그아웃</button>
 </div>
 <div class="summary" id="summary"><div><span data-i="s_bsa">BSA 합</span><b id="s_bsa">–</b></div><div><span data-i="s_lift">Lifting 합</span><b id="s_lift">–</b></div>
-<div><span data-i="s_achv">평균 달성률</span><b id="s_achv">–</b></div><div><span data-i="s_surp">총 Loadable Space</span><b id="s_surp">–</b></div><div><span data-i="s_own">총 Own Slot</span><b id="s_own">–</b></div><div><span data-i="s_util">평균 소석률</span><b id="s_util">–</b></div><div><span data-i="s_voy">항차</span><b id="s_voy">–</b></div><div><span data-i="s_cnt">행</span><b id="s_cnt">–</b></div></div>
+<div><span data-i="s_achv">평균 달성률</span><b id="s_achv">–</b></div><div><span data-i="s_surp">총 Loadable Space</span><b id="s_surp">–</b></div><div><span data-i="s_own">총 Own Slot</span><b id="s_own">–</b></div><div><span data-i="s_util">평균 소석률</span><b id="s_util">–</b></div><div><span data-i="s_voy">항차</span><b id="s_voy">–</b></div><div><span data-i="s_cnt">행</span><b id="s_cnt">–</b></div><div id="s_miss" class="misstile" title="잉여선복 > 0 (배에 자리가 남았던) 행만 모아 계산 — 꽉 차서 더 못 실은 항차는 제외. 클릭하면 그 행만 보기 / 다시 클릭하면 해제"><span data-i="s_miss">미달성(여유선복 있던 곳)</span><b id="s_missv">–</b><span class="msub"><span data-i="s_missa">달성률</span><b id="s_missp">–</b></span></div></div>
 </div>
 <div class="wrap" id="wrap"></div>
 <div id="lpm" class="lpm"></div>
@@ -370,7 +377,7 @@ let LANG='ko', showSub=false, showSkip=false, showLast=false;   // showSkip=fals
 let viewMode='week';    // 'week'=주차별(적출항) / 'voyage'=항차별(전 기항지 로테이션)
 let lastBasis='cn';     // 라스트포트 기준: 'cn'=중국발(마지막 CN 적출항) / 'sea'=동남아발(마지막 적출항)
 const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항로',f_ctr:'선적지 국가',f_port:'선적지 포트',
-  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',f_rmkw:'리마크 줄바꿈',f_csv:'⬇ CSV',f_cgo:'화물구분',cgo_all:'전체',f_tssub:'T/S 병기',cgo_team:'이 데이터에는 T/S 영업주체 분해가 없어(옛 스냅샷) T/S 합계로 집계됩니다 — 갱신 후 영업주체 필터가 적용됩니다',
+  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',f_rmkw:'리마크 줄바꿈',f_csv:'⬇ CSV',f_cgo:'화물구분',cgo_all:'전체',f_tssub:'T/S 병기',s_miss:'미달성(여유선복 있던 곳)',s_missa:'달성률',cgo_team:'이 데이터에는 T/S 영업주체 분해가 없어(옛 스냅샷) T/S 합계로 집계됩니다 — 갱신 후 영업주체 필터가 적용됩니다',
   m_week:'주차별',m_voy:'항차별',c_ord:'순번',lb_cn:'중국',lb_sea:'동남아',f_hist:'🕘 변경내역',sel_route:'항로 선택',sel_ctr:'국가 선택',
   sel_port:'포트 선택',sel_team:'영업주체 선택',sel_wf:'시작 주차',sel_wt:'종료 주차',toggle:'전체/해제',all:'전체',none:'없음',
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
@@ -380,7 +387,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
-  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',f_rmkw:'Wrap remark',f_csv:'⬇ CSV',f_cgo:'Cargo',cgo_all:'All',f_tssub:'Show T/S',cgo_team:'This snapshot has no T/S team breakdown yet - showing T/S totals; the team filter applies after the next refresh',
+  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',f_rmkw:'Wrap remark',f_csv:'⬇ CSV',f_cgo:'Cargo',cgo_all:'All',f_tssub:'Show T/S',s_miss:'Unfilled (had room)',s_missa:'Achv',cgo_team:'This snapshot has no T/S team breakdown yet - showing T/S totals; the team filter applies after the next refresh',
   m_week:'By Week',m_voy:'By Voyage',c_ord:'Seq',lb_cn:'China',lb_sea:'SE Asia',f_hist:'🕘 History',sel_route:'Select Route',sel_ctr:'Select Country',
   sel_port:'Select Port',sel_team:'Select Team',sel_wf:'From week',sel_wt:'To week',toggle:'All/None',all:'All',none:'None',
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
@@ -440,6 +447,19 @@ const mtyLoadOf=r=>r.role==='dis'?(_MTYL[r.vessel+'|'+r.pol+'|'+r.etd]||0):(r.li
 const surpOf=r=>(utilMode==='laden')?((r.surplus||0)+(r.rob_mty||0)-mtyLoadOf(r)):(r.surplus||0);
 // 잉여선복 = Own Slot − ROB (자선슬롯 대비 남은 여유. 음수=자선슬롯 초과 적재)
 const slackOf=r=>(r.own_slot||0)-robOf(r);
+// ── 미달성(여유선복 있던 곳) — 배가 꽉 차서 더 못 실은 행(잉여선복<=0)은 빼고 본다 ──
+//   달성률 = 그 행들의 ΣLifting/ΣBSA(물량가중), 미달성 TEU = ΣBSA−ΣLifting.
+//   ★기준은 자선슬롯 여유(Own Slot−ROB). Loadable Space 로 거르면 '배는 찼는데 BSA는 남은' 경우를 못 걸러낸다.
+//   ★공컨(MT) 토글 상태의 ROB 를 그대로 쓴다(화면의 잉여선복 컬럼과 같은 값).
+let missOnly=false;                                  // 타일 클릭 = 그 행만 보기
+const hasRoom=r=>slackOf(r)>0;
+function setMissTile(rows){
+  const rm=rows.filter(r=>r.role!=='dis'&&hasRoom(r));
+  const b=rm.reduce((a,r)=>a+bsaOf(r),0), l=rm.reduce((a,r)=>a+liftOf(r),0);
+  $('s_missv').textContent=fmt(Math.round(b-l))+' TEU';
+  $('s_missp').textContent=b?(Math.round(l/b*1000)/10)+'%':'–';
+  $('s_miss').classList.toggle('on',missOnly);
+}
 // ── 주차: 데이터 ETD로 주 시작(일요일) 도출 → "M월 N주차 (Wxx)" 라벨 ──
 const weeks=[...new Set(ALL.map(r=>r.week).filter(w=>w!=null))].sort((a,b)=>a-b);
 const weekStart={};
@@ -951,6 +971,9 @@ function applyVoyage(rs,_lo,_hi){
   renderVoyage(voys);
 }
 function renderVoyage(voys){
+  const _pre=[]; voys.forEach(v=>v.rot.forEach(r=>{if(r.role!=='dis')_pre.push(r);}));
+  setMissTile(_pre);
+  if(missOnly) voys=voys.filter(v=>v.rot.some(r=>r.role!=='dis'&&hasRoom(r)));
   const loadAll=[]; voys.forEach(v=>v.rot.forEach(r=>{if(r.role!=='dis')loadAll.push(r);}));
   const sm=aggr(loadAll);
   $('s_bsa').textContent=fmt(sm.b);$('s_lift').textContent=fmt(sm.l);
@@ -997,6 +1020,8 @@ function pickCells(r, PMAP){
        + `<td style="font-weight:600;color:${pcol}">${pct==null?'–':pct+'%'}</td>`;
 }
 function render(rows,PM){
+  setMissTile(rows);                                 // 타일은 필터 전 기준(전체 중 여유 있던 곳)
+  if(missOnly) rows=rows.filter(hasRoom);            // 타일 클릭 시 그 행만 표에 남김
   const pmShow=PM!==null&&PM!==undefined;
   const PMAP=(pmShow&&PM!=='loading')?PM:null;
   const emptyPC=pmShow?'<td class="pk1"></td><td></td><td></td><td></td>':'';
@@ -1067,13 +1092,14 @@ function _csvRows(){
   const pass=r=>rs.has(r.route)&&selCtr.has(r.pol_ctr||'ETC')&&selPort.has(r.pol)&&selHaul.has(r._haul)&&r.week>=_lo&&r.week<=_hi;
   if(viewMode!=='voyage'){
     const isLast=r=>LASTMAP[r.vessel+'|'+r.voyage]===r.pol;
-    return ALL.filter(r=>pass(r)&&(showSkip||r.skp!=='Y')&&(!showLast||isLast(r)))
+    return ALL.filter(r=>pass(r)&&(showSkip||r.skp!=='Y')&&(!showLast||isLast(r))&&(!missOnly||hasRoom(r)))
       .slice().sort((a,b)=>(a.week-b.week)||(a.route<b.route?-1:a.route>b.route?1:0)
         ||((a.vessel+a.voyage)<(b.vessel+b.voyage)?-1:1)||((a.ord||0)-(b.ord||0)));
   }
   // 항차별: 필터에 걸린 항차의 전 기항지(양하·경유 포함) — 화면과 동일
   if(!VOYROT) buildVoyRot();
   const qual=new Set(); ALL.forEach(r=>{ if(pass(r)) qual.add(r.vessel+'|'+r.voyage); });
+  if(missOnly) [...qual].forEach(k=>{ if(!(VOYROT[k]||[]).some(r=>r.role!=='dis'&&hasRoom(r))) qual.delete(k); });
   const out=[];
   [...qual].sort().forEach(k=>(VOYROT[k]||[]).filter(r=>showSkip||r.skp!=='Y').forEach(r=>out.push(r)));
   return out;
@@ -1144,6 +1170,7 @@ function setCgo(m, quiet){
 }
 CGOMODES.forEach(k=>{ $('cgo-'+k).onclick=()=>setCgo(k); });
 function applyTsSub(){ $('b-tssub').classList.toggle('on', tsSub); }
+$('s_miss').onclick=()=>{ missOnly=!missOnly; apply(); };
 $('b-tssub').onclick=()=>{ tsSub=!tsSub;
   try{ localStorage.setItem('lb_tssub', tsSub?'1':'0'); }catch(e){}
   applyTsSub(); apply(); };
