@@ -250,6 +250,7 @@ function _maybeEnableLogin(){ if(!(_gapiReady&&_gisReady))return;
          catch(e){ _clearTok(); } } }
 function _showLoginError(m){ const e=document.getElementById('gerr'); if(e)e.textContent=m||''; }
 function requestSignIn(){ if(!_tokenClient){_showLoginError('구글 SDK 로딩 중 — 잠시 후 다시 시도하세요.');return;}
+  try{ sessionStorage.removeItem('lb_view_state'); }catch(e){}   // 새로 로그인 = 기본값으로 시작
   _showLoginError(''); document.getElementById('gstat').textContent='데이터 불러오는 중…';
   _tokenClient.requestAccessToken({prompt:'consent'}); }   // consent 강제: 시트(spreadsheets) 권한을 확실히 재동의받아 반쪽 토큰 방지
 async function fetchDriveJson(filename){
@@ -305,7 +306,7 @@ async function onLoginSuccess(){
   }catch(e){ _clearTok(); _showLoginError('데이터 로드 실패 — '+(e.message||e)+' (접근 권한 또는 파일 확인)');
     document.getElementById('gstat').textContent=''; }
 }
-function logout(){ _clearTok(); try{ const t=gapi.client.getToken&&gapi.client.getToken();
+function logout(){ _clearTok(); try{ sessionStorage.removeItem('lb_view_state'); }catch(e){} try{ const t=gapi.client.getToken&&gapi.client.getToken();
   if(t&&t.access_token)google.accounts.oauth2.revoke(t.access_token); }catch(e){} location.reload(); }
 </script>
 </head><body>
@@ -377,6 +378,47 @@ const achvCls=p=>p==null?'':(p>100?'over':(p<80?'warn':''));
 //   보기옵션=리마크 줄바꿈만 켜짐(소계·총계·스킵 포함·T/S 병기·라스트포트는 꺼짐).
 //   ★토글 상태는 새로고침하면 기본값으로 돌아온다(예전엔 화물구분·T/S 병기·줄바꿈만 localStorage 로 남았음).
 let LANG='ko', showSub=false, showSkip=false, showLast=false;   // showSkip=false → 스킵 포트 제외(기본). showLast=라스트포트만
+// ── 보던 옵션 유지 (sessionStorage = 그 탭 한정) ──
+//   새로고침·뒤로가기: 보던 상태 그대로 / 새 탭·새 로그인: 위 기본값으로 시작.
+//   ★localStorage 를 쓰면 새로 로그인해도 남아버려서(다른 사람 PC·공용 화면) 세션 저장으로 둔다.
+const VS_KEY='lb_view_state';
+let _vsRt=null;                                      // 복원 대기 중인 항로 체크 목록
+function vsSave(){ try{ sessionStorage.setItem(VS_KEY, JSON.stringify({
+  wkFrom, wkTo, achvMode, utilMode, cgoMode, tsSub, rmkWrap, showSub, showSkip, showLast,
+  lastBasis, viewMode, missOnly,
+  rt:[...document.querySelectorAll('.rt:checked')].map(c=>c.value),
+  ctr:[...selCtr], port:[...selPort], team:[...selTeam], haul:[...selHaul], exp:[..._expandWk]
+})); }catch(e){} }
+function vsLoad(){
+  let o=null; try{ o=JSON.parse(sessionStorage.getItem(VS_KEY)||'null'); }catch(e){}
+  if(!o) return;
+  const put=(s,a)=>{ if(Array.isArray(a)&&a.length){ s.clear(); a.forEach(v=>s.add(v)); } };
+  if(weeks.indexOf(o.wkFrom)>=0) wkFrom=o.wkFrom;
+  if(weeks.indexOf(o.wkTo)>=0) wkTo=o.wkTo;
+  if(MTMODES.indexOf(o.achvMode)>=0) achvMode=o.achvMode;
+  if(MTMODES.indexOf(o.utilMode)>=0) utilMode=o.utilMode;
+  if(CGOMODES.indexOf(o.cgoMode)>=0) cgoMode=o.cgoMode;
+  tsSub=!!o.tsSub; rmkWrap=!!o.rmkWrap; showSub=!!o.showSub; showSkip=!!o.showSkip;
+  showLast=!!o.showLast; missOnly=!!o.missOnly;
+  if(o.lastBasis==='cn'||o.lastBasis==='sea') lastBasis=o.lastBasis;
+  if(o.viewMode==='week'||o.viewMode==='voyage') viewMode=o.viewMode;
+  put(selCtr,o.ctr); put(selPort,o.port); put(selTeam,o.team); put(selHaul,o.haul);
+  if(Array.isArray(o.exp)){ _expandWk.clear(); o.exp.forEach(w=>_expandWk.add(+w)); }
+  _vsRt=Array.isArray(o.rt)?o.rt:null;
+}
+function vsSyncUI(){                                  // 복원한 상태를 버튼/체크박스에 반영
+  if(_vsRt){ const keep=new Set(_vsRt);
+    document.querySelectorAll('.rt').forEach(c=>{ c.checked=keep.has(c.value); }); _vsRt=null; }
+  MTMODES.forEach(k=>{ $('achv-'+k).classList.toggle('on',achvMode===k);
+                       $('util-'+k).classList.toggle('on',utilMode===k); });
+  CGOMODES.forEach(k=>$('cgo-'+k).classList.toggle('on',cgoMode===k));
+  $('achvseg').classList.toggle('segoff', cgoMode!=='all');
+  $('b-tssub').classList.toggle('segoff', cgoMode==='ts');
+  $('b-sub').classList.toggle('on',showSub);
+  $('b-skp').classList.toggle('on',showSkip);
+  applyTsSub(); applyRmkWrap();
+}
+
 let viewMode='week';    // 'week'=주차별(적출항) / 'voyage'=항차별(전 기항지 로테이션)
 let lastBasis='cn';     // 라스트포트 기준: 'cn'=중국발(마지막 CN 적출항) / 'sea'=동남아발(마지막 적출항)
 const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항로',f_ctr:'선적지 국가',f_port:'선적지 포트',
@@ -486,8 +528,9 @@ const _lastS=weekStart[weeks[weeks.length-1]]; if(_lastS&&_today>=_lastS.getTime
 const _prevW=weeks.filter(w=>w<_curW).pop();
 let wkFrom=(_prevW===undefined?_curW:_prevW);
 let wkTo=_curW;
-// 주차 아코디언: 펼쳐진 주차 집합. 기본 현재주만 펼침 → 접속 시 나머지 주차는 헤더(소계)만 렌더.
-let _expandWk=new Set([_curW]);
+// 주차 아코디언: 펼쳐진 주차 집합. 기본은 전주(=wkFrom)만 펼침 — 이번주는 아직 실적이 덜 차서
+//   먼저 보는 건 마감된 전주. 이번주는 소계 줄만 보이고 클릭하면 펼쳐진다.
+let _expandWk=new Set([wkFrom]);
 
 const ctrPorts={};
 ALL.forEach(r=>{const c=r.pol_ctr||'ETC';(ctrPorts[c]=ctrPorts[c]||new Set()).add(r.pol);});
@@ -942,6 +985,7 @@ function aggUtilCell(a){ if(!a.u)return `<td class="dim" title="${T('rob_na')}">
 function aggSlackCell(a){ return a.u?`<td>${fmt((a.o||0)-(a.r||0))}</td>`:`<td class="dim" title="${T('rob_na')}">–</td>`; }
 
 function apply(){
+  vsSave();
   labels();
   LASTMAP=computeLastMap(lastBasis);
   const rs=selRoutes();const _lo=Math.min(wkFrom,wkTo),_hi=Math.max(wkFrom,wkTo);
@@ -1179,7 +1223,7 @@ $('lang').onclick=()=>setLang(LANG==='ko'?'en':'ko');
 let rmkWrap=true;                                    // 접속 기본값(끄면 그 세션에만 적용)
 function applyRmkWrap(){ document.body.classList.toggle('rmkwrap',rmkWrap);
   const b=$('b-rmkw'); if(b)b.classList.toggle('on',rmkWrap); }
-$('b-rmkw').onclick=()=>{ rmkWrap=!rmkWrap; applyRmkWrap(); };
+$('b-rmkw').onclick=()=>{ rmkWrap=!rmkWrap; applyRmkWrap(); vsSave(); };
 applyRmkWrap();
 $('b-sub').onclick=()=>{showSub=!showSub;$('b-sub').classList.toggle('on',showSub);apply();};
 $('b-skp').onclick=()=>{showSkip=!showSkip;$('b-skp').classList.toggle('on',showSkip);apply();};
@@ -1236,6 +1280,7 @@ $('rt-search').addEventListener('input',e=>{const q=e.target.value.trim().toLowe
 // 검색창 다시 클릭하면 기존 검색어·필터 초기화(지웠다 새로 적는 불편 제거) — 체크상태는 유지
 $('rt-search').addEventListener('focus',e=>{e.target.value='';document.querySelectorAll('#routes .dp-item').forEach(it=>{it.style.display='';});});
 
+vsLoad();                                            // 같은 탭에서 보던 상태가 있으면 먼저 복원
 // ── pages(github.io) 전용: 라스트포트 수동지정/변경내역/공유는 사내(8077) 서버 전용 ──
 window._apply=apply;                                   // 전역 픽업 폴링이 재렌더 호출
 // ── 라스트포트 오버라이드: pages는 구글 로그인으로 공유시트(Sheet1) 직접 read/write (openLastPort=gen 인라인 팝업) ──
@@ -1316,6 +1361,7 @@ window.openLastPort=openLastPort; window.closeLastPort=closeLastPort; window.pic
 window.undoTo=undoTo; window.openHistory=openHistory; window.editRemark=editRemark; window.toggleWk=toggleWk;
 window.toggleConfirm=toggleConfirm;
 renderRoutes();renderCtrs();renderPorts();renderTeams();renderHaul();renderWkList('f');renderWkList('t');
+vsSyncUI();
 // 초기 상태 → DOM 동기화 (강제/저장된 viewMode·showLast·lastBasis 반영. 중국/동남아 토글은 라스트 ON일 때 노출)
 $('mode-week').classList.toggle('on',viewMode==='week');
 $('mode-voy').classList.toggle('on',viewMode==='voyage');
