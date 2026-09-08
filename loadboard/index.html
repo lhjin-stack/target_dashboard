@@ -373,6 +373,9 @@ const fmt=n=>(n==null||isNaN(n))?'–':Math.round(n).toLocaleString();
 const etd=s=>s?s.slice(5).replace('-','/'):'';
 const achvCls=p=>p==null?'':(p>100?'over':(p<80?'warn':''));
 // ── 언어(한/영) + 소계·총계 표시 ──
+// ── 접속 기본값 ── 기간=전주~이번주 / 달성률=Laden / 소석률=ALL / 화물구분=전체 /
+//   보기옵션=리마크 줄바꿈만 켜짐(소계·총계·스킵 포함·T/S 병기·라스트포트는 꺼짐).
+//   ★토글 상태는 새로고침하면 기본값으로 돌아온다(예전엔 화물구분·T/S 병기·줄바꿈만 localStorage 로 남았음).
 let LANG='ko', showSub=false, showSkip=false, showLast=false;   // showSkip=false → 스킵 포트 제외(기본). showLast=라스트포트만
 let viewMode='week';    // 'week'=주차별(적출항) / 'voyage'=항차별(전 기항지 로테이션)
 let lastBasis='cn';     // 라스트포트 기준: 'cn'=중국발(마지막 CN 적출항) / 'sea'=동남아발(마지막 적출항)
@@ -479,10 +482,10 @@ const wkBtn=w=>{ const d=weekStart[w]; if(!d)return `W${w}`; const f=fiscalMW(d.
 const _today=(()=>{const n=new Date();return Date.UTC(n.getFullYear(),n.getMonth(),n.getDate());})();
 let _curW=weeks[0]; weeks.forEach(w=>{const s=weekStart[w];if(s&&_today>=s.getTime()&&_today<s.getTime()+604800000)_curW=w;});
 const _lastS=weekStart[weeks[weeks.length-1]]; if(_lastS&&_today>=_lastS.getTime()+604800000)_curW=weeks[weeks.length-1];
-// 기본 범위 = 현재주 ~ +3주(초기 렌더 경량화). 더 보려면 주차 필터로 확대.
-let wkFrom=_curW;
-const _cand=weeks.filter(w=>w>=_curW&&w<=_curW+3);
-let wkTo=_cand.length?_cand[_cand.length-1]:_curW;
+// 기본 범위 = 전주 ~ 이번주. 더 보려면 주차 필터로 확대.
+const _prevW=weeks.filter(w=>w<_curW).pop();
+let wkFrom=(_prevW===undefined?_curW:_prevW);
+let wkTo=_curW;
 // 주차 아코디언: 펼쳐진 주차 집합. 기본 현재주만 펼침 → 접속 시 나머지 주차는 헤더(소계)만 렌더.
 let _expandWk=new Set([_curW]);
 
@@ -1163,7 +1166,6 @@ function setCgo(m, quiet){
   else if(_achvSaved!==null){ _achvUI(_achvSaved); _achvSaved=null; }
   $('achvseg').classList.toggle('segoff', m!=='all');
   $('b-tssub').classList.toggle('segoff', m==='ts');
-  try{ localStorage.setItem('lb_cgo', m); }catch(e){}
   if(quiet) return;
   if(m!=='all'&&!TS_TEAMED&&selTeam.size!==TEAMS.length) toast(T('cgo_team'));
   apply();
@@ -1171,20 +1173,13 @@ function setCgo(m, quiet){
 CGOMODES.forEach(k=>{ $('cgo-'+k).onclick=()=>setCgo(k); });
 function applyTsSub(){ $('b-tssub').classList.toggle('on', tsSub); }
 $('s_miss').onclick=()=>{ missOnly=!missOnly; apply(); };
-$('b-tssub').onclick=()=>{ tsSub=!tsSub;
-  try{ localStorage.setItem('lb_tssub', tsSub?'1':'0'); }catch(e){}
-  applyTsSub(); apply(); };
-try{ tsSub=(localStorage.getItem('lb_tssub')==='1'); }catch(e){}
+$('b-tssub').onclick=()=>{ tsSub=!tsSub; applyTsSub(); apply(); };
 applyTsSub();
-try{ const _c=localStorage.getItem('lb_cgo'); if(_c&&CGOMODES.indexOf(_c)>=0) setCgo(_c,true); }catch(e){}
 $('lang').onclick=()=>setLang(LANG==='ko'?'en':'ko');
-let rmkWrap=true;
-try{ const _v=localStorage.getItem('lb_rmk_wrap'); if(_v!==null) rmkWrap=(_v==='1'); }catch(e){}
+let rmkWrap=true;                                    // 접속 기본값(끄면 그 세션에만 적용)
 function applyRmkWrap(){ document.body.classList.toggle('rmkwrap',rmkWrap);
   const b=$('b-rmkw'); if(b)b.classList.toggle('on',rmkWrap); }
-$('b-rmkw').onclick=()=>{ rmkWrap=!rmkWrap;
-  try{ localStorage.setItem('lb_rmk_wrap', rmkWrap?'1':'0'); }catch(e){}
-  applyRmkWrap(); };
+$('b-rmkw').onclick=()=>{ rmkWrap=!rmkWrap; applyRmkWrap(); };
 applyRmkWrap();
 $('b-sub').onclick=()=>{showSub=!showSub;$('b-sub').classList.toggle('on',showSub);apply();};
 $('b-skp').onclick=()=>{showSkip=!showSkip;$('b-skp').classList.toggle('on',showSkip);apply();};
