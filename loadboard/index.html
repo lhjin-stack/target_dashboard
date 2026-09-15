@@ -180,6 +180,7 @@ table.board.grid{table-layout:auto;width:auto;max-width:100%}
 .board th.gs.g2,.board td.gs.g2{border-left:2px solid #b2d2a2}
 .board th.gend,.board td.gend{border-left:2px solid #b2d2a2}
 #b-sub.on,#b-skp.on,#b-last.on,#b-rmkw.on,#b-tssub.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+body.unit-wt .g1{background:#fff8ec}   /* 중량 모드 — 지표 컬럼 배경으로 단위 전환을 알린다 */
 .langbtn{position:absolute;top:12px;right:16px;font-weight:700}
 
 .board .pk1{border-left:2px solid #cbd6e8}
@@ -355,6 +356,7 @@ function logout(){ _clearTok(); try{ sessionStorage.removeItem('lb_view_state');
   <span class="flab" data-i="f_achv">달성률</span><span class="mtseg" id="achvseg" title="달성률(Lifting/BSA) 공컨 기준 · ALL=MT+Laden, Laden=laden만, Empty=공컨(MT)만(영업주체 필터 무관)"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button><button id="achv-mty">Empty</button></span>
   <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 기준 · ALL=MT+Laden ROB, Laden=laden ROB, Empty=공컨(MT) ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button><button id="util-mty">Empty</button></span>
   <span class="flab" data-i="f_cgo" style="margin-left:8px">화물구분</span><span class="mtseg" id="cgoseg" title="BSA·Lifting·달성률의 화물 구분 · Local=Local 화물만(laden−T/S), T/S=환적화물만. 영업주체 필터도 그대로 적용된다(T/S×팀 교차). 공컨(MT) 토글은 laden 기준이라 무효. ROB·소석률·Loadable Space 는 본선 총량이라 구분 없음(Own Slot 이 화물별로 안 나뉨)"><button id="cgo-all" class="on" data-i="cgo_all">전체</button><button id="cgo-lcl">Local</button><button id="cgo-ts">T/S</button></span>
+  <span class="flab" data-i="f_unit" style="margin-left:8px">단위</span><span class="mtseg" id="unitseg" title="TEU = 기존 보드. 중량 = ERP UISCBS114 WEIGHT 모드와 동일한 톤 기준(화물중량 + 컨테이너 tare). 중량 데이터가 수집된 주차에서만 켜진다"><button id="unit-teu" class="on">TEU</button><button id="unit-wt" data-i="u_wt">중량(T)</button></span>
   <span class="sep"></span><span class="vgrp"><span class="vlab" data-i="viewopt">보기옵션</span><button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-tssub" data-i="f_tssub" title="BSA·Lifting 숫자 아래에 그 행의 T/S 분을 작은 글씨로 같이 표시(비교용)">T/S 병기</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button><button id="b-rmkw" data-i="f_rmkw" title="리마크가 컬럼 폭보다 길면 줄을 바꿔 전체 내용을 보여줌(행 높이가 늘어남). 끄면 한 줄 + 말줄임">리마크 줄바꿈</button></span>
   <span class="mtseg lbseg" id="lbseg" style="display:none"><button id="lb-cn" class="on" data-i="lb_cn">중국</button><button id="lb-sea" data-i="lb_sea">동남아</button></span>
   <span class="sep"></span><button id="b-hist" data-i="f_hist" title="변경내역">🕘 변경내역</button><button id="b-csv" data-i="f_csv" title="현재 필터에 걸린 전 행을 CSV로 내려받기(접힌 주차 포함). 숫자는 서식 없는 원본값 — 엑셀에서 바로 계산 가능">⬇ CSV</button>
@@ -435,7 +437,7 @@ function voySortVal(v){
 const VS_KEY='lb_view_state';
 let _vsRt=null;                                      // 복원 대기 중인 항로 체크 목록
 function vsSave(){ try{ sessionStorage.setItem(VS_KEY, JSON.stringify({
-  wkFrom, wkTo, achvMode, utilMode, cgoMode, tsSub, rmkWrap, showSub, showSkip, showLast,
+  wkFrom, wkTo, achvMode, utilMode, cgoMode, tsSub, rmkWrap, showSub, showSkip, showLast, unit,
   lastBasis, viewMode, missOnly, sortKey, sortDir,
   rt:[...document.querySelectorAll('.rt:checked')].map(c=>c.value),
   ctr:[...selCtr], port:[...selPort], team:[...selTeam], haul:[...selHaul], exp:[..._expandWk]
@@ -449,6 +451,7 @@ function vsLoad(){
   if(MTMODES.indexOf(o.achvMode)>=0) achvMode=o.achvMode;
   if(MTMODES.indexOf(o.utilMode)>=0) utilMode=o.utilMode;
   if(CGOMODES.indexOf(o.cgoMode)>=0) cgoMode=o.cgoMode;
+  if(o.unit==='wt'||o.unit==='teu') unit=o.unit;
   tsSub=!!o.tsSub; rmkWrap=!!o.rmkWrap; showSub=!!o.showSub; showSkip=!!o.showSkip;
   showLast=!!o.showLast; missOnly=!!o.missOnly;
   if(o.lastBasis==='cn'||o.lastBasis==='sea') lastBasis=o.lastBasis;
@@ -464,6 +467,7 @@ function vsSyncUI(){                                  // 복원한 상태를 버
   MTMODES.forEach(k=>{ $('achv-'+k).classList.toggle('on',achvMode===k);
                        $('util-'+k).classList.toggle('on',utilMode===k); });
   CGOMODES.forEach(k=>$('cgo-'+k).classList.toggle('on',cgoMode===k));
+  ['teu','wt'].forEach(k=>{const e=$('unit-'+k); if(e) e.classList.toggle('on',unit===k);});
   $('achvseg').classList.toggle('segoff', cgoMode!=='all');
   $('b-tssub').classList.toggle('segoff', cgoMode==='ts');
   $('b-sub').classList.toggle('on',showSub);
@@ -474,7 +478,7 @@ function vsSyncUI(){                                  // 복원한 상태를 버
 let viewMode='week';    // 'week'=주차별(적출항) / 'voyage'=항차별(전 기항지 로테이션)
 let lastBasis='cn';     // 라스트포트 기준: 'cn'=중국발(마지막 CN 적출항) / 'sea'=동남아발(마지막 적출항)
 const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항로',f_ctr:'선적지 국가',f_port:'선적지 포트',
-  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',f_rmkw:'리마크 줄바꿈',f_csv:'⬇ CSV',f_cgo:'화물구분',cgo_all:'전체',f_tssub:'T/S 병기',s_miss:'미달성(BSA기준)',sort_tip:'클릭: 오름차순 → 내림차순 → 해제',s_missa:'달성률',cgo_team:'이 데이터에는 T/S 영업주체 분해가 없어(옛 스냅샷) T/S 합계로 집계됩니다 — 갱신 후 영업주체 필터가 적용됩니다',
+  f_team:'영업주체',f_mt:'공컨(MT)',f_view:'보기',viewopt:'보기옵션',f_sub:'소계·총계',f_skp:'스킵 포함',f_last:'라스트포트',f_rmkw:'리마크 줄바꿈',f_csv:'⬇ CSV',f_cgo:'화물구분',cgo_all:'전체',f_unit:'단위',u_wt:'중량(T)',f_tssub:'T/S 병기',s_miss:'미달성(BSA기준)',sort_tip:'클릭: 오름차순 → 내림차순 → 해제',s_missa:'달성률',cgo_team:'이 데이터에는 T/S 영업주체 분해가 없어(옛 스냅샷) T/S 합계로 집계됩니다 — 갱신 후 영업주체 필터가 적용됩니다',
   m_week:'주차별',m_voy:'항차별',c_ord:'순번',lb_cn:'중국',lb_sea:'동남아',f_hist:'🕘 변경내역',sel_route:'항로 선택',sel_ctr:'국가 선택',
   sel_port:'포트 선택',sel_team:'영업주체 선택',sel_wf:'시작 주차',sel_wt:'종료 주차',toggle:'전체/해제',all:'전체',none:'없음',
   mt_x:'제외 (laden)',mt_i:'포함 (전체)',v_exp:'펼치기',v_rt:'항로',v_wk:'주차',
@@ -484,7 +488,7 @@ const I18N={ko:{title:'선복 적재현황 보드',f_week:'주차',f_route:'항�
   total:'총계',week:'주',voy:'항차',pol_n:'개 적출항',ownslot:'Own Slot',empty:'조건에 맞는 데이터 없음',
   t_o:'OBT (해외)',t_e:'EST (수출)',t_i:'IST (수입)',t_j:'JBT (일본)',f_haul:'Head/Back',sel_haul:'Head/Back 선택',h_head:'Head Haul',h_back:'Back Haul',langbtn:'EN'},
  en:{title:'Vessel Loading Board',f_week:'Week',f_route:'Route',f_ctr:'Origin Country',f_port:'Origin Port',
-  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',f_rmkw:'Wrap remark',f_csv:'⬇ CSV',f_cgo:'Cargo',cgo_all:'All',f_tssub:'Show T/S',s_miss:'Unfilled (vs BSA)',sort_tip:'Click: ascending → descending → off',s_missa:'Achv',cgo_team:'This snapshot has no T/S team breakdown yet - showing T/S totals; the team filter applies after the next refresh',
+  f_team:'Sales Team',f_mt:'Empty(MT)',f_view:'View',viewopt:'View options',f_sub:'Subtotal·Total',f_skp:'Incl. skipped',f_last:'Last port',f_rmkw:'Wrap remark',f_csv:'⬇ CSV',f_cgo:'Cargo',cgo_all:'All',f_unit:'Unit',u_wt:'Weight(T)',f_tssub:'Show T/S',s_miss:'Unfilled (vs BSA)',sort_tip:'Click: ascending → descending → off',s_missa:'Achv',cgo_team:'This snapshot has no T/S team breakdown yet - showing T/S totals; the team filter applies after the next refresh',
   m_week:'By Week',m_voy:'By Voyage',c_ord:'Seq',lb_cn:'China',lb_sea:'SE Asia',f_hist:'🕘 History',sel_route:'Select Route',sel_ctr:'Select Country',
   sel_port:'Select Port',sel_team:'Select Team',sel_wf:'From week',sel_wt:'To week',toggle:'All/None',all:'All',none:'None',
   mt_x:'Excl (laden)',mt_i:'Incl (all)',v_exp:'Expand',v_rt:'Route',v_wk:'Week',
@@ -497,6 +501,7 @@ const T=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ko[k]||k;
 // 달성률(Lifting/BSA) 토글: 'all'=MT+Laden / 'laden'=laden만(기본) / 'mty'=공컨(MT)만.
 // 소석률(ROB/Own Slot) 토글: 'all'=MT+Laden ROB(기본) / 'laden'=laden ROB / 'mty'=공컨(MT) ROB.
 let achvMode='laden', utilMode='all';
+let unit='teu';   // 'teu' | 'wt'(중량, 톤)
 // 화물구분(BSA·Lifting·달성률에만 적용): all=현행 / lcl=Local(laden−T/S) / ts=T/S만.
 //   원천(SC052D CGO_MODE, TEU_2)에 T/S 의 팀 분해가 없어 영업주체·공컨 토글과 무관하게 집계된다.
 //   ROB·소석률·Loadable Space 는 본선 총량이라 화물구분이 성립하지 않음(Own Slot 이 안 나뉨).
@@ -506,16 +511,21 @@ const TEAMS=['o','e','i','j'];
 const T_TEAM=t=>T('t_'+t);
 const selTeam=new Set(TEAMS);
 // laden BSA/Lifting: 전체선택이면 클린 총계(r.bsa/r.lifting), 부분선택이면 선택 팀 합. 달성률 ALL이면 MT(bsa_mty/lift_mty) 가산.
-const bsaLaden=r=>selTeam.size===TEAMS.length?(r.bsa||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['bsa_'+t]||0):0),0);
-const liftLaden=r=>selTeam.size===TEAMS.length?(r.lifting||0):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['lift_'+t]||0):0),0);
+// ── 단위(TEU/중량) — 중량 행은 w_ 접두로 같은 이름·같은 의미로 실린다(gen_weight.BOARD_MAP).
+//   V(r,k) 한 군데만 거치면 아래 지표식은 단위와 무관하게 그대로 쓴다.
+const HAS_WT=ALL.some(r=>r.w_has);
+const V=(r,k)=>(unit==='wt'?(r['w_'+k]||0):(r[k]||0));
+const HASF=(r,k)=>(unit==='wt'?r['w_'+k]:r[k])!=null;
+const bsaLaden=r=>selTeam.size===TEAMS.length?V(r,'bsa'):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?V(r,'bsa_'+t):0),0);
+const liftLaden=r=>selTeam.size===TEAMS.length?V(r,'lifting'):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?V(r,'lift_'+t):0),0);
 // T/S 도 원천에 팀 분해가 있다(SC052D POR/DLY · TEU_2 의 CGO_MODE='T' 행 ET/OVRS/IM/JPN).
 //   교차 필드가 실린 데이터면 영업주체 필터를 그대로 적용하고, 옛 데이터(필드 없음)면 총계로 폴백.
 const TS_TEAMED=ALL.some(r=>r.bsa_ts_o!==undefined||r.lift_ts_o!==undefined);
 const _tsTeamed=()=>TS_TEAMED&&selTeam.size!==TEAMS.length;
-const tsB=r=>_tsTeamed()?TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['bsa_ts_'+t]||0):0),0):(r.bsa_ts||0);
-const tsL=r=>_tsTeamed()?TEAMS.reduce((a,t)=>a+(selTeam.has(t)?(r['lift_ts_'+t]||0):0),0):(r.lift_ts||0);
-const _bsaMt=r=>achvMode==='mty'?(r.bsa_mty||0):bsaLaden(r)+(achvMode==='all'?(r.bsa_mty||0):0);
-const _liftMt=r=>achvMode==='mty'?(r.lift_mty||0):liftLaden(r)+(achvMode==='all'?(r.lift_mty||0):0);
+const tsB=r=>_tsTeamed()?TEAMS.reduce((a,t)=>a+(selTeam.has(t)?V(r,'bsa_ts_'+t):0),0):V(r,'bsa_ts');
+const tsL=r=>_tsTeamed()?TEAMS.reduce((a,t)=>a+(selTeam.has(t)?V(r,'lift_ts_'+t):0),0):V(r,'lift_ts');
+const _bsaMt=r=>achvMode==='mty'?V(r,'bsa_mty'):bsaLaden(r)+(achvMode==='all'?V(r,'bsa_mty'):0);
+const _liftMt=r=>achvMode==='mty'?V(r,'lift_mty'):liftLaden(r)+(achvMode==='all'?V(r,'lift_mty'):0);
 const bsaOf=r=>cgoMode==='ts'?tsB(r)
   :cgoMode==='lcl'?Math.max(0,bsaLaden(r)-tsB(r)):_bsaMt(r);
 const liftOf=r=>cgoMode==='ts'?tsL(r)
@@ -527,10 +537,10 @@ const tsSubCell=(r,k)=>{ if(!tsSub||cgoMode==='ts') return '';
 const tsSubAgg=v=>(tsSub&&cgoMode!=='ts'&&v)?`<span class="tssub">T/S ${fmt(v)}</span>`:'';
 const achvOf=r=>{const b=bsaOf(r);return b?Math.round(liftOf(r)/b*1000)/10:null;};
 // ROB/소석률: ALL=r.rob(MT포함) / Laden=r.rob_laden / Empty=r.rob_mty. 각 필드 미탑재 시 r.rob·차감값으로 폴백.
-const robOf=r=>utilMode==='all'?(r.rob||0)
-  :utilMode==='mty'?(r.rob_mty!=null?r.rob_mty:Math.max(0,(r.rob||0)-(r.rob_laden||0)))
-  :(r.rob_laden!=null?r.rob_laden:(r.rob||0));
-const utilOf=r=>{const o=r.own_slot||0;return o?Math.round(robOf(r)/o*1000)/10:null;};
+const robOf=r=>utilMode==='all'?V(r,'rob')
+  :utilMode==='mty'?(HASF(r,'rob_mty')?V(r,'rob_mty'):Math.max(0,V(r,'rob')-V(r,'rob_laden')))
+  :(HASF(r,'rob_laden')?V(r,'rob_laden'):V(r,'rob'));
+const utilOf=r=>{const o=V(r,'own_slot');return o?Math.round(robOf(r)/o*1000)/10:null;};
 // Loadable Space: ERP LDR_SPC_QTY = BSA − 직전까지 누적적재 + 누적양하 (= BSA − ROB + 이 항 적재). MT 포함 총계 기준.
 //   Laden = 그 MT분을 되돌림 → surplus + (현재 재선 MT=rob_mty) − (이 항에서 실은 MT=lift_mty).
 //   예) KDB 2605W NBO: -208 + 404(SHA서 실어 SHK까지 가는 공컨) − 0 = 196.
@@ -538,12 +548,14 @@ const utilOf=r=>{const o=r.own_slot||0;return o?Math.round(robOf(r)/o*1000)/10:n
 //   적출항으로 다시 잡히므로, (선명|포트|ETD)로 그 load행의 lift_mty를 회수해 보정한다.
 //   예) KDB 2605W NSA(dis) ← 2605E NSA(load) lift_mty 158 → laden Loadable 199(과대) 아닌 41.
 const _MTYL={};
-ALL.forEach(r=>{const k=r.vessel+'|'+r.pol+'|'+r.etd; if(_MTYL[k]===undefined)_MTYL[k]=r.lift_mty||0;});
-const mtyLoadOf=r=>r.role==='dis'?(_MTYL[r.vessel+'|'+r.pol+'|'+r.etd]||0):(r.lift_mty||0);
+ALL.forEach(r=>{const k=r.vessel+'|'+r.pol+'|'+r.etd;
+  if(_MTYL[k]===undefined)_MTYL[k]={teu:r.lift_mty||0,wt:r.w_lift_mty||0};});
+const mtyLoadOf=r=>{const u=unit==='wt'?'wt':'teu';
+  return r.role==='dis'?((_MTYL[r.vessel+'|'+r.pol+'|'+r.etd]||{})[u]||0):V(r,'lift_mty');};
 //   Empty 모드는 '공컨만의 적재가능공간'이라는 개념이 성립하지 않아 ALL(총계) 값을 그대로 쓴다.
-const surpOf=r=>(utilMode==='laden')?((r.surplus||0)+(r.rob_mty||0)-mtyLoadOf(r)):(r.surplus||0);
+const surpOf=r=>(utilMode==='laden')?(V(r,'surplus')+V(r,'rob_mty')-mtyLoadOf(r)):V(r,'surplus');
 // 잉여선복 = Own Slot − ROB (자선슬롯 대비 남은 여유. 음수=자선슬롯 초과 적재)
-const slackOf=r=>(r.own_slot||0)-robOf(r);
+const slackOf=r=>V(r,'own_slot')-robOf(r);
 // ── 미달성(BSA기준) — BSA 를 다 채우지 못한 구간만 모아 본다 ──
 //   판정: Lifting < BSA (달성률 100% 미만). BSA 를 넘겼거나 딱 맞춘 구간은 제외.
 //   달성률 = 그 행들의 ΣLifting/ΣBSA(물량가중), 미달성 TEU = ΣBSA−ΣLifting.
@@ -553,7 +565,7 @@ const hasRoom=r=>liftOf(r)<bsaOf(r);
 function setMissTile(rows){
   const rm=rows.filter(r=>r.role!=='dis'&&hasRoom(r));
   const b=rm.reduce((a,r)=>a+bsaOf(r),0), l=rm.reduce((a,r)=>a+liftOf(r),0);
-  $('s_missv').textContent=fmt(Math.round(b-l))+' TEU';
+  $('s_missv').textContent=fmt(Math.round(b-l))+(unit==='wt'?' T':' TEU');
   $('s_missp').textContent=b?(Math.round(l/b*1000)/10)+'%':'–';
   $('s_miss').classList.toggle('on',missOnly);
 }
@@ -1043,7 +1055,7 @@ function apply(){
   const rs=selRoutes();const _lo=Math.min(wkFrom,wkTo),_hi=Math.max(wkFrom,wkTo);
   if(viewMode==='voyage'){ applyVoyage(rs,_lo,_hi); return; }
   const isLast=r=>LASTMAP[r.vessel+'|'+r.voyage]===r.pol;
-  const rows=ALL.filter(r=>rs.has(r.route)&&selCtr.has(r.pol_ctr||'ETC')&&selPort.has(r.pol)&&selHaul.has(r._haul)&&r.week>=_lo&&r.week<=_hi&&(showSkip||r.skp!=='Y')&&(!showLast||isLast(r)));
+  const rows=ALL.filter(r=>(unit!=='wt'||r.w_has)&&rs.has(r.route)&&selCtr.has(r.pol_ctr||'ETC')&&selPort.has(r.pol)&&selHaul.has(r._haul)&&r.week>=_lo&&r.week<=_hi&&(showSkip||r.skp!=='Y')&&(!showLast||isLast(r)));
   const pmActive=rows.length>0&&rows.every(r=>r.pol==='SHK'||r.pol==='DCB');
   if(pmActive&&PICKMAP===null&&!_pickLoading)loadPickup();
   render(rows, pmActive?(PICKMAP||'loading'):null);
@@ -1280,6 +1292,17 @@ function setCgo(m, quiet){
   apply();
 }
 CGOMODES.forEach(k=>{ $('cgo-'+k).onclick=()=>setCgo(k); });
+// ── 단위 토글 ───────────────────────────────────────────────────────────
+function setUnit(u){
+  if(u==='wt'&&!HAS_WT) return;
+  unit=u;
+  ['teu','wt'].forEach(k=>$('unit-'+k).classList.toggle('on',unit===k));
+  document.body.classList.toggle('unit-wt', unit==='wt');
+  apply();
+}
+['teu','wt'].forEach(k=>{ const e=$('unit-'+k); if(e) e.onclick=()=>setUnit(k); });
+if(!HAS_WT){ const g=$('unitseg'); if(g) g.classList.add('segoff');
+  const b=$('unit-wt'); if(b) b.title='이 스냅샷에는 중량 데이터가 없습니다 (gen_weight.py 로 수집 필요)'; }
 function applyTsSub(){ $('b-tssub').classList.toggle('on', tsSub); }
 $('s_miss').onclick=()=>{ missOnly=!missOnly; apply(); };
 // 컬럼명 클릭: 같은 컬럼이면 오름 → 내림 → 해제, 다른 컬럼이면 오름차순부터
