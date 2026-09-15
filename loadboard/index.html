@@ -398,7 +398,7 @@ const SORTV={
   wk:r=>r.week, rt:r=>r.route||'', vsl:r=>(r.vessel||'')+'|'+(r.voyage||''),
   pol:r=>r.pol||'', etd:r=>r.etd||'',
   bsa:r=>bsaOf(r), surp:r=>surpOf(r), lift:r=>liftOf(r), achv:r=>achvOf(r),
-  own:r=>r.own_slot||0, rob:r=>robOf(r), util:r=>utilOf(r), slack:r=>slackOf(r),
+  own:r=>V(r,'own_slot'), rob:r=>robOf(r), util:r=>utilOf(r), slack:r=>slackOf(r),
   cfm:r=>(CONFIRMS[cfmKey(r)]&&CONFIRMS[cfmKey(r)].checked)?1:0
 };
 const _isNil=v=>v==null||v===''||(typeof v==='number'&&isNaN(v));
@@ -1035,7 +1035,7 @@ function selRoutes(){return new Set([...document.querySelectorAll('.rt:checked')
 //   → 그룹 내 항차마다 행이 1개뿐일 때(=선적지·항로를 좁힌 조회)만 합계·소석률을 낸다. Own Slot은 항차당 1회만 가산.
 function aggr(rows){
   const own={};let dup=false;
-  rows.forEach(x=>{const k=x.vessel+'|'+x.voyage;if(k in own)dup=true;else own[k]=x.own_slot||0;});
+  rows.forEach(x=>{const k=x.vessel+'|'+x.voyage;if(k in own)dup=true;else own[k]=V(x,'own_slot');});
   const o=Object.values(own).reduce((a,b)=>a+b,0);
   return{b:rows.reduce((a,x)=>a+bsaOf(x),0),l:rows.reduce((a,x)=>a+liftOf(x),0),s:rows.reduce((a,x)=>a+surpOf(x),0),
          bt:rows.reduce((a,x)=>a+tsB(x),0),lt:rows.reduce((a,x)=>a+tsL(x),0),
@@ -1076,7 +1076,7 @@ function applyVoyage(rs,_lo,_hi){
     const inEtd=rot.filter(r=>r.week===sortWk&&r.etd).map(r=>r.etd);
     const etdKey=inEtd.length?inEtd.sort()[0]:(first.etd||'9999');
     return {k, rot, route:(load[0]||first).route||'', vsl:k.split('|')[0], voy:k.split('|')[1],
-            own:(load[0]||first).own_slot, etd0:etdKey, week0:sortWk};
+            own:V(load[0]||first,'own_slot'), etd0:etdKey, week0:sortWk};
   }).filter(v=>v.rot.length);
   voys.sort((a,b)=> a.week0-b.week0 || (a.route<b.route?-1:a.route>b.route?1:0) || (a.etd0<b.etd0?-1:1));
   renderVoyage(voys);
@@ -1136,7 +1136,7 @@ function leafRow(r,o){
    + `<td class="l gk"></td><td class="l gk">${o.showRt?(r.route||''):''}</td><td class="l gk vsl${o.first?' vclick':''}"${o.first?` onclick="openLastPort('${vk}')" title="클릭: 라스트포트 수동 지정"`:''}>${o.first?`${r.vessel} / ${r.voyage}`:''}</td>`
    + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
    + `<td class="g1 gs">${fmt(bsaOf(r))+tsSubCell(r,'b')}</td><td class="${sC} g1">${fmt(sv)}</td><td class="g1">${fmt(liftOf(r))+tsSubCell(r,'l')}</td><td class="${aC} g1" style="${ast}">${av==null?'–':av+'%'}</td>`
-   + `<td class="gk own g2 gs">${o.first?fmt(r.own_slot):''}</td><td class="g2">${fmt(robOf(r))}</td>`
+   + `<td class="gk own g2 gs">${o.first?fmt(V(r,'own_slot')):''}</td><td class="g2">${fmt(robOf(r))}</td>`
    + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${cfmCell(r)}</tr>`;
 }
 let _pmShow=false,_PMAP=null;      // render()가 매번 갱신 — leafRow()에서 참조
@@ -1250,8 +1250,8 @@ function exportCsv(){
       r.vessel||'', r.voyage||'', r.pol||'', r.pol_ctr||'', r.etd||'',
       r.skp==='Y'?'Y':'', (LASTMAP[r.vessel+'|'+r.voyage]===r.pol)?'Y':'',
       isDis?'':num(bsaOf(r)), num(surpOf(r)), isDis?'':num(liftOf(r)), isDis?'':num(achvOf(r)),
-      isDis?'':num(r.bsa_ts||0), isDis?'':num(r.lift_ts||0),
-      num(r.own_slot), num(robOf(r)), num(utilOf(r)), num(slackOf(r)),
+      isDis?'':num(V(r,'bsa_ts')), isDis?'':num(V(r,'lift_ts')),
+      num(V(r,'own_slot')), num(robOf(r)), num(utilOf(r)), num(slackOf(r)),
       rmkPlain(rk.remark||''), rk.by||'', rk.at||'',
       ck.checked?'Y':'', ck.by||'', ck.at||'' ];
     if(pm){ const p=pm[r.vessel+'|'+r.voyage]||{};
