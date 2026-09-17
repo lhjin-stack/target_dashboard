@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CM1/TEU 계산기</title>
+<style>
+  :root{--bg:#eef1f6;--panel:#ffffff;--panel2:#f3f6fa;--line:#dde4ee;--tx:#26303d;--mut:#6b7a8d;
+        --accent:#2f6fed;--good:#1f9d57;--warn:#b9710a;--bad:#d83a3a;--head:#ffffff;--zebra:#f8fafc;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 -apple-system,"Malgun Gothic",sans-serif}
+  header{padding:13px 22px;background:var(--head);border-bottom:1px solid var(--line);display:flex;
+         align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:20;box-shadow:0 1px 4px rgba(40,60,90,.05)}
+  h1{font-size:16px;margin:0;font-weight:800;letter-spacing:-.2px}
+  .gtabs{display:flex;gap:6px}
+  .gtab{padding:7px 18px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--mut);cursor:pointer;font-weight:700}
+  .gtab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .hinfo{margin-left:auto;color:var(--mut);font-size:12px;display:flex;gap:10px;align-items:center}
+  .hinfo a{color:var(--mut);cursor:pointer;text-decoration:underline dotted}
+  .wrap{padding:16px 22px;max-width:1460px;margin:0 auto}
+  .fseg{color:var(--mut);font-size:12px;font-weight:700}
+  select{background:var(--panel);border:1px solid var(--line);color:var(--tx);padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer;min-width:110px}
+  select:focus{outline:2px solid #cfe0fb;border-color:var(--accent)}
+  .ctrls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 16px;box-shadow:0 1px 3px rgba(40,60,90,.06)}
+  .pbtn{padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--mut);cursor:pointer;font-size:13px;font-weight:600}
+  .pbtn:hover{border-color:var(--accent)}
+  .muted{color:var(--mut)}.neg{color:var(--bad);font-weight:800}
+  table{width:100%;border-collapse:separate;border-spacing:0;background:var(--panel);border-radius:12px;box-shadow:0 1px 3px rgba(40,60,90,.07)}
+  th,td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-variant-numeric:tabular-nums}
+  th{background:var(--panel2);color:var(--mut);font-size:11.5px;font-weight:700;letter-spacing:.2px}
+  th:last-child,td:last-child{border-right:none}
+  th:first-child,td:first-child{text-align:left}
+  tbody tr:last-child td{border-bottom:none}
+  .sect-t{font-size:14px;font-weight:800;margin:20px 0 9px}
+  .note{color:var(--mut);font-size:12px;margin-top:8px}
+  .calc-head{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;margin:4px 0 14px;flex-wrap:wrap}
+  .calc-head .ar{color:var(--mut);font-weight:600}
+  .calc-head .badge{background:var(--accent);color:#fff;font-size:12px;font-weight:800;padding:2px 9px;border-radius:6px}
+  .wf{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;background:#f7f9fc;border:1px solid #e3e8ef;border-radius:10px;padding:12px 14px;margin-bottom:6px}
+  .wf-i{flex:1;min-width:88px;text-align:center;padding:4px 6px}
+  .wf-k{font-size:11px;color:var(--mut);font-weight:600;margin-bottom:3px}
+  .wf-v{font-size:17px;font-weight:800}
+  .wf-op{display:flex;align-items:center;color:var(--mut);font-size:16px;font-weight:700;padding:0 2px}
+  .wf-cm{background:rgba(37,99,235,.08);border-radius:8px}
+  .wf-cm .wf-v{color:var(--accent)}
+  .wf-cm.neg .wf-v{color:#dc2626}
+  .bench{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;background:rgba(10,125,50,.06);border:1px solid rgba(10,125,50,.18);border-radius:9px;padding:9px 13px;margin-bottom:8px;flex-wrap:wrap}
+  .sha-ref{background:#eef5ff;border:1px solid #bcd4f5;border-radius:9px;padding:10px 13px;margin-bottom:8px;font-size:13px}
+  .sha-ref .sr-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700}
+  .sha-ref .sr-badge{background:#1e5fbf;color:#fff;font-size:12px;font-weight:800;padding:2px 8px;border-radius:6px}
+  .sha-ref .sr-org{margin-left:auto;font-weight:600;font-size:12px;color:var(--mut)}
+  .sha-ref .sr-f{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;margin-top:8px}
+  .sha-ref .sr-f .op{color:var(--mut);font-weight:700}
+  .sha-ref .sr-cm{font-size:18px;font-weight:800}
+  .sha-ref .sr-rmk{font-size:11px;color:var(--mut);margin-top:7px;line-height:1.45}
+  .sha-ref.empty{background:#f6f7f9;border-color:var(--line)}
+  .loading{color:var(--mut);padding:24px;text-align:center}
+  .cols{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px}
+  .cols>div{flex:1;min-width:240px}
+  input[type=number]{width:96px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+  #foot{color:var(--mut);font-size:11.5px;margin-top:22px;line-height:1.6}
+</style>
+<script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script><script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script>
+</head>
+<body>
+<div id=gate style="position:fixed;inset:0;z-index:100;background:#f6f7f9;display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:360px;padding:20px"><div style="font-size:44px">🧮</div><h2 style="margin:6px 0">CM1/TEU 계산기</h2><p style="color:#697488;font-size:13px">ekmtc.com 계정으로 로그인하세요.</p><button id=loginBtn onclick=signIn() disabled style="margin-top:8px;padding:9px 20px;border:0;border-radius:8px;background:#1e40af;color:#fff;font:600 14px sans-serif;cursor:pointer">구글 로그인</button><div id=gerr style="color:#b91c1c;font-size:12px;margin-top:10px"></div></div></div>
+<header>
+  <h1>CM1/TEU 계산기</h1>
+  <div class="gtabs">
+    <div class="gtab" data-g="DRY">DRY (GP/HC)</div>
+    <div class="gtab" data-g="FROT">FR / OT</div>
+    <div class="gtab" data-g="RF">RF / RH</div>
+  </div>
+  <div class="hinfo"><span id="built"></span><a onclick="logout()">로그아웃</a></div>
+</header>
+<div class="wrap">
+  <div class="ctrls">
+    <span class="fseg">선적</span><select id="c-porc"></select><select id="c-por"></select>
+    <span class="muted">→</span>
+    <span class="fseg">도착</span><select id="c-dlyc"></select><select id="c-dly"></select>
+    <select id="c-typ"></select>
+    <select id="c-oog" title="OOG 등급 (상해발 참조운임에 반영)"></select>
+    <span class="fseg">│ O/F($/컨)</span>
+    <input type="number" id="c-of">
+    <span class="pbtn" id="c-reset-of" title="O/F 입력값을 구간 평균으로 되돌립니다">O/F 기본값</span>
+  </div>
+  <div id="calc-out" class="loading">데이터 불러오는 중…</div>
+  <div id="foot"></div>
+</div>
+<script>
+const BAKED=null;
+let DATA=null;
+const $=s=>document.querySelector(s);
+const fmt=n=>(n||0).toLocaleString();
+const opt=(label,val,sel)=>`<option value="${val}"${sel?" selected":""}>${label}</option>`;
+const GROUPS={DRY:["20GP","40GP","40HC"],FROT:["20FR","40FR","20OT","40OT"],RF:["20RF","40RH"]};
+const S={group:"DRY"};
+try{ const g=localStorage.getItem("cm1calc_group"); if(GROUPS[g]) S.group=g; }catch(e){}
+const CST={porc:"",por:"",dlyc:"",dly:"",typ:"",oog:"ING",waived:new Set()};
+const curTypes=()=>GROUPS[S.group];
+function uniq(a){return [...new Set(a)].sort();}
+function laneRows(){ const t=curTypes(); return DATA.lanes.filter(l=>t.includes(l.typ)); }
+
+// ── 할증 정가 (스냅샷에 압축 저장: 선적(P)/도착(C) 리스트를 인덱스로 공유) ──
+function surOf(por,dly,typ){
+  const S=DATA.sur; const e=S.idx[por]&&S.idx[por][dly]&&S.idx[por][dly][typ];
+  if(!e) return [];
+  const mk=(i,pnc)=>(S.lists[i]||[]).map(([code,amt])=>({code,name:S.names[code]||"",pnc,amt}));
+  return mk(e[0],"P").concat(mk(e[1],"C"));
+}
+
+function buildCalcSel(){
+  CST.waived.clear();           // 항로/그룹 바뀌면 Waive 초기화
+  const L=laneRows();
+  // 선적↔도착 독립 선택 (이력쌍에 묶이지 않음). 규격=고정. → 아무 항로나 조회 가능
+  const porcs=uniq(L.map(l=>l.por_ctr));
+  if(!porcs.includes(CST.porc)) CST.porc=porcs[0]||"";
+  const pors=uniq(L.filter(l=>l.por_ctr===CST.porc).map(l=>l.por));
+  if(!pors.includes(CST.por)) CST.por=pors[0]||"";
+  const dlycs=uniq(L.map(l=>l.dly_ctr));
+  if(!dlycs.includes(CST.dlyc)) CST.dlyc=dlycs[0]||"";
+  const dlys=uniq(L.filter(l=>l.dly_ctr===CST.dlyc).map(l=>l.dly));
+  if(!dlys.includes(CST.dly)) CST.dly=dlys[0]||"";
+  const typs=curTypes();
+  if(!typs.includes(CST.typ)) CST.typ=typs[0]||"";
+  $("#c-porc").innerHTML=porcs.map(p=>opt(p,p,p===CST.porc)).join("");
+  $("#c-por").innerHTML=pors.map(p=>opt(p,p,p===CST.por)).join("");
+  $("#c-dlyc").innerHTML=dlycs.map(d=>opt(d,d,d===CST.dlyc)).join("");
+  $("#c-dly").innerHTML=dlys.map(d=>opt(d,d,d===CST.dly)).join("");
+  $("#c-typ").innerHTML=typs.map(t=>opt(t,t,t===CST.typ)).join("");
+  const oogs=["ING","OH","OW","OWH"];                    // OOG 등급 — FROT만 의미
+  if(!oogs.includes(CST.oog)) CST.oog="ING";
+  $("#c-oog").innerHTML=oogs.map(o=>opt(o,o,o===CST.oog)).join("");
+  $("#c-oog").style.display=S.group==="FROT"?"":"none";
+  const l=resolveLane();
+  if(l) $("#c-of").value=l.of;
+  renderCalc();
+}
+// 해당 구간·규격 실적 평균 CM1/TEU (컨수 가중) — 정확항로→국가구간→규격 순
+function segAvgCm1Teu(){
+  const lanes=DATA.lanes, typ=CST.typ;
+  const wavg=(rows,scope)=>{ if(!rows.length) return null;
+    const bc=rows.reduce((a,l)=>a+l.bls,0); if(!bc) return null;
+    return {cm1teu:Math.round(rows.reduce((a,l)=>a+l.cm1_teu*l.bls,0)/bc), bls:bc, scope}; };
+  return wavg(lanes.filter(l=>l.por===CST.por&&l.dly===CST.dly&&l.typ===typ),"정확 항로")
+      || wavg(lanes.filter(l=>l.por_ctr===CST.porc&&l.dly_ctr===CST.dlyc&&l.typ===typ),"국가 구간")
+      || wavg(lanes.filter(l=>l.por_ctr===CST.porc&&l.typ===typ),"선적국가")
+      || wavg(lanes.filter(l=>l.typ===typ),"규격 전체");
+}
+const teuOf=t=>t&&t.startsWith("40")?2:1;
+// 포트 단위 원가 분해 (선적항 O원가 + 도착항 I원가) — 신규 항로 정밀 추정
+// 포트 핸들링원가는 컨당 부과라 규격 거의 무관 → 해당 규격 없으면 같은 그룹 대체규격
+const PC_FAM={'20FR':['20FR','40FR','20OT','40OT'],'40FR':['40FR','20FR','40OT','20OT'],
+  '20OT':['20OT','40OT','20FR','40FR'],'40OT':['40OT','20OT','40FR','20FR'],
+  '20RF':['20RF','40RH'],'40RH':['40RH','20RF'],
+  '20GP':['20GP','40GP','40HC'],'40GP':['40GP','40HC','20GP'],'40HC':['40HC','40GP','20GP']};
+function portEntry(side,port,typ){
+  const pt=DATA.port_cost&&DATA.port_cost[side]&&DATA.port_cost[side][port];
+  if(!pt) return null;
+  for(const t of (PC_FAM[typ]||[typ])){ if(pt[t]) return {...pt[t],approx:t!==typ}; }
+  return null;
+}
+function portCost(){
+  const o=portEntry("origin",CST.por,CST.typ), d=portEntry("dest",CST.dly,CST.typ);
+  if(!o||!d) return null;                 // 양쪽 포트 실적 다 있을 때만
+  const accts=[];
+  o.accts.forEach(a=>accts.push({nm:a.nm+" ·선적항",amt:a.amt}));
+  d.accts.forEach(a=>accts.push({nm:a.nm+" ·도착항",amt:a.amt}));
+  return {cost:accts.reduce((s,a)=>s+a.amt,0),accts,bls:Math.min(o.bls,d.bls),approx:o.approx||d.approx};
+}
+// 상해(SHA)발 시트 참조운임 조회 — (도착포트, FR/OT, OOG등급, 규격) → 올인 HQ Idea O/F
+function shaRef(){
+  const R=DATA.sha; if(!R||!R.map||S.group!=="FROT") return null;
+  const ctyp=CST.typ.slice(2), sz=CST.typ.slice(0,2);
+  let e=R.map[`${CST.dlyc}|${CST.dly}|${ctyp}|${CST.oog}`];
+  if(!e){ const f=(R.lanes||[]).find(l=>l.dly===CST.dly&&l.ctyp===ctyp&&l.oog===CST.oog); if(f) e=f; }
+  if(!e) return null;
+  const of=sz==="20"?e.of20:e.of40;
+  if(!of) return null;
+  return {of, remark:e.remark||"", ctyp, oog:CST.oog};
+}
+function shaPortCost(){
+  const o=portEntry("origin","SHA",CST.typ), d=portEntry("dest",CST.dly,CST.typ);
+  if(!o||!d) return null;
+  const accts=[];
+  o.accts.forEach(a=>accts.push({nm:a.nm+" ·상해항",amt:a.amt}));
+  d.accts.forEach(a=>accts.push({nm:a.nm+" ·도착항",amt:a.amt}));
+  return {cost:accts.reduce((s,a)=>s+a.amt,0),accts,approx:o.approx||d.approx};
+}
+// 선택 항로 해석: ①정확 이력 ②포트원가 분해(실적) ③유사항로 평균 순
+function resolveLane(){
+  if(!DATA||!CST.typ) return null;
+  const lanes=DATA.lanes, typ=CST.typ, porc=CST.porc, dlyc=CST.dlyc;
+  const exact=lanes.find(l=>l.por===CST.por&&l.dly===CST.dly&&l.typ===typ);
+  if(exact) return {...exact, basis:"exact"};
+  const ofAvg=rows=>rows.length?Math.round(rows.reduce((a,l)=>a+l.of,0)/rows.length):0;
+  const ofDef=ofAvg(lanes.filter(l=>l.por_ctr===porc&&l.dly_ctr===dlyc&&l.typ===typ))
+           || ofAvg(lanes.filter(l=>l.por_ctr===porc&&l.typ===typ))
+           || ofAvg(lanes.filter(l=>l.typ===typ));
+  const pc=portCost();
+  if(pc) return {por_ctr:porc,por:CST.por,dly_ctr:dlyc,dly:CST.dly,typ,teu:teuOf(typ),
+                 bls:pc.bls,of:ofDef,cost:pc.cost,accts:pc.accts,basis:pc.approx?"port~":"port"};
+  const avg=(rows,label)=>{ if(!rows.length) return null;
+    const n=rows.length, teu=teuOf(typ);
+    const cost=Math.round(rows.reduce((a,l)=>a+l.cost,0)/n);
+    const of=Math.round(rows.reduce((a,l)=>a+l.of,0)/n);
+    const am={}; rows.forEach(l=>(l.accts||[]).forEach(a=>am[a.nm]=(am[a.nm]||0)+a.amt));
+    const accts=Object.entries(am).map(([nm,v])=>({nm,amt:Math.round(v/n)})).filter(a=>a.amt>0).sort((a,b)=>b.amt-a.amt);
+    return {por_ctr:porc,por:CST.por,dly_ctr:dlyc,dly:CST.dly,typ,teu,bls:n,of,cost,accts,basis:label}; };
+  return avg(lanes.filter(l=>l.por_ctr===porc&&l.dly_ctr===dlyc&&l.typ===typ),"국가쌍 평균")
+      || avg(lanes.filter(l=>l.por_ctr===porc&&l.typ===typ),"선적국가+규격 평균")
+      || avg(lanes.filter(l=>l.dly_ctr===dlyc&&l.typ===typ),"도착국가+규격 평균")
+      || avg(lanes.filter(l=>l.typ===typ),"규격 평균")
+      || {por_ctr:porc,por:CST.por,dly_ctr:dlyc,dly:CST.dly,typ,teu:teuOf(typ),bls:0,of:0,cost:0,accts:[],basis:"none"};
+}
+function wkey(s){ return `${s.code}|${s.pnc}`; }      // Waive 키 = 코드+방향
+function renderCalc(){
+  const l=resolveLane();
+  if(!l){ $("#calc-out").className=""; $("#calc-out").innerHTML="<div class='note'>규격을 선택하세요</div>"; return; }
+  const costNote = l.basis==="exact" ? `원가 실적 ${l.bls}컨 평균`
+    : l.basis==="port" ? `<span style="color:#0a7d32">원가: 선적항+도착항 실적 분해</span>`
+    : l.basis==="port~" ? `<span style="color:#0a7d32">원가: 선적항+도착항 실적 분해 <span class="muted">(규격 근사)</span></span>`
+    : l.basis==="none" ? `<span style="color:#dc2626">⚠ 원가 데이터 없음 — 직접 확인 필요</span>`
+    : `<span style="color:#d97706">⚠ 원가 추정: ${l.basis} (유사 ${l.bls}컨)</span>`;
+  const SU=surOf(l.por,l.dly,l.typ);
+  const ofIn=Number($("#c-of").value)||0;
+  const surApplied=SU.filter(s=>!CST.waived.has(wkey(s))).reduce((a,s)=>a+s.amt,0);
+  const revenue=ofIn+surApplied, cm1=revenue-l.cost, cm1teu=Math.round(cm1/l.teu);
+  const bench=segAvgCm1Teu();
+  // ── 상해발(SHA) 시트 참조: OOG등급 반영 올인 O/F → CM1/TEU (FR/OT만) ──
+  const sr=shaRef();
+  let shaBlock="";
+  if(sr){
+    const teu=teuOf(CST.typ);
+    const sc=shaPortCost();
+    const scost=sc?sc.cost:l.cost, sappr=sc?sc.approx:(l.basis!=="exact");
+    const scm1=sr.of-scost, scm1teu=Math.round(scm1/teu);
+    const isSha=CST.por==="SHA";
+    const cbadge=sc?(sappr?'원가 근사':'원가 실적분해'):'원가 대체(선택구간)';
+    const ccolor=sc?(sappr?'var(--mut)':'#0a7d32'):'#d97706';
+    let rel;
+    if(scm1<0) rel={c:'#dc2626',t:'⚠ 시트 O/F가 원가보다 낮음 — 이 구간 시트값 비현실적(참조 무효). 초록 실적값을 쓰세요'};
+    else if(sr.oog==="OW"||sr.oog==="OWH") rel={c:'#d97706',t:'⚠ OOG 리스트가 기준 — 실현 CM1/TEU는 통상 이보다 낮음(할증 할인). 위 실적 평균과 대조'};
+    else rel={c:'#0a7d32',t:'✔ 표준화물(ING/OH) — 실적 CM1/TEU와 ±수% 정합(검증됨)'};
+    shaBlock=`<div class="sha-ref">
+      <div class="sr-h">🚢 상해발(SHA) 기준
+        <span class="muted" style="font-weight:600">${DATA.sha.rate||''}</span>
+        <span class="sr-badge">${sr.ctyp}(${sr.oog}) · ${CST.typ.slice(0,2)}'</span>
+        <span class="sr-org">${isSha?'✔ 현재 선적지 = 상해':'참조 · 선택 선적지('+CST.por+')와 무관'}</span></div>
+      <div class="sr-f">
+        <span>O/F(올인) <b>$${fmt(sr.of)}</b></span><span class="op">−</span>
+        <span>원가 <b>$${fmt(scost)}</b> <span style="font-size:11px;color:${ccolor}">${cbadge}</span></span><span class="op">=</span>
+        <span>CM1 <b>$${fmt(scm1)}</b>/컨</span><span class="op">→</span>
+        <span>CM1/TEU <b class="sr-cm" style="color:${scm1teu<0?'#dc2626':'#0a7d32'}">$${fmt(scm1teu)}</b></span></div>
+      <div class="sr-rmk" style="color:${rel.c};font-weight:600">${rel.t}</div>
+      ${sr.remark?`<div class="sr-rmk">포함내역: ${sr.remark} <span style="color:#1e5fbf;font-weight:600">→ 올인가라 할증 미가산</span></div>`:''}
+    </div>`;
+  } else if(S.group==="FROT"){
+    shaBlock=`<div class="sha-ref empty"><div class="sr-h">🚢 <span class="muted" style="font-weight:600">상해발 기준: 이 도착지(${CST.dly}) · ${CST.typ.slice(2)}(${CST.oog}) · ${CST.typ.slice(0,2)}' 시트 운임 없음</span></div></div>`;
+  }
+  // 할증 정가 — 선적(P)/도착(C) 분리 + 소계 (코드별 Waive)
+  const surTable=(title,rows)=>{
+    const sub=rows.filter(s=>!CST.waived.has(wkey(s))).reduce((a,s)=>a+s.amt,0);
+    let h=`<div class="sect-t" style="margin-top:10px">${title} <span class="muted" style="font-weight:700">$${fmt(sub)}</span></div>
+      <table><thead><tr><th>코드</th><th>$/컨</th><th>Waive</th></tr></thead><tbody>`;
+    if(!rows.length){ h+=`<tr><td colspan="3" class="muted" style="text-align:left">해당 할증 없음</td></tr></tbody></table>`; return h; }
+    for(const s of rows){ const w=CST.waived.has(wkey(s));
+      h+=`<tr><td style="text-align:left" class="${w?'muted':''}" title="${s.name||''}">${s.code} <span class="muted" style="font-size:10px">${(s.name||'').slice(0,16)}</span></td>
+        <td class="${w?'muted':''}">${w?'<s>$'+fmt(s.amt)+'</s>':'$'+fmt(s.amt)}</td>
+        <td><input type="checkbox" class="wv" data-code="${wkey(s)}" ${w?'checked':''}></td></tr>`; }
+    h+=`<tr><td style="text-align:left"><b>소계</b></td><td><b>$${fmt(sub)}</b></td><td></td></tr></tbody></table>`;
+    return h; };
+  const so=SU.filter(s=>s.pnc==='P'), sd=SU.filter(s=>s.pnc==='C');
+  let acc=`<table><thead><tr><th>원가 계정</th><th>$/컨</th></tr></thead><tbody>`;
+  for(const a of l.accts) acc+=`<tr><td style="text-align:left">${a.nm}</td><td>$${fmt(a.amt)}</td></tr>`;
+  acc+=`<tr><td style="text-align:left"><b>원가 합계</b></td><td><b>$${fmt(l.cost)}</b></td></tr></tbody></table>`;
+  const subOf=a=>a.filter(s=>!CST.waived.has(wkey(s))).reduce((x,s)=>x+s.amt,0);
+  const soSum=subOf(so), sdSum=subOf(sd);
+  const step=(k,v,cls)=>`<div class="wf-i ${cls||''}"><div class="wf-k">${k}</div><div class="wf-v">$${fmt(v)}</div></div>`;
+  const op=s=>`<div class="wf-op">${s}</div>`;
+  $("#calc-out").className="";
+  $("#calc-out").innerHTML=`
+    <div class="calc-head">${l.por_ctr}/${l.por} <span class="ar">→</span> ${l.dly_ctr}/${l.dly}
+      <span class="badge">${l.typ}</span>
+      <span class="muted" style="font-size:12px;font-weight:500">할증 정가(Tariff) · ${costNote}</span></div>
+    <div class="bench">📊 이 구간 <b>${l.typ}</b> 실적 평균 CM1/TEU
+      <b style="font-size:17px;color:${bench?(bench.cm1teu<0?'#dc2626':'#0a7d32'):'var(--mut)'}">${bench?'$'+fmt(bench.cm1teu):'실적 없음'}</b>
+      ${bench?`<span class="muted">· ${bench.scope} ${fmt(bench.bls)}컨</span>`:''}
+      <span class="muted" style="margin-left:auto">아래는 입력 O/F 기준 계산값</span></div>
+    ${shaBlock}
+    <div class="wf">
+      ${step("O/F 입력", ofIn)} ${op("+")}
+      ${step("선적 할증", soSum)} ${op("+")}
+      ${step("도착 할증", sdSum)} ${op("−")}
+      ${step("원가", l.cost)} ${op("=")}
+      ${step("CM1 /컨", cm1, cm1<0?'neg':'')} ${op("→")}
+      ${step("CM1 / TEU", cm1teu, "wf-cm "+(cm1teu<0?'neg':''))}
+    </div>
+    <div class="cols">
+      <div>${surTable("⬆ 선적지 할증 (선불)", so)}</div>
+      <div>${surTable("⬇ 도착지 할증 (착불)", sd)}</div>
+      <div><div class="sect-t" style="margin-top:10px">원가 <span class="muted" style="font-weight:700">$${fmt(l.cost)}</span> <span class="muted" style="font-weight:500;font-size:11px">자동·비용계정별</span></div>${acc}</div>
+    </div>`;
+  document.querySelectorAll(".wv").forEach(cb=>cb.onchange=e=>{
+    const c=e.target.dataset.code;
+    if(e.target.checked) CST.waived.add(c); else CST.waived.delete(c);
+    renderCalc(); });
+}
+$("#c-porc").onchange=e=>{ CST.porc=e.target.value; CST.por=""; buildCalcSel(); };
+$("#c-por").onchange=e=>{ CST.por=e.target.value; buildCalcSel(); };
+$("#c-dlyc").onchange=e=>{ CST.dlyc=e.target.value; CST.dly=""; buildCalcSel(); };
+$("#c-dly").onchange=e=>{ CST.dly=e.target.value; buildCalcSel(); };
+$("#c-typ").onchange=e=>{ CST.typ=e.target.value; buildCalcSel(); };
+$("#c-oog").onchange=e=>{ CST.oog=e.target.value; renderCalc(); };
+$("#c-of").oninput=renderCalc;
+$("#c-reset-of").onclick=()=>{ const l=resolveLane(); if(l){ $("#c-of").value=l.of; renderCalc(); } };
+document.querySelectorAll(".gtab").forEach(t=>t.onclick=()=>{ S.group=t.dataset.g;
+  try{localStorage.setItem("cm1calc_group",S.group);}catch(e){}
+  document.querySelectorAll(".gtab").forEach(x=>x.classList.toggle("on",x.dataset.g===S.group));
+  if(DATA) buildCalcSel(); });
+
+function boot(d){
+  DATA=d;
+  // 스냅샷은 계정명을 인덱스로 압축 → 화면용 {nm,amt}로 복원
+  const N=d.acct_names||[]; const hyd=a=>Array.isArray(a)?{nm:N[a[0]],amt:a[1]}:a;
+  d.lanes.forEach(l=>l.accts=(l.accts||[]).map(hyd));
+  for(const side of Object.values(d.port_cost||{})) for(const pt of Object.values(side)) for(const e of Object.values(pt)) e.accts=(e.accts||[]).map(hyd);
+  document.querySelectorAll(".gtab").forEach(x=>x.classList.toggle("on",x.dataset.g===S.group));
+  $("#built").textContent=`데이터 ${d.built}`;
+  $("#foot").innerHTML=`실적 베이스라인: 최근 ${d.days}일 적재(OBRD) B/L의 O/F(CS165H 확정운임)·원가(PM327I 비용계정, 컨당 환산) — 항로 ${fmt(d.lanes.length)}개.
+    할증은 ERP 정가(Tariff, SA215I/216D) 기준 ${d.built.slice(0,10)} 시점, Waive 체크로 제외 시뮬레이션.
+    이력 없는 항로는 선적항+도착항 원가 분해 → 유사항로 평균 순으로 추정(상단 문구로 근거 표시).`;
+  buildCalcSel();
+  const g=document.getElementById('gate'); if(g) g.style.display='none';
+}
+
+const OAUTH_CLIENT_ID='313527315690-04t6lei9sd9i7ls21a6mhurif4nm8qg7.apps.googleusercontent.com';
+const OAUTH_HD='ekmtc.com';const OAUTH_SCOPE='https://www.googleapis.com/auth/drive.readonly';
+const SNAP_FILE_ID='1Kvw7pjx-NciiP8Ap4vVf8c9E5Rtitwx2';const TOK_KEY='cm1calc_tok';
+let _gapiReady=false,_gisReady=false,_tokenClient=null;
+function _gapiInit(){gapi.load('client',async()=>{await gapi.client.init({});await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');_gapiReady=true;_maybe();});}
+function _saveTok(r){try{localStorage.setItem(TOK_KEY,JSON.stringify({t:r.access_token,exp:Date.now()+((r.expires_in||3500)*1000)}));}catch(e){}}
+function _loadTok(){try{var o=JSON.parse(localStorage.getItem(TOK_KEY)||'null');if(o&&o.t&&o.exp>Date.now()+60000)return o.t;}catch(e){}return null;}
+function _clearTok(){try{localStorage.removeItem(TOK_KEY);}catch(e){}}
+function _gerr(m){var e=document.getElementById('gerr');if(e)e.textContent=m||'';}
+function _gisInit(){if(!window.google||!google.accounts)return;_tokenClient=google.accounts.oauth2.initTokenClient({client_id:OAUTH_CLIENT_ID,scope:OAUTH_SCOPE,hd:OAUTH_HD,callback:async(resp)=>{if(resp.error){_gerr('로그인 실패: '+(resp.error_description||resp.error));return;}_saveTok(resp);await _afterLogin();}});_gisReady=true;_maybe();}
+function _maybe(){if(!(_gapiReady&&_gisReady))return;var b=document.getElementById('loginBtn');if(b)b.disabled=false;var t=_loadTok();if(t){try{gapi.client.setToken({access_token:t});_afterLogin();}catch(e){_clearTok();}}}
+function signIn(){if(!_tokenClient){_gerr('구글 SDK 로딩 중 — 잠시 후');return;}_gerr('불러오는 중…');_tokenClient.requestAccessToken({prompt:''});}
+async function _afterLogin(){try{var g=await gapi.client.drive.files.get({fileId:SNAP_FILE_ID,alt:'media'});boot(JSON.parse(g.body));}catch(e){_clearTok();_gerr('데이터 로드 실패 — '+(e.message||e));}}
+function logout(){_clearTok();location.reload();}
+
+</script>
+</body>
+</html>
