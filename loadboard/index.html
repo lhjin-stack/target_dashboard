@@ -399,8 +399,11 @@ const SORTV={
   pol:r=>r.pol||'', etd:r=>r.etd||'',
   bsa:r=>bsaOf(r), surp:r=>surpOf(r), lift:r=>liftOf(r), achv:r=>achvOf(r),
   own:r=>V(r,'own_slot'), rob:r=>robOf(r), util:r=>utilOf(r), slack:r=>slackOf(r),
-  cfm:r=>(CONFIRMS[cfmKey(r)]&&CONFIRMS[cfmKey(r)].checked)?1:0
+  cfm:r=>(CONFIRMS[cfmKey(r)]&&CONFIRMS[cfmKey(r)].checked)?1:0,
+  rmk:r=>rmkSortVal(REMARKS[rmkKey(r)])
 };
+// 리마크 정렬값: 서식 표기([b]…)를 뗀 평문, 대소문자 무시. 비어 있으면 null(값 없는 행은 항상 뒤).
+function rmkSortVal(rk){ const t=(rk&&rk.remark)?rmkPlain(rk.remark).trim().toLowerCase():''; return t||null; }
 const _isNil=v=>v==null||v===''||(typeof v==='number'&&isNaN(v));
 function sortList(list, f){                          // 안정 정렬 + 값 없는 행은 항상 뒤로
   return list.map((x,i)=>({x,i,v:f(x)})).sort((a,b)=>{
@@ -417,7 +420,7 @@ function thS(k,lab,cls){ const on=sortKey===k;
 function headCells(){ return thS('rt',T('f_route'),'l')+thS('vsl',T('c_vsl'),'l')+thS('pol',T('c_pol'),'l')+thS('etd',T('c_etd'),'l')
   +thS('bsa',T('c_bsa'),'g1 gs')+thS('surp',T('c_surp'),'g1')+thS('lift',T('c_lift'),'g1')+thS('achv',T('c_achv'),'g1')
   +thS('own',T('ownslot'),'g2 gs')+thS('rob',T('c_rob'),'g2')+thS('util',T('c_util'),'g2')+thS('slack',T('c_slack'),'g2')
-  +`<th class="l gend rmk">${T('c_rmk')}<span class="colres" title="드래그: 폭 조절 · 더블클릭: 내용에 맞추기 ↔ 기본폭"></span></th>`
+  +thS('rmk',T('c_rmk')+'<span class="colres" title="드래그: 폭 조절 · 더블클릭: 내용에 맞추기 ↔ 기본폭"></span>','l gend rmk')
   +thS('cfm',T('c_cfm'),'l'); }
 // 항차 블록의 정렬값: 텍스트는 블록 대표값, 숫자는 그 항차 적출항들의 집계(주차 헤더와 같은 규칙)
 function voySortVal(v){
@@ -432,7 +435,8 @@ function voySortVal(v){
   if(sortKey==='rob') return a.u?a.r:null;
   if(sortKey==='util') return aggUtil(a);
   if(sortKey==='slack') return a.u?((a.o||0)-(a.r||0)):null;
-  return null;                                       // 순번·리마크·확인은 항차별 뷰에서 정렬 대상 아님
+  if(sortKey==='rmk'){ for(const r of v.rot){ const t=rmkSortVal(REMARKS[rmkKey(r)]); if(t) return t; } return null; }
+  return null;                                       // 순번·확인은 항차별 뷰에서 정렬 대상 아님
 }
 const VS_KEY='lb_view_state';
 let _vsRt=null;                                      // 복원 대기 중인 항로 체크 목록
