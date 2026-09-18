@@ -154,6 +154,7 @@ function segAvgCm1Teu(){
 const teuOf=t=>t&&t.startsWith("40")?2:1;
 // 포트 단위 원가 분해 (선적항 O원가 + 도착항 I원가) — 신규 항로 정밀 추정
 // 포트 핸들링원가는 컨당 부과라 규격 거의 무관 → 해당 규격 없으면 같은 그룹 대체규격
+const SIB={'40GP':['40HC'],'40HC':['40GP'],'20RF':[],'40RH':['40RF'],'20FR':[],'40FR':[],'20OT':[],'40OT':[],'20GP':[]};
 const PC_FAM={'20FR':['20FR','40FR','20OT','40OT'],'40FR':['40FR','20FR','40OT','20OT'],
   '20OT':['20OT','40OT','20FR','40FR'],'40OT':['40OT','20OT','40FR','20FR'],
   '20RF':['20RF','40RH'],'40RH':['40RH','20RF'],
@@ -161,7 +162,9 @@ const PC_FAM={'20FR':['20FR','40FR','20OT','40OT'],'40FR':['40FR','20FR','40OT',
 function portEntry(side,port,typ){
   const pt=DATA.port_cost&&DATA.port_cost[side]&&DATA.port_cost[side][port];
   if(!pt) return null;
-  for(const t of (PC_FAM[typ]||[typ])){ if(pt[t]) return {...pt[t],approx:t!==typ}; }
+  const MIN=20;                                 // 표본 최소 컨수 — 미만이면 대체규격 우선
+  for(const t of (PC_FAM[typ]||[typ])){ if(pt[t]&&pt[t].bls>=MIN) return {...pt[t],approx:t!==typ}; }
+  for(const t of (PC_FAM[typ]||[typ])){ if(pt[t]) return {...pt[t],approx:t!==typ,thin:true}; }
   return null;
 }
 function portCost(){
@@ -170,7 +173,7 @@ function portCost(){
   const accts=[];
   o.accts.forEach(a=>accts.push({nm:a.nm+" ·선적항",amt:a.amt}));
   d.accts.forEach(a=>accts.push({nm:a.nm+" ·도착항",amt:a.amt}));
-  return {cost:accts.reduce((s,a)=>s+a.amt,0),accts,bls:Math.min(o.bls,d.bls),approx:o.approx||d.approx};
+  return {cost:accts.reduce((s,a)=>s+a.amt,0),accts,bls:Math.min(o.bls,d.bls),approx:o.approx||d.approx||o.thin||d.thin};
 }
 // 상해(SHA)발 시트 참조운임 조회 — (도착포트, FR/OT, OOG등급, 규격) → 올인 HQ Idea O/F
 function shaRef(){
@@ -197,6 +200,11 @@ function resolveLane(){
   const lanes=DATA.lanes, typ=CST.typ, porc=CST.porc, dlyc=CST.dlyc;
   const exact=lanes.find(l=>l.por===CST.por&&l.dly===CST.dly&&l.typ===typ);
   if(exact) return {...exact, basis:"exact"};
+  // 같은 항로의 형제 규격 실적(40GP↔40HC 등) — ERP 표준단가도 동일 취급. 포트분해(타항로 평균)보다 정확
+  for(const st of (SIB[typ]||[])){
+    const sib=lanes.find(l=>l.por===CST.por&&l.dly===CST.dly&&l.typ===st);
+    if(sib) return {...sib, typ, teu:teuOf(typ), basis:"sib", sibTyp:st};
+  }
   const ofAvg=rows=>rows.length?Math.round(rows.reduce((a,l)=>a+l.of,0)/rows.length):0;
   const ofDef=ofAvg(lanes.filter(l=>l.por_ctr===porc&&l.dly_ctr===dlyc&&l.typ===typ))
            || ofAvg(lanes.filter(l=>l.por_ctr===porc&&l.typ===typ))
@@ -222,6 +230,7 @@ function renderCalc(){
   const l=resolveLane();
   if(!l){ $("#calc-out").className=""; $("#calc-out").innerHTML="<div class='note'>규격을 선택하세요</div>"; return; }
   const costNote = l.basis==="exact" ? `원가 실적 ${l.bls}컨 평균`
+    : l.basis==="sib" ? `<span style="color:#0a7d32">원가·O/F: 같은 항로 ${l.sibTyp} 실적 ${l.bls}컨 (규격 동일단가)</span>`
     : l.basis==="port" ? `<span style="color:#0a7d32">원가: 선적항+도착항 실적 분해</span>`
     : l.basis==="port~" ? `<span style="color:#0a7d32">원가: 선적항+도착항 실적 분해 <span class="muted">(규격 근사)</span></span>`
     : l.basis==="none" ? `<span style="color:#dc2626">⚠ 원가 데이터 없음 — 직접 확인 필요</span>`
