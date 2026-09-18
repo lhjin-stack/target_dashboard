@@ -26,6 +26,8 @@
   .pbtn{padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--mut);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap}
   .pbtn:hover{border-color:var(--accent);color:var(--accent)}
   .pbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .pbtn.go{border-color:var(--accent);color:var(--accent);font-weight:800;padding:6px 16px}
+  .pbtn.go.on{background:var(--accent);color:#fff;box-shadow:0 0 0 3px rgba(47,111,237,.18)}
   .muted{color:var(--mut)}.neg{color:var(--bad);font-weight:800}
   table{width:100%;border-collapse:separate;border-spacing:0;background:var(--panel);border-radius:12px;box-shadow:0 1px 3px rgba(40,60,90,.07)}
   th,td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -143,7 +145,7 @@
     <span class="mini" id="hs-cmp" title="이력 구간을 한 표로 비교">비교표</span>
     <span class="mini" id="hs-clear" title="고정(★) 제외 전부 삭제">지우기</span></div>
   <div class="hs-l" id="hs-l"></div>
-  <div class="hs-f">구간을 조회하면 자동 저장(이 브라우저). 클릭=같은 조건 복원 · ★=고정 · 최근 40개 유지</div>
+  <div class="hs-f">조회 버튼을 누른 구간만 저장(이 브라우저). 클릭=같은 조건 복원(O/F·Waive 포함) · ★=고정 · 최근 40개 유지</div>
 </aside>
 <div class="wrap">
   <div class="ctrls">
@@ -152,6 +154,7 @@
     <span class="fseg">도착</span><span class="cb ctr" id="c-dlyc"></span><span class="cb port" id="c-dly"></span>
     <select id="c-typ"></select>
     <select id="c-oog" title="OOG 등급 (상해발 참조운임에 반영)"></select>
+    <span class="pbtn go" id="c-go" title="선택한 구간·규격으로 조회 (이력에 저장)">🔍 조회</span>
     <span class="fseg">│ O/F($/컨)</span>
     <input type="number" id="c-of">
     <span class="pbtn" id="c-reset-of" title="O/F 입력값을 구간 평균으로 되돌립니다">O/F 기본값</span>
@@ -172,12 +175,15 @@ const opt=(label,val,sel)=>`<option value="${val}"${sel?" selected":""}>${label}
 const GROUPS={DRY:["20GP","40GP","40HC"],FROT:["20FR","40FR","20OT","40OT"],RF:["20RF","40RH"]};
 const S={group:"DRY",cmp:false};
 try{ const g=localStorage.getItem("cm1calc_group"); if(GROUPS[g]) S.group=g; }catch(e){}
-const CST={porc:"",por:"",dlyc:"",dly:"",typ:"",oog:"ING",waived:new Set()};
+// SEL = 선택창 상태(콤보/규격/탭), CST = 조회 버튼으로 확정돼 화면에 그려진 상태. 조회 전엔 이전 결과가 그대로 남음.
+const SEL={group:S.group,porc:"",por:"",dlyc:"",dly:"",typ:"",oog:"ING"};
+const CST={group:S.group,porc:"",por:"",dlyc:"",dly:"",typ:"",oog:"ING",waived:new Set()};
+let LAST=null;   // 마지막 렌더 결과(이력 저장용)
 // 조건부 청구 항목 — 해당 케이스(서렌더·C/A·EDI·OAF)에만 발생하므로 기본 Waive. 체크 풀면 포함.
 const DEFAULT_WAIVE=new Set(["SRD","CCA","EDI","OAF"]);
 const CAT_NM={P:"포트 핸들링",F:"피더·내륙 운송",H:"T/S 허브 핸들링"};
 const KIND={"01":["본선",""],"02":["피더","f"],"04":["철도","t"],"05":["트럭","t"],"99":["기타","t"]};
-const curTypes=()=>GROUPS[S.group];
+const curTypes=()=>GROUPS[SEL.group];
 function uniq(a){return [...new Set(a)].sort();}
 function laneRows(){ const t=curTypes(); return DATA.lanes.filter(l=>t.includes(l.typ)); }
 const pname=p=>(DATA.pnames&&DATA.pnames[p])||"";
@@ -212,7 +218,7 @@ function combo(id,items,value,onpick){
   inp.onkeydown=e=>{
     if(e.key==="ArrowDown"){ e.preventDefault(); if(!el.classList.contains("open")) return render(inp.value); hl=Math.min(shown.length-1,hl+1); list.querySelectorAll(".cb-it").forEach((d,k)=>d.classList.toggle("hl",k===hl)); const h=list.querySelector(".hl"); if(h) h.scrollIntoView({block:"nearest"}); }
     else if(e.key==="ArrowUp"){ e.preventDefault(); hl=Math.max(0,hl-1); list.querySelectorAll(".cb-it").forEach((d,k)=>d.classList.toggle("hl",k===hl)); const h=list.querySelector(".hl"); if(h) h.scrollIntoView({block:"nearest"}); }
-    else if(e.key==="Enter"){ e.preventDefault(); pick(hl); inp.blur(); }
+    else if(e.key==="Enter"){ e.preventDefault(); if(!el.classList.contains("open")){ inp.blur(); query(); return; } pick(hl); inp.blur(); }
     else if(e.key==="Escape"){ close(); inp.blur(); }
     else if(e.key==="Tab"){ if(el.classList.contains("open")&&inp.value.trim()&&shown.length) pick(hl); else close(); }
   };
@@ -228,41 +234,51 @@ function surOf(por,dly,typ){
   return mk(e[0],"P").concat(mk(e[1],"C"));
 }
 
-function buildCalcSel(keep){
-  // keep: 이력 복원 시 {of, waived} 를 유지 (기본은 항로 바뀌면 Waive 초기화·O/F 구간평균)
-  CST.waived.clear();
+function syncSelectors(){
+  // 선택창만 갱신(콤보 캐스케이드) — 렌더·저장 없음. 조회 버튼이 눌리면 query() 가 SEL→CST 복사 후 렌더
   const L=laneRows();
   // 선적↔도착 독립 선택 (이력쌍에 묶이지 않음). 규격=고정. → 아무 항로나 조회 가능
   const porcs=uniq(L.map(l=>l.por_ctr));
-  if(!porcs.includes(CST.porc)) CST.porc=porcs[0]||"";
-  const pors=uniq(L.filter(l=>l.por_ctr===CST.porc).map(l=>l.por));
-  if(!pors.includes(CST.por)) CST.por=pors[0]||"";
+  if(!porcs.includes(SEL.porc)) SEL.porc=porcs[0]||"";
+  const pors=uniq(L.filter(l=>l.por_ctr===SEL.porc).map(l=>l.por));
+  if(!pors.includes(SEL.por)) SEL.por=pors[0]||"";
   const dlycs=uniq(L.map(l=>l.dly_ctr));
-  if(!dlycs.includes(CST.dlyc)) CST.dlyc=dlycs[0]||"";
-  const dlys=uniq(L.filter(l=>l.dly_ctr===CST.dlyc).map(l=>l.dly));
-  if(!dlys.includes(CST.dly)) CST.dly=dlys[0]||"";
+  if(!dlycs.includes(SEL.dlyc)) SEL.dlyc=dlycs[0]||"";
+  const dlys=uniq(L.filter(l=>l.dly_ctr===SEL.dlyc).map(l=>l.dly));
+  if(!dlys.includes(SEL.dly)) SEL.dly=dlys[0]||"";
   const typs=curTypes();
-  if(!typs.includes(CST.typ)) CST.typ=typs[0]||"";
+  if(!typs.includes(SEL.typ)) SEL.typ=typs[0]||"";
   const ctrItems=cs=>cs.map(c=>({v:c,label:c,sub:(DATA.cnames&&DATA.cnames[c])||""}));
   const portItems=ps=>ps.map(p=>({v:p,label:p,sub:pname(p)}));
-  combo("c-porc",ctrItems(porcs),CST.porc,v=>{ CST.porc=v; CST.por=""; buildCalcSel(); });
-  combo("c-por",portItems(pors),CST.por,v=>{ CST.por=v; buildCalcSel(); });
-  combo("c-dlyc",ctrItems(dlycs),CST.dlyc,v=>{ CST.dlyc=v; CST.dly=""; buildCalcSel(); });
-  combo("c-dly",portItems(dlys),CST.dly,v=>{ CST.dly=v; buildCalcSel(); });
-  $("#c-typ").innerHTML=typs.map(t=>opt(t,t,t===CST.typ)).join("");
+  combo("c-porc",ctrItems(porcs),SEL.porc,v=>{ SEL.porc=v; SEL.por=""; syncSelectors(); });
+  combo("c-por",portItems(pors),SEL.por,v=>{ SEL.por=v; syncSelectors(); });
+  combo("c-dlyc",ctrItems(dlycs),SEL.dlyc,v=>{ SEL.dlyc=v; SEL.dly=""; syncSelectors(); });
+  combo("c-dly",portItems(dlys),SEL.dly,v=>{ SEL.dly=v; syncSelectors(); });
+  $("#c-typ").innerHTML=typs.map(t=>opt(t,t,t===SEL.typ)).join("");
   const oogs=["ING","OH","OW","OWH"];                    // OOG 등급 — FROT만 의미
-  if(!oogs.includes(CST.oog)) CST.oog="ING";
-  $("#c-oog").innerHTML=oogs.map(o=>opt(o,o,o===CST.oog)).join("");
-  $("#c-oog").style.display=S.group==="FROT"?"":"none";
+  if(!oogs.includes(SEL.oog)) SEL.oog="ING";
+  $("#c-oog").innerHTML=oogs.map(o=>opt(o,o,o===SEL.oog)).join("");
+  $("#c-oog").style.display=SEL.group==="FROT"?"":"none";
+  markPending();
+}
+const selKey=()=>`${SEL.group}|${SEL.porc}|${SEL.por}|${SEL.dlyc}|${SEL.dly}|${SEL.typ}|${SEL.group==="FROT"?SEL.oog:""}`;
+function markPending(){ const b=$("#c-go"); if(b) b.classList.toggle("on",!!DATA&&selKey()!==histKey()); }
+// 조회: SEL→CST 확정, Waive 기본값·O/F 구간평균(keep 있으면 유지) → 렌더 → 이력 저장(save)
+function query(keep,save=true){
+  if(!DATA) return;
+  Object.assign(CST,{group:SEL.group,porc:SEL.porc,por:SEL.por,dlyc:SEL.dlyc,dly:SEL.dly,typ:SEL.typ,oog:SEL.oog});
+  CST.waived.clear();
   const l=resolveLane();
   if(l){ $("#c-of").value=keep&&keep.of!=null?keep.of:l.of;
     if(keep&&keep.waived) keep.waived.forEach(w=>CST.waived.add(w));
     else surOf(l.por,l.dly,l.typ).forEach(s=>{ if(DEFAULT_WAIVE.has(s.code)) CST.waived.add(wkey(s)); }); }
   renderCalc();
+  if(save) histCommit();
+  markPending();
 }
-// 해당 구간·규격 실적 평균 CM1/TEU (컨수 가중) — 정확항로→국가구간→규격 순
-function segAvgCm1Teu(){
-  const lanes=DATA.lanes, typ=CST.typ;
+// 해당 구간·규격 실적 평균 CM1/TEU (컨수 가중) — 정확항로→국가구간→규격 순. lanes=90일(3개월) / lanes30=최근 30일
+function segAvgCm1Teu(lanes){
+  lanes=lanes||DATA.lanes; const typ=CST.typ;
   const wavg=(rows,scope)=>{ if(!rows.length) return null;
     const bc=rows.reduce((a,l)=>a+l.bls,0); if(!bc) return null;
     return {cm1teu:Math.round(rows.reduce((a,l)=>a+l.cm1_teu*l.bls,0)/bc), bls:bc, scope}; };
@@ -320,7 +336,7 @@ function portCost(){
 }
 // 상해(SHA)발 시트 참조운임 조회 — (도착포트, FR/OT, OOG등급, 규격) → 올인 HQ Idea O/F
 function shaRef(){
-  const R=DATA.sha; if(!R||!R.map||S.group!=="FROT") return null;
+  const R=DATA.sha; if(!R||!R.map||CST.group!=="FROT") return null;
   const ctyp=CST.typ.slice(2), sz=CST.typ.slice(0,2);
   let e=R.map[`${CST.dlyc}|${CST.dly}|${ctyp}|${CST.oog}`];
   if(!e){ const f=(R.lanes||[]).find(l=>l.dly===CST.dly&&l.ctyp===ctyp&&l.oog===CST.oog); if(f) e=f; }
@@ -415,7 +431,7 @@ function renderCalc(){
   const ofIn=Number($("#c-of").value)||0;
   const surApplied=SU.filter(s=>!CST.waived.has(wkey(s))).reduce((a,s)=>a+s.amt,0);
   const revenue=ofIn+surApplied, cm1=revenue-l.cost, cm1teu=Math.round(cm1/l.teu);
-  const bench=segAvgCm1Teu();
+  const bench=segAvgCm1Teu(), bench30=DATA.lanes30?segAvgCm1Teu(DATA.lanes30):null;
   // ── 상해발(SHA) 시트 참조: OOG등급 반영 올인 O/F → CM1/TEU (FR/OT만) ──
   const sr=shaRef();
   let shaBlock="";
@@ -444,7 +460,7 @@ function renderCalc(){
       <div class="sr-rmk" style="color:${rel.c};font-weight:600">${rel.t}</div>
       ${sr.remark?`<div class="sr-rmk">포함내역: ${sr.remark} <span style="color:#1e5fbf;font-weight:600">→ 올인가라 할증 미가산</span></div>`:''}
     </div>`;
-  } else if(S.group==="FROT"){
+  } else if(CST.group==="FROT"){
     shaBlock=`<div class="sha-ref empty"><div class="sr-h">🚢 <span class="muted" style="font-weight:600">상해발 기준: 이 도착지(${CST.dly}) · ${CST.typ.slice(2)}(${CST.oog}) · ${CST.typ.slice(0,2)}' 시트 운임 없음</span></div></div>`;
   }
   // 할증 정가 — 선적(P)/도착(C) 분리 + 소계 (코드별 Waive)
@@ -474,9 +490,13 @@ function renderCalc(){
       <span class="muted" style="font-size:12px;font-weight:500">할증 정가(Tariff) · ${costNote}</span></div>
     ${routeBlock(l)}
     <div class="bench">📊 이 구간 <b>${l.typ}</b> 실적 평균 CM1/TEU
+      <span class="muted">최근 3개월(${DATA.days}일)</span>
       <b style="font-size:17px;color:${bench?(bench.cm1teu<0?'#dc2626':'#0a7d32'):'var(--mut)'}">${bench?'$'+fmt(bench.cm1teu):'실적 없음'}</b>
       ${bench?`<span class="muted">· ${bench.scope} ${fmt(bench.bls)}컨</span>`:''}
-      <span class="muted" style="margin-left:auto">아래는 입력 O/F 기준 계산값</span></div>
+      ${DATA.lanes30?`<span class="muted" style="margin-left:14px">최근 1개월(${DATA.days_short||30}일)</span>
+      <b style="font-size:17px;color:${bench30?(bench30.cm1teu<0?'#dc2626':'#0a7d32'):'var(--mut)'}">${bench30?'$'+fmt(bench30.cm1teu):'실적 없음'}</b>
+      ${bench30?`<span class="muted">· ${bench30.scope} ${fmt(bench30.bls)}컨</span>`:''}`:''}
+      <span class="muted" style="margin-left:auto">실적=적재(OBRD) B/L 확정운임−원가 · 아래는 입력 O/F 기준 계산값</span></div>
     ${shaBlock}
     <div class="wf">
       ${step("O/F 입력", ofIn)} ${op("+")}
@@ -496,34 +516,40 @@ function renderCalc(){
     const c=e.target.dataset.code;
     if(e.target.checked) CST.waived.add(c); else CST.waived.delete(c);
     renderCalc(); });
-  histTouch({l,ofIn,soSum,sdSum,cm1,cm1teu,bench,ts:ct.tsSum});
+  LAST={l,ofIn,soSum,sdSum,cm1,cm1teu,bench,ts:ct.tsSum};
+  histUpdate();
 }
 
-// ── 조회 이력 (localStorage) : 자동 저장·클릭 복원·고정·비교표 ──
-const HK="cm1calc_hist"; let HIST=[]; let _ht=null; let CURKEY="";
+// ── 조회 이력 (localStorage) : 조회 버튼 시 저장·클릭 복원·고정·비교표 ──
+const HK="cm1calc_hist"; let HIST=[]; let CURKEY="";
 try{ HIST=JSON.parse(localStorage.getItem(HK)||"[]"); if(!Array.isArray(HIST)) HIST=[]; }catch(e){ HIST=[]; }
 function histSave(){ try{ localStorage.setItem(HK,JSON.stringify(HIST)); }catch(e){} }
-function histKey(){ return `${S.group}|${CST.porc}|${CST.por}|${CST.dlyc}|${CST.dly}|${CST.typ}|${S.group==="FROT"?CST.oog:""}`; }
-function histTouch(r){
-  // 렌더 후 1.2초 안정되면 upsert (드롭다운 스크롤 중 스쳐간 구간은 안 남음)
-  CURKEY=histKey(); histRender();
-  clearTimeout(_ht);
-  _ht=setTimeout(()=>{
-    const key=histKey(); if(key!==CURKEY) return;
-    const e={key,g:S.group,porc:CST.porc,por:CST.por,dlyc:CST.dlyc,dly:CST.dly,typ:CST.typ,oog:CST.oog,
+function histKey(){ return `${CST.group}|${CST.porc}|${CST.por}|${CST.dlyc}|${CST.dly}|${CST.typ}|${CST.group==="FROT"?CST.oog:""}`; }
+function histEntry(){ const r=LAST; return {key:histKey(),g:CST.group,porc:CST.porc,por:CST.por,dlyc:CST.dlyc,dly:CST.dly,typ:CST.typ,oog:CST.oog,
              of:r.ofIn,w:[...CST.waived],so:r.soSum,sd:r.sdSum,cost:r.l.cost,cm1:r.cm1,cm1teu:r.cm1teu,
-             bench:r.bench?r.bench.cm1teu:null,ts:r.ts,basis:r.l.basis,t:Date.now()};
-    const i=HIST.findIndex(x=>x.key===key);
-    if(i>=0){ e.pin=HIST[i].pin; HIST.splice(i,1); }
-    HIST.unshift(e);
-    const keep=[],drop=[]; let n=0;
-    for(const x of HIST){ if(x.pin) keep.push(x); else if(n<40){ keep.push(x); n++; } }
-    HIST=keep; histSave(); histRender(); if(S.cmp) cmpRender();
-  },1200);
+             bench:r.bench?r.bench.cm1teu:null,ts:r.ts,basis:r.l.basis,t:Date.now()}; }
+function histCommit(){
+  // 조회 버튼/복원/링크 → 맨 위로 upsert (고정 유지, 미고정 40개)
+  if(!LAST) return;
+  const e=histEntry(); CURKEY=e.key;
+  const i=HIST.findIndex(x=>x.key===e.key);
+  if(i>=0){ e.pin=HIST[i].pin; HIST.splice(i,1); }
+  HIST.unshift(e);
+  const keep=[]; let n=0;
+  for(const x of HIST){ if(x.pin) keep.push(x); else if(n<40){ keep.push(x); n++; } }
+  HIST=keep; histSave(); histRender(); if(S.cmp) cmpRender();
+}
+function histUpdate(){
+  // O/F·Waive 만 바뀐 경우: 같은 키의 기존 항목 값만 갱신(순서·신규 없음)
+  if(!LAST) return;
+  CURKEY=histKey();
+  const i=HIST.findIndex(x=>x.key===CURKEY);
+  if(i>=0){ const pin=HIST[i].pin; HIST[i]=histEntry(); HIST[i].pin=pin; histSave(); if(S.cmp) cmpRender(); }
+  histRender();
 }
 function histRender(){
   const L=$("#hs-l"); $("#hs-n").textContent=HIST.length?`${HIST.length}`:"";
-  if(!HIST.length){ L.innerHTML=`<div class="hs-empty">아직 없음.<br>구간을 조회하면 여기에 쌓이고, 클릭하면 같은 조건(O/F·Waive 포함)으로 돌아갑니다.</div>`; return; }
+  if(!HIST.length){ L.innerHTML=`<div class="hs-empty">아직 없음.<br>구간을 고르고 <b>조회</b>를 누르면 여기에 쌓이고, 클릭하면 같은 조건(O/F·Waive 포함)으로 돌아갑니다.</div>`; return; }
   const rows=[...HIST].sort((a,b)=>(b.pin?1:0)-(a.pin?1:0));
   L.innerHTML=rows.map(e=>`<div class="hi${e.pin?' pin':''}${e.key===CURKEY?' cur':''}" data-k="${e.key}">
       <div class="l1">${e.por}<span class="muted">→</span>${e.dly}<span class="ty">${e.typ}</span>${e.g==="FROT"&&e.oog!=="ING"?`<span class="flag">${e.oog}</span>`:''}</div>
@@ -536,11 +562,12 @@ function histRender(){
       histRestore(e); };
   });
 }
+function setGroup(g){ SEL.group=g; try{localStorage.setItem("cm1calc_group",g);}catch(x){} document.querySelectorAll(".gtab").forEach(x=>x.classList.toggle("on",x.dataset.g===g)); }
 function histRestore(e){
-  S.group=e.g; try{localStorage.setItem("cm1calc_group",S.group);}catch(x){}
-  document.querySelectorAll(".gtab").forEach(x=>x.classList.toggle("on",x.dataset.g===S.group));
-  Object.assign(CST,{porc:e.porc,por:e.por,dlyc:e.dlyc,dly:e.dly,typ:e.typ,oog:e.oog||"ING"});
-  buildCalcSel({of:e.of,waived:e.w||[]});
+  setGroup(GROUPS[e.g]?e.g:SEL.group);
+  Object.assign(SEL,{porc:e.porc,por:e.por,dlyc:e.dlyc,dly:e.dly,typ:e.typ,oog:e.oog||"ING"});
+  syncSelectors();
+  query({of:e.of,waived:e.w||[]});
   toast(`${e.por}→${e.dly} ${e.typ} 복원`);
 }
 $("#hs-clear").onclick=()=>{ HIST=HIST.filter(x=>x.pin); histSave(); histRender(); if(S.cmp) cmpRender(); };
@@ -568,7 +595,7 @@ function cmpRender(){
 }
 // ── 링크 공유: 현재 조건을 URL 해시로 (동료가 열면 같은 조건으로 뜸) ──
 function stateHash(){
-  const p=new URLSearchParams({g:S.group,porc:CST.porc,por:CST.por,dlyc:CST.dlyc,dly:CST.dly,typ:CST.typ,oog:CST.oog,of:$("#c-of").value||"",w:[...CST.waived].join(",")});
+  const p=new URLSearchParams({g:CST.group,porc:CST.porc,por:CST.por,dlyc:CST.dlyc,dly:CST.dly,typ:CST.typ,oog:CST.oog,of:$("#c-of").value||"",w:[...CST.waived].join(",")});
   return "#"+p.toString();
 }
 $("#c-link").onclick=()=>{ const u=location.href.split("#")[0]+stateHash(); try{ history.replaceState(null,"",stateHash()); }catch(e){ location.hash=stateHash(); }
@@ -576,20 +603,19 @@ $("#c-link").onclick=()=>{ const u=location.href.split("#")[0]+stateHash(); try{
 function applyHash(){
   if(!location.hash||location.hash.length<3) return false;
   try{ const p=new URLSearchParams(location.hash.slice(1)); if(!p.get("por")||!p.get("dly")) return false;
-    if(GROUPS[p.get("g")]) S.group=p.get("g");
-    Object.assign(CST,{porc:p.get("porc")||"",por:p.get("por"),dlyc:p.get("dlyc")||"",dly:p.get("dly"),typ:p.get("typ")||"",oog:p.get("oog")||"ING"});
-    document.querySelectorAll(".gtab").forEach(x=>x.classList.toggle("on",x.dataset.g===S.group));
-    buildCalcSel({of:p.get("of")?Number(p.get("of")):null,waived:(p.get("w")||"").split(",").filter(Boolean)}); return true; }catch(e){ return false; }
+    if(GROUPS[p.get("g")]) setGroup(p.get("g"));
+    Object.assign(SEL,{porc:p.get("porc")||"",por:p.get("por"),dlyc:p.get("dlyc")||"",dly:p.get("dly"),typ:p.get("typ")||"",oog:p.get("oog")||"ING"});
+    syncSelectors();
+    query({of:p.get("of")?Number(p.get("of")):null,waived:(p.get("w")||"").split(",").filter(Boolean)}); return true; }catch(e){ return false; }
 }
 
-$("#c-typ").onchange=e=>{ CST.typ=e.target.value; buildCalcSel(); };
-$("#c-oog").onchange=e=>{ CST.oog=e.target.value; renderCalc(); };
+$("#c-typ").onchange=e=>{ SEL.typ=e.target.value; markPending(); };
+$("#c-oog").onchange=e=>{ SEL.oog=e.target.value; markPending(); };
+$("#c-go").onclick=()=>query();
 $("#c-of").oninput=renderCalc;
+$("#c-of").onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); query(); } };
 $("#c-reset-of").onclick=()=>{ const l=resolveLane(); if(l){ $("#c-of").value=l.of; renderCalc(); } };
-document.querySelectorAll(".gtab").forEach(t=>t.onclick=()=>{ S.group=t.dataset.g;
-  try{localStorage.setItem("cm1calc_group",S.group);}catch(e){}
-  document.querySelectorAll(".gtab").forEach(x=>x.classList.toggle("on",x.dataset.g===S.group));
-  if(DATA) buildCalcSel(); });
+document.querySelectorAll(".gtab").forEach(t=>t.onclick=()=>{ setGroup(t.dataset.g); if(DATA) syncSelectors(); });
 
 function boot(d){
   DATA=d;
@@ -597,13 +623,16 @@ function boot(d){
   const N=d.acct_names||[]; const hyd=a=>Array.isArray(a)?{nm:N[a[0]],amt:a[1],cat:a[2]||null,side:a[3]||null}:a;
   d.lanes.forEach(l=>l.accts=(l.accts||[]).map(hyd));
   for(const side of Object.values(d.port_cost||{})) for(const pt of Object.values(side)) for(const e of Object.values(pt)) e.accts=(e.accts||[]).map(hyd);
-  document.querySelectorAll(".gtab").forEach(x=>x.classList.toggle("on",x.dataset.g===S.group));
+  if(Array.isArray(d.lanes30)){   // [por,dly,typ,cntrs,cm1_teu] → 90일 lanes 와 같은 모양(국가는 포트→국가 룩업)
+    const pc={}, dc={}; d.lanes.forEach(l=>{ pc[l.por]=l.por_ctr; dc[l.dly]=l.dly_ctr; });
+    d.lanes30=d.lanes30.map(([por,dly,typ,bls,cm1_teu])=>({por,por_ctr:pc[por]||"",dly,dly_ctr:dc[dly]||"",typ,bls,cm1_teu})); }
+  setGroup(SEL.group);
   $("#built").textContent=`데이터 ${d.built}`;
   $("#foot").innerHTML=`실적 베이스라인: 최근 ${d.days}일 적재(OBRD) B/L의 O/F(CS165H 확정운임)·원가(PM327I 비용계정, 컨당 환산) — 항로 ${fmt(d.lanes.length)}개.
     ${d.routes?`원가는 B/L 레그(CS102I)별로 선적측(첫 본선 적재까지)/도착측으로 갈라 포트핸들링·피더·내륙운송(FEEDERAGE/TRUCKING/RAIL)·T/S허브 핸들링으로 구분 — 피더료는 Feeder Transportation Agreement(SC031I/032I) 계약단가가 PM327I에 그대로 반영된 값.`:`원가에는 B/L의 피더·T/S 레그 비용(PM327I 레그별, 피더료=Feeder Transportation Agreement 계약단가)이 포함됨 — 레그별 분해 표시는 다음 데이터 갱신부터.`}
     할증은 ERP 정가(Tariff, SA215I/216D) 기준 ${d.built.slice(0,10)} 시점, Waive 체크로 제외 시뮬레이션. 조건부 항목(SRD·CCA·EDI·OAF)은 해당 시에만 청구되므로 기본 Waive — 필요하면 체크 해제.
     이력 없는 항로는 선적측+도착측 원가 분해 →${d.ctrt?` 이력 없는 피더포트는 피더계약(${fmt(d.ctrt_n||0)}건)+허브 실적 →`:''} 유사항로 평균 순으로 추정(상단 문구로 근거 표시).`;
-  if(!applyHash()) buildCalcSel();
+  if(!applyHash()){ syncSelectors(); query(null,false); }   // 첫 화면은 기본 구간을 보여주되 이력엔 안 넣음
   const g=document.getElementById('gate'); if(g) g.style.display='none';
 }
 
