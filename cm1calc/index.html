@@ -55,6 +55,7 @@
   .sha-ref .sr-rmk{font-size:11px;color:var(--mut);margin-top:7px;line-height:1.45}
   .sha-ref.empty{background:#f6f7f9;border-color:var(--line)}
   .loading{color:var(--mut);padding:24px;text-align:center}
+  .cond{display:inline-block;margin-left:5px;font-size:10px;font-weight:700;color:#b9710a;background:#fdf3e3;border-radius:5px;padding:0 5px;vertical-align:1px}
   .cols{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px}
   .cols>div{flex:1;min-width:240px}
   input[type=number]{width:96px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px}
@@ -97,6 +98,8 @@ const GROUPS={DRY:["20GP","40GP","40HC"],FROT:["20FR","40FR","20OT","40OT"],RF:[
 const S={group:"DRY"};
 try{ const g=localStorage.getItem("cm1calc_group"); if(GROUPS[g]) S.group=g; }catch(e){}
 const CST={porc:"",por:"",dlyc:"",dly:"",typ:"",oog:"ING",waived:new Set()};
+// 조건부 청구 항목 — 해당 케이스(서렌더·C/A·EDI·OAF)에만 발생하므로 기본 Waive. 체크 풀면 포함.
+const DEFAULT_WAIVE=new Set(["SRD","CCA","EDI","OAF"]);
 const curTypes=()=>GROUPS[S.group];
 function uniq(a){return [...new Set(a)].sort();}
 function laneRows(){ const t=curTypes(); return DATA.lanes.filter(l=>t.includes(l.typ)); }
@@ -110,7 +113,7 @@ function surOf(por,dly,typ){
 }
 
 function buildCalcSel(){
-  CST.waived.clear();           // 항로/그룹 바뀌면 Waive 초기화
+  CST.waived.clear();           // 항로/그룹 바뀌면 Waive 초기화(조건부 항목은 기본 Waive로 복귀)
   const L=laneRows();
   // 선적↔도착 독립 선택 (이력쌍에 묶이지 않음). 규격=고정. → 아무 항로나 조회 가능
   const porcs=uniq(L.map(l=>l.por_ctr));
@@ -133,7 +136,8 @@ function buildCalcSel(){
   $("#c-oog").innerHTML=oogs.map(o=>opt(o,o,o===CST.oog)).join("");
   $("#c-oog").style.display=S.group==="FROT"?"":"none";
   const l=resolveLane();
-  if(l) $("#c-of").value=l.of;
+  if(l){ $("#c-of").value=l.of;
+    surOf(l.por,l.dly,l.typ).forEach(s=>{ if(DEFAULT_WAIVE.has(s.code)) CST.waived.add(wkey(s)); }); }
   renderCalc();
 }
 // 해당 구간·규격 실적 평균 CM1/TEU (컨수 가중) — 정확항로→국가구간→규격 순
@@ -265,7 +269,8 @@ function renderCalc(){
       <table><thead><tr><th>코드</th><th>$/컨</th><th>Waive</th></tr></thead><tbody>`;
     if(!rows.length){ h+=`<tr><td colspan="3" class="muted" style="text-align:left">해당 할증 없음</td></tr></tbody></table>`; return h; }
     for(const s of rows){ const w=CST.waived.has(wkey(s));
-      h+=`<tr><td style="text-align:left" class="${w?'muted':''}" title="${s.name||''}">${s.code} <span class="muted" style="font-size:10px">${(s.name||'').slice(0,16)}</span></td>
+      const dw=DEFAULT_WAIVE.has(s.code);
+      h+=`<tr><td style="text-align:left" class="${w?'muted':''}" title="${s.name||''}${dw?' — 조건부 청구(해당 시에만). 기본 Waive':''}">${s.code} <span class="muted" style="font-size:10px">${(s.name||'').slice(0,16)}</span>${dw?'<span class="cond">조건부</span>':''}</td>
         <td class="${w?'muted':''}">${w?'<s>$'+fmt(s.amt)+'</s>':'$'+fmt(s.amt)}</td>
         <td><input type="checkbox" class="wv" data-code="${wkey(s)}" ${w?'checked':''}></td></tr>`; }
     h+=`<tr><td style="text-align:left"><b>소계</b></td><td><b>$${fmt(sub)}</b></td><td></td></tr></tbody></table>`;
@@ -328,7 +333,7 @@ function boot(d){
   document.querySelectorAll(".gtab").forEach(x=>x.classList.toggle("on",x.dataset.g===S.group));
   $("#built").textContent=`데이터 ${d.built}`;
   $("#foot").innerHTML=`실적 베이스라인: 최근 ${d.days}일 적재(OBRD) B/L의 O/F(CS165H 확정운임)·원가(PM327I 비용계정, 컨당 환산) — 항로 ${fmt(d.lanes.length)}개.
-    할증은 ERP 정가(Tariff, SA215I/216D) 기준 ${d.built.slice(0,10)} 시점, Waive 체크로 제외 시뮬레이션.
+    할증은 ERP 정가(Tariff, SA215I/216D) 기준 ${d.built.slice(0,10)} 시점, Waive 체크로 제외 시뮬레이션. 조건부 항목(SRD·CCA·EDI·OAF)은 해당 시에만 청구되므로 기본 Waive — 필요하면 체크 해제.
     이력 없는 항로는 선적항+도착항 원가 분해 → 유사항로 평균 순으로 추정(상단 문구로 근거 표시).`;
   buildCalcSel();
   const g=document.getElementById('gate'); if(g) g.style.display='none';
