@@ -101,9 +101,6 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 #lowlist th,#lowlist td{text-align:right}#lowlist th:first-child,#lowlist td:first-child,#lowlist td.tl,#lowlist th.tl{text-align:left}
 #lowlist tr.hi td{background:#fff7f7}
 #lowlist tr.dim td{opacity:.45}
-.gapbar{position:relative;height:15px;width:110px;background:var(--soft);border-radius:3px;display:inline-block;vertical-align:middle}
-.gapbar i{position:absolute;top:2px;bottom:2px;right:0;border-radius:2px;background:var(--crit)}
-.gapbar.pos i{background:var(--good)}
 </style><script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script><script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script></head><body><div class=wrap><div id=gate style="position:fixed;inset:0;z-index:100;background:#f6f7f9;display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:360px;padding:20px"><div style="font-size:44px">🚢</div><h2 style="margin:6px 0">HK 운임 모니터</h2><p style="color:#697488;font-size:13px">ekmtc.com 계정으로 로그인하세요.</p><button id=loginBtn onclick=signIn() disabled style="margin-top:8px;padding:9px 20px;border:0;border-radius:8px;background:#1e40af;color:#fff;font:600 14px sans-serif;cursor:pointer">구글 로그인</button><div id=gerr style="color:#b91c1c;font-size:12px;margin-top:10px"></div></div></div>
 <h1>🚢 HK 운임 모니터 <span class="tag tag-live">실데이터</span></h1>
 <div class=sub>홍콩 사무소 발 · 실적 O/F(ETD 기준) vs 시트 WK39&40 타겟 · 등급 = 20260301~20260531 TEU · D-1 ADW</div>
@@ -154,7 +151,7 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
    <span class=seg id=lmetseg><button data-m="o" class=on>O/F</button><button data-m="c">CM1</button></span></span>
  <span class=note>가중평균 = Σ(운임×TEU)/ΣTEU<br>평균 미만 = 저운임</span>
 </div>
-<div class=helprow><b>항차 → 구간(POL→POD)</b>을 고르면 그 구간의 부킹이 운임(USD/box)별로 쌓입니다. <b>세로선=가중평균</b>, 평균보다 왼쪽(빨강)이 저운임 구간. <b>빨간 영역이나 막대를 클릭</b>하면 해당 부킹·RA와 평균 대비 차이가 아래에 나옵니다.</div>
+<div class=helprow><b>항차 → 구간(POL→POD)</b>을 고르면 그 구간의 부킹이 운임(USD/box)별로 쌓입니다. 구간은 <b>본선 레그</b>(T/S면 환적항→도착항), 집계는 <b>홍콩 사무소 부킹만</b>. <b>세로선=가중평균</b>, 평균보다 왼쪽(빨강)이 저운임 구간. <b>빨간 영역이나 막대를 클릭</b>하면 해당 부킹·RA와 평균 대비 차이가 아래에 나옵니다.</div>
 
 <div class=tiles id=ltiles></div>
 
@@ -424,27 +421,24 @@ function renderLow(){const c=lowCur;if(!c)return;const avg=c.avg;
  else{rows=c.low;title=`저운임 부킹 — 평균 $${fmt(avg)} 미만 ${rows.length}건 · ${fmt(c.lq)}TEU`;$("#lowreset").style.display="none";}
  $("#lowhead").innerHTML=`<span>${title} <span class=hn>(${LV||''} · ${LSEG||''} · ${LSZ}' · ${metName()})</span></span>`;
  const box=l=>l.s==='40'?l.q/2:l.q;
- const maxGap=Math.max(1,...c.rows.map(l=>Math.abs(metVal(l)-avg)));
  let h;
  if(LVIEW==='s'){
   const m={};for(const l of rows){const s=(m[l.n]=m[l.n]||{nm:l.n,g:l.g,q:0,vq:0,bx:0,n:0,ras:new Set()});s.q+=l.q;s.vq+=metVal(l)*l.q;s.bx+=box(l);s.n++;if(l.r)s.ras.add(l.r);}
   const arr=Object.values(m).map(s=>({...s,v:s.vq/s.q,dev:s.vq/s.q-avg})).map(s=>({...s,gap:-s.dev*s.bx})).sort((a,b)=>b.gap-a.gap);
-  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th>부킹</th><th>물량</th><th>평균 ${metName()}</th><th>Δ평균</th><th>편차</th><th>평균까지 갭(USD)</th><th class=tl>RA</th></tr></thead><tbody>`;
-  if(!arr.length)h+=`<tr><td colspan=9 class=empty>해당 부킹이 없습니다</td></tr>`;
-  arr.forEach(s=>{const w=Math.min(100,Math.abs(s.dev)/maxGap*100);
+  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th>부킹</th><th>물량</th><th>평균 ${metName()}</th><th>Δ평균</th><th>평균까지 갭(USD)</th><th class=tl>RA</th></tr></thead><tbody>`;
+  if(!arr.length)h+=`<tr><td colspan=8 class=empty>해당 부킹이 없습니다</td></tr>`;
+  arr.forEach(s=>{
    h+=`<tr><td class=tl><b>${esc(s.nm)}</b></td><td>${s.g}</td><td class=num>${s.n}</td><td class=num>${fmt(s.q)}TEU</td><td class=num>${fmt(s.v)}</td>
     <td class="num ${s.dev<0?'dneg':s.dev>0?'dpos':'dfl'}">${s.dev>0?'+':''}${fmt(s.dev)}</td>
-    <td><span class="gapbar ${s.dev>0?'pos':''}"><i style="width:${w}%"></i></span></td>
     <td class="num ${s.gap>0?'dneg':'dfl'}">${s.gap>0?'+'+fmt(s.gap):'—'}</td><td class="tl hn">${[...s.ras].slice(0,3).join(', ')}${s.ras.size>3?' 외 '+(s.ras.size-3):''}</td></tr>`;});
  }else{
   const arr=rows.map(l=>({...l,v:metVal(l),dev:metVal(l)-avg,gap:(avg-metVal(l))*box(l)})).sort((a,b)=>a.dev-b.dev||b.q-a.q);
-  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th class=tl>부킹넘버</th><th class=tl>RA넘버</th><th>물량</th><th>ETD</th><th>${metName()}</th><th>Δ평균</th><th>편차</th><th>평균까지 갭(USD)</th></tr></thead><tbody>`;
-  if(!arr.length)h+=`<tr><td colspan=10 class=empty>해당 부킹이 없습니다</td></tr>`;
-  arr.forEach(l=>{const w=Math.min(100,Math.abs(l.dev)/maxGap*100);
+  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th class=tl>부킹넘버</th><th class=tl>RA넘버</th><th>물량</th><th>ETD</th><th>${metName()}</th><th>Δ평균</th><th>평균까지 갭(USD)</th></tr></thead><tbody>`;
+  if(!arr.length)h+=`<tr><td colspan=9 class=empty>해당 부킹이 없습니다</td></tr>`;
+  arr.forEach(l=>{
    h+=`<tr class="${l.dev<0?'':'dim'}"><td class=tl><b>${esc(l.n)}</b> <span class=hn>월${l.m}T</span></td><td>${l.g}</td><td class="tl num">${l.b}</td><td class=tl>${l.r||'<span class=hn>≈ 항차평균</span>'}</td>
     <td class=num>${fmt(l.q)}TEU</td><td class=num>${md(l.e)}</td><td class=num>${fmt(l.v)}</td>
     <td class="num ${l.dev<0?'dneg':l.dev>0?'dpos':'dfl'}">${l.dev>0?'+':''}${fmt(l.dev)}</td>
-    <td><span class="gapbar ${l.dev>0?'pos':''}"><i style="width:${w}%"></i></span></td>
     <td class="num ${l.gap>0?'dneg':'dfl'}">${l.gap>0?'+'+fmt(l.gap):'—'}</td></tr>`;});
  }
  h+=`</tbody>`;$("#lowlist").innerHTML=h;}
