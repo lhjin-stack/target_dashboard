@@ -182,7 +182,7 @@ const tOf=l=>l.t||"DRY";
 const hOf=l=>l.h?1:0;
 const passH=(l,m)=>m==="a"||(m==="y"?hOf(l)===1:hOf(l)===0);
 const passT=l=>tOf(l)===TCL&&passH(l,HZS);
-let SZ="20", GSEL=new Set(["A","B","C","D"]), CSEL=new Set(), PSEL=new Set(), COLL=new Set(), SEL=null, PF="", PT="";
+let SZ="20", GSEL=new Set(["A","B","C","D","N"]), CSEL=new Set(), PSEL=new Set(), COLL=new Set(), SEL=null, PF="", PT="";
 const $=s=>document.querySelector(s), ce=t=>document.createElement(t);
 const esc=s=>(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 const heat=(a,t)=>t==null?"hn":(a-t>=0?"hg":(a-t>=-t*0.05?"hw":"hc"));
@@ -191,7 +191,7 @@ const iso=y=>y.slice(0,4)+'-'+y.slice(4,6)+'-'+y.slice(6,8);
 const y8=d=>d.replace(/-/g,'');
 const md=e=>e.slice(4,6)+'-'+e.slice(6,8);
 const fmt=n=>Math.round(n).toLocaleString('en-US');
-const tgt=(p,g,s)=>((DATA.targets[p]||{})[g]||{})[s];
+const tgt=(p,g,s)=>(TCL!=="DRY"||HZS==="y"||g==="N")?undefined:((DATA.targets[p]||{})[g]||{})[s];
 
 /* 탭 */
 function showTab(k){for(const t of ['cmp','low']){$("#tab-"+t).classList.toggle("on",t===k);$("#pane-"+t).classList.toggle("on",t===k);}
@@ -210,7 +210,7 @@ function aggCells(){const m={};
 
 /* 등급 chips */
 function buildGchips(){const h=$("#gchips");h.innerHTML="";
- for(const g of "ABCD"){const b=ce("span");b.className="chip on";b.textContent=g;
+ for(const g of "ABCDN"){const b=ce("span");b.className="chip on";b.textContent=(g==="N"?"N/A":g);b.title=(g==="N"?"등급 없는 화주(타선사 슬롯·최근 3개월 실적 없음) — 시트 타겟 없음":"");
   b.onclick=()=>{if(GSEL.has(g)){if(GSEL.size>1)GSEL.delete(g);}else GSEL.add(g);
    b.classList.toggle("on",GSEL.has(g));renderMtx();if(SEL)drill(...SEL);};
   h.appendChild(b);} }
@@ -250,15 +250,18 @@ function setPreset(k){const now=new Date();
  if(k==='m'){const a=new Date(now.getFullYear(),now.getMonth(),1);setPeriod(ymd(a),ymd(now));return;}
  if(k==='2w'){const a=new Date(now.getTime()-13*864e5);setPeriod(ymd(a),ymd(now));return;}}
 function onDate(){const f=$("#pfrom").value,t=$("#pto").value;if(!f||!t)return;PF=clamp(y8(f));PT=clamp(y8(t));applyF();updInfo();}
-function updInfo(){$("#mtxinfo").textContent=`기간 ${md(PF)}~${md(PT)} · 색=타겟대비 · n=표본 박스수 · 회색점선=표본<3`;}
+function updInfo(){const noT=(TCL!=="DRY"||HZS==="y");
+ $("#mtxinfo").textContent=`기간 ${md(PF)}~${md(PT)} · 색=타겟대비 · n=표본 박스수 · 회색점선=표본<3`
+   +(noT?` · ${TCL}${HZS==="y"?"·위험물":""}는 시트 타겟(드라이 기준)이 없어 타겟 비교 제외`:"")
+   +` · N/A=등급 없는 화주(타겟 비교 제외)`;}
 
 /* 매트릭스 */
 function cellHtml(m,pod,g){const c=(m[pod]&&m[pod][g])?m[pod][g][SZ]:null;
  if(!c||c.q<=0)return '<span class=hn>—</span>';
  const act=Math.round(c.oq/c.q),t=tgt(pod,g,SZ),cnt=Math.round(c.q),low=cnt<3;
  return `<span class="cell ${low?'lown':heat(act,t)}" onclick="drill('${pod}','${g}')" title="표본 ${cnt}박스(${cnt*(SZ==='40'?2:1)}TEU)${low?' — 적어서 참고용':''}"><span class=a>${act}</span><span class=t>타겟 ${t==null?'-':t} <span class=n>· n${cnt}</span></span></span>`;}
-function renderMtx(){const m=aggCells();const gr=[...GSEL].filter(g=>"ABCD".includes(g)).sort();
- let h=`<thead><tr><th class=pod>POD</th>`+gr.map(g=>`<th class=gcol>${g}</th>`).join("")+`<th class=cntc>물량(TEU)</th></tr></thead><tbody>`;
+function renderMtx(){const m=aggCells();const gr=[...GSEL].filter(g=>"ABCDN".includes(g)).sort();
+ let h=`<thead><tr><th class=pod>POD</th>`+gr.map(g=>`<th class=gcol>${g==="N"?"N/A":g}</th>`).join("")+`<th class=cntc>물량(TEU)</th></tr></thead><tbody>`;
  let any=false;
  DATA.countries.forEach(([cc,nm])=>{if(!CSEL.has(cc))return;
   const ports=(DATA.ports[cc]||[]).filter(p=>PSEL.has(p) && m[p] && gr.some(g=>m[p][g]&&m[p][g][SZ]&&m[p][g][SZ].q>0));
@@ -309,9 +312,9 @@ function drill(pod,g){SEL=[pod,g];
 function tog(i){const e=$("#bk"+i);e.style.display=e.style.display=="none"?"":"none";}
 
 $("#tclseg").onclick=e=>{if(e.target.dataset.t){TCL=e.target.dataset.t;
- [...$("#tclseg").children].forEach(b=>b.classList.toggle("on",b.dataset.t==TCL));renderMtx();if(SEL)drill(...SEL);}};
+ [...$("#tclseg").children].forEach(b=>b.classList.toggle("on",b.dataset.t==TCL));updInfo();renderMtx();if(SEL)drill(...SEL);}};
 $("#hzseg").onclick=e=>{if(e.target.dataset.h){HZS=e.target.dataset.h;
- [...$("#hzseg").children].forEach(b=>b.classList.toggle("on",b.dataset.h==HZS));renderMtx();if(SEL)drill(...SEL);}};
+ [...$("#hzseg").children].forEach(b=>b.classList.toggle("on",b.dataset.h==HZS));updInfo();renderMtx();if(SEL)drill(...SEL);}};
 $("#szseg").onclick=e=>{if(e.target.dataset.s){SZ=e.target.dataset.s;
  [...$("#szseg").children].forEach(b=>b.classList.toggle("on",b.dataset.s==SZ));renderMtx();if(SEL)drill(...SEL);}};
 $("#ctrbtn").onclick=e=>{e.stopPropagation();$("#portdd").classList.remove("open");$("#ctrdd").classList.toggle("open");};
