@@ -118,6 +118,10 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
    <button class="chip pchip" onclick="setPreset('2w')">최근2주</button></span>
  <span class=fl><span class=lb>규격</span>
    <span class=seg id=szseg><button data-s="20" class=on>20'</button><button data-s="40">40'</button></span></span>
+ <span class=fl><span class=lb>화물</span>
+   <span class=seg id=tclseg><button data-t="DRY" class=on>DRY</button><button data-t="RF">RF</button><button data-t="OOG">OOG</button><button data-t="TK">TK</button></span></span>
+ <span class=fl><span class=lb>위험물</span>
+   <span class=seg id=hzseg><button data-h="n" class=on>일반</button><button data-h="y">위험물</button><button data-h="a">전체</button></span></span>
  <span class=fl><span class=lb>등급</span><span id=gchips></span></span>
  <span class=fl><span class=lb>국가</span>
    <span class="dd" id=ctrdd><button id=ctrbtn>국가 <span class=cnt id=ctrcnt></span> ▾</button>
@@ -131,7 +135,7 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 </div>
 <div class=helprow>필터는 모두 <b>다중 선택</b>. <b>기간(ETD 출항일)을 직접 선택</b>하면 그 기간 부킹으로 다시 집계됩니다. 포트는 국가의 하위.</div>
 
-<div class=panel><div class=ph><span>① POD × 등급 요약 — 실제평균 / <span class=hn>타겟</span> (USD, <span id=szlbl>20'</span>)</span>
+<div class=panel><div class=ph><span>① POD × 등급 요약 — 실제평균 / <span class=hn>타겟</span> (USD, <span id=szlbl>20'</span> · <span id=tcllbl>DRY</span>)</span>
   <span class=r id=mtxinfo></span></div>
  <div class=scroll><table id=mtx></table></div></div>
 
@@ -147,6 +151,10 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
  <span class=fl><span class=lb>구간</span><select id=lseg class=dinput onchange="onSeg()"></select></span>
  <span class=fl><span class=lb>규격</span>
    <span class=seg id=lszseg><button data-s="20" class=on>20'</button><button data-s="40">40'</button></span></span>
+ <span class=fl><span class=lb>화물</span>
+   <span class=seg id=ltclseg><button data-t="DRY" class=on>DRY</button><button data-t="RF">RF</button><button data-t="OOG">OOG</button><button data-t="TK">TK</button></span></span>
+ <span class=fl><span class=lb>위험물</span>
+   <span class=seg id=lhzseg><button data-h="n" class=on>일반</button><button data-h="y">위험물</button><button data-h="a">전체</button></span></span>
  <span class=fl id=lmetwrap><span class=lb>기준</span>
    <span class=seg id=lmetseg><button data-m="o" class=on>O/F</button><button data-m="c">CM1</button></span></span>
  <span class=note>가중평균 = Σ(운임×박스)/Σ박스<br>평균 미만 = 저운임</span>
@@ -169,6 +177,11 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 
 <script>
 const BAKED=null; let DATA=null;
+let TCL="DRY", HZS="n";              /* 화물종류(DRY/RF/OOG/TK) + 위험물(HZ)은 별개 축 */
+const tOf=l=>l.t||"DRY";
+const hOf=l=>l.h?1:0;
+const passH=(l,m)=>m==="a"||(m==="y"?hOf(l)===1:hOf(l)===0);
+const passT=l=>tOf(l)===TCL&&passH(l,HZS);
 let SZ="20", GSEL=new Set(["A","B","C","D"]), CSEL=new Set(), PSEL=new Set(), COLL=new Set(), SEL=null, PF="", PT="";
 const $=s=>document.querySelector(s), ce=t=>document.createElement(t);
 const esc=s=>(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
@@ -190,7 +203,7 @@ function passPod(l){return CSEL.has(DATA.podctr[l.p]) && PSEL.has(l.p);}
 
 /* ── 집계: 필터된 라인 → cell[p][g][s]={oq,q} ── */
 function aggCells(){const m={};
- for(const l of DATA.lines){ if(!inRange(l)||!passPod(l)) continue;
+ for(const l of DATA.lines){ if(!inRange(l)||!passPod(l)||!passT(l)||l.x||l.u) continue;   /* x=RA만료 · u=운임미등록: 평균 제외 */
   (m[l.p]=m[l.p]||{}); (m[l.p][l.g]=m[l.p][l.g]||{});
   const c=(m[l.p][l.g][l.s]=m[l.p][l.g][l.s]||{oq:0,q:0}); c.oq+=l.o*l.q; c.q+=l.q; }
  return m;}
@@ -257,19 +270,20 @@ function renderMtx(){const m=aggCells();const gr=[...GSEL].filter(g=>"ABCD".incl
    h+=`<tr class=portrow><td class=pod><b>${p}</b></td>`+gr.map(g=>`<td class=gcell>${cellHtml(m,p,g)}</td>`).join("")+`<td class=cntc>${cnt||''}</td></tr>`;});
  });
  if(!any)h+=`<tr><td class=empty colspan="${gr.length+2}">이 기간·필터에 O/F 확정 부킹이 없습니다</td></tr>`;
- h+=`</tbody>`;$("#mtx").innerHTML=h;$("#szlbl").textContent=SZ+"'";}
+ h+=`</tbody>`;$("#mtx").innerHTML=h;$("#szlbl").textContent=SZ+"'";const tl=$("#tcllbl");if(tl)tl.textContent=TCL+(HZS==="y"?" · 위험물":HZS==="a"?" · 위험물포함":"");}
 function tglCtr(cc){COLL.has(cc)?COLL.delete(cc):COLL.add(cc);renderMtx();}
 
 /* 드릴다운 (선택 POD·등급·규격, 현재 기간) */
 function drill(pod,g){SEL=[pod,g];
- const rows=DATA.lines.filter(l=>l.p===pod&&l.g===g&&l.s===SZ&&inRange(l));
+ const rows=DATA.lines.filter(l=>l.p===pod&&l.g===g&&l.s===SZ&&passT(l)&&inRange(l));
  let goq=0,gq=0;const byS={};
- for(const l of rows){goq+=l.o*l.q;gq+=l.q;
-  const s=(byS[l.n]=byS[l.n]||{nm:l.n,m:l.m,oq:0,q:0,bks:[]});s.oq+=l.o*l.q;s.q+=l.q;
-  s.bks.push({b:l.b,v:l.v,l:l.l,d:l.d,q:l.q,e:l.e,o:l.o,r:l.r});}
+ for(const l of rows){const ok=!l.x&&!l.u;if(ok){goq+=l.o*l.q;gq+=l.q;}
+  const s=(byS[l.n]=byS[l.n]||{nm:l.n,m:l.m,oq:0,q:0,bks:[]});
+  if(ok){s.oq+=l.o*l.q;s.q+=l.q;}
+  s.bks.push({b:l.b,v:l.v,l:l.l,d:l.d,q:l.q,e:l.e,o:l.o,r:l.r,x:l.x,u:l.u,h:l.h});}
  const gact=gq?goq/gq:0,t=tgt(pod,g,SZ),dt=t!=null?Math.round(gact-t):null;
- const arr=Object.values(byS).map(s=>{const act=s.oq/s.q;return{nm:s.nm,m:s.m,act:Math.round(act),cnt:Math.round(s.q),
-   dev:Math.round(act-gact),dtgt:(t!=null?Math.round(act-t):null),bks:s.bks.sort((a,b)=>a.e<b.e?-1:1)};})
+ const arr=Object.values(byS).map(s=>{const has=s.q>0,act=has?s.oq/s.q:0;return{nm:s.nm,m:s.m,act:has?Math.round(act):null,cnt:Math.round(s.q),
+   dev:has?Math.round(act-gact):0,dtgt:(has&&t!=null?Math.round(act-t):null),bks:s.bks.sort((a,b)=>a.e<b.e?-1:1)};})
    .sort((a,b)=>a.dev-b.dev);
  $("#drillpanel").style.display="";
  $("#drillhead").innerHTML=`<span>② 드릴다운 — <b style="color:var(--accent)">${pod} · ${g}등급 · ${SZ}'</b> 화주별 편차 <span class=hn>(${md(PF)}~${md(PT)})</span></span>`+
@@ -282,18 +296,22 @@ function drill(pod,g){SEL=[pod,g];
             (s.dev<=-15?'<span class="pill pwatch">주시</span>':'<span class="pill pok">양호</span>');
   const bw=Math.min(50,Math.abs(s.dev)/2);
   h+=`<tr><td><span class=shname onclick="tog(${i})">▸ ${esc(s.nm)}</span></td>
-   <td class=num>${s.m}</td><td class=num>${s.act}</td>
+   <td class=num>${s.m}</td><td class=num>${s.act==null?'-':s.act}</td>
    <td class="num ${s.dev<0?'dneg':s.dev>0?'dpos':'dfl'}">${s.dev>0?'+':''}${s.dev}</td>
    <td><span class=devbar><i class=mid></i><i class="${s.dev<0?'fneg':'fpos'}" style="width:${bw}%"></i></span></td>
    <td class="num ${s.dtgt==null?'dfl':s.dtgt<0?'dneg':'dpos'}">${s.dtgt==null?'-':(s.dtgt>0?'+':'')+s.dtgt}</td>
    <td>${sig}</td><td class=hn>${s.cnt*(SZ==='40'?2:1)}TEU</td></tr>
    <tr class=bkrow id=bk${i} style=display:none><td colspan=8><table><thead><tr><th>부킹넘버</th><th>항차</th><th>POL→POD</th><th>물량</th><th>ETD</th><th>O/F</th><th>RA넘버</th></tr></thead><tbody>`+
-   s.bks.map(b=>`<tr><td>${b.b}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${b.q}</td><td class=num>${md(b.e)}</td><td class=num>${b.o}</td><td>${b.r||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
+   s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${b.q}</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.u?`<span class="pill" style="background:#eef1f5;color:var(--grey)" title="연결된 RA·O/F가 없어 운임이 없는 부킹 — 평균에서 제외">운임미등록</span>`:b.o}</td><td>${b.r||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
    `</tbody></table></td></tr>`;});
  h+=`</tbody>`;$("#drill").innerHTML=h;
  $("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});}
 function tog(i){const e=$("#bk"+i);e.style.display=e.style.display=="none"?"":"none";}
 
+$("#tclseg").onclick=e=>{if(e.target.dataset.t){TCL=e.target.dataset.t;
+ [...$("#tclseg").children].forEach(b=>b.classList.toggle("on",b.dataset.t==TCL));renderMtx();if(SEL)drill(...SEL);}};
+$("#hzseg").onclick=e=>{if(e.target.dataset.h){HZS=e.target.dataset.h;
+ [...$("#hzseg").children].forEach(b=>b.classList.toggle("on",b.dataset.h==HZS));renderMtx();if(SEL)drill(...SEL);}};
 $("#szseg").onclick=e=>{if(e.target.dataset.s){SZ=e.target.dataset.s;
  [...$("#szseg").children].forEach(b=>b.classList.toggle("on",b.dataset.s==SZ));renderMtx();if(SEL)drill(...SEL);}};
 $("#ctrbtn").onclick=e=>{e.stopPropagation();$("#portdd").classList.remove("open");$("#ctrdd").classList.toggle("open");};
@@ -301,7 +319,7 @@ $("#portbtn").onclick=e=>{e.stopPropagation();$("#ctrdd").classList.remove("open
 document.addEventListener("click",e=>{if(!$("#ctrdd").contains(e.target))$("#ctrdd").classList.remove("open");if(!$("#portdd").contains(e.target))$("#portdd").classList.remove("open");});
 
 /* ══════════════ 저운임 관리 탭 ══════════════ */
-let LV=null, LSEG=null, LSZ="20", LMET="o", LVIEW="b", lowSel=null, lowCur=null, VOYS=[];
+let LTCL="DRY", LHZ="n", LV=null, LSEG=null, LSZ="20", LMET="o", LVIEW="b", lowSel=null, lowCur=null, VOYS=[];
 const hasCM1=()=>DATA&&DATA.lines.some(l=>l.c!=null);
 const metVal=l=>LMET==='c'?l.c:l.o;
 /* ★라인의 q는 컨테이너(박스) 수. TEU는 40'=2배. 운임 가중평균은 박스당 요율이므로 박스 가중이 맞고,
@@ -313,7 +331,8 @@ const segKey=l=>l.l+'→'+l.d;
 
 /* 항차 목록: ETD 최신순 */
 function buildVoys(){const m={};
- for(const l of DATA.lines){const v=(m[l.v]=m[l.v]||{v:l.v,e:l.e,q:0,segs:{}});if(l.e>v.e)v.e=l.e;v.q+=teuOf(l);
+ for(const l of DATA.lines){if(l.x||l.u||tOf(l)!==LTCL||!passH(l,LHZ))continue;   /* RA만료·운임미등록·타 화물종류·위험물구분 제외 */
+  const v=(m[l.v]=m[l.v]||{v:l.v,e:l.e,q:0,segs:{}});if(l.e>v.e)v.e=l.e;v.q+=teuOf(l);
   const s=(v.segs[segKey(l)]=v.segs[segKey(l)]||{k:segKey(l),p:l.p,q:0,n20:0,n40:0});s.q+=teuOf(l);
   if(l.s==='40')s.n40++;else s.n20++;}
  VOYS=Object.values(m).sort((a,b)=>a.e<b.e?1:a.e>b.e?-1:a.v<b.v?-1:1);
@@ -336,12 +355,18 @@ function markSz(){const c=segCnt();[...$("#lszseg").children].forEach(b=>{const 
  b.style.opacity=e?.45:1;b.title=e?"이 구간엔 이 규격 부킹이 없습니다":"";});}
 function setLsz(v){LSZ=v;[...$("#lszseg").children].forEach(b=>b.classList.toggle("on",b.dataset.s==LSZ));lowSel=null;renderLowAll();}
 $("#lszseg").onclick=e=>{if(e.target.dataset.s)setLsz(e.target.dataset.s);};
+$("#ltclseg").onclick=e=>{if(e.target.dataset.t){LTCL=e.target.dataset.t;
+ [...$("#ltclseg").children].forEach(b=>b.classList.toggle("on",b.dataset.t==LTCL));
+ lowSel=null;buildVoys();renderLowAll();}};
+$("#lhzseg").onclick=e=>{if(e.target.dataset.h){LHZ=e.target.dataset.h;
+ [...$("#lhzseg").children].forEach(b=>b.classList.toggle("on",b.dataset.h==LHZ));
+ lowSel=null;buildVoys();renderLowAll();}};
 $("#lmetseg").onclick=e=>{if(e.target.dataset.m){LMET=e.target.dataset.m;[...$("#lmetseg").children].forEach(b=>b.classList.toggle("on",b.dataset.m==LMET));lowSel=null;renderLowAll();}};
 $("#lviewseg").onclick=e=>{if(e.target.dataset.v){LVIEW=e.target.dataset.v;[...$("#lviewseg").children].forEach(b=>b.classList.toggle("on",b.dataset.v==LVIEW));renderLow();}};
 
 /* 선택 항차·구간·규격의 라인 + 가중평균 + 빈 */
 function lowCompute(){
- const rows=DATA.lines.filter(l=>l.v===LV&&segKey(l)===LSEG&&l.s===LSZ&&metVal(l)!=null);
+ const rows=DATA.lines.filter(l=>l.v===LV&&segKey(l)===LSEG&&l.s===LSZ&&tOf(l)===LTCL&&passH(l,LHZ)&&metVal(l)!=null&&!l.x&&!l.u);
  let sq=0,sv=0;for(const l of rows){sq+=l.q;sv+=metVal(l)*l.q;}
  const avg=sq?sv/sq:0;
  const vals=rows.map(metVal);const mn=Math.min(...vals),mx=Math.max(...vals);
@@ -367,7 +392,7 @@ function renderTiles(){const c=lowCur;const F=teuF();
 /* ── SVG 히스토그램: X=운임(USD/box), Y=TEU, 세로선=가중평균, 평균 미만 빈=빨강 ── */
 function renderChart(){const c=lowCur,host=$("#lchart");const tip=$("#lctip");
  host.querySelectorAll("svg").forEach(s=>s.remove());
- $("#lcharthead").textContent=`운임 분포 — ${LV||''} · ${LSEG||''} · ${LSZ}' · X=${metName()}(USD/box) · Y=물량(TEU)`;
+ $("#lcharthead").textContent=`운임 분포 — ${LV||''} · ${LSEG||''} · ${LSZ}' · ${LTCL}${LHZ==="y"?" · 위험물":LHZ==="a"?" · 위험물포함":""} · X=${metName()}(USD/box) · Y=물량(TEU)`;
  if(!c.rows.length){$("#lchartinfo").textContent="";const d=ce("div");d.className="empty";
   const other=LSZ==='20'?'40':'20',oc=segCnt()[other];
   d.innerHTML=oc?`이 구간에 <b>${LSZ}' 부킹은 없습니다</b> — ${other}'로 ${oc}건 실렸습니다. `+
@@ -468,7 +493,7 @@ function boot(snap){ DATA=snap; CSEL=new Set(); PSEL=new Set();
  pt.min=iso(DATA.af);pt.max=iso(DATA.at);pt.value=iso(PT);pt.onchange=onDate;
  buildGchips();buildCtr();buildPort();updInfo();renderMtx();
  buildVoys(); if(!hasCM1()){$("#lmetwrap").style.display="none";LMET="o";}
- const f=$("#foot");if(f)f.textContent=`라인 ${DATA.lines.length}건 · POD ${Object.keys(DATA.podctr).length}개 · 국가 ${DATA.countries.length}개 · 실제 ADW 집계값. 적재범위 ${md(DATA.af)}~${md(DATA.at)}.`;
+ const f=$("#foot");if(f)f.textContent=`라인 ${DATA.lines.length}건(RA만료 ${DATA.lines.filter(l=>l.x).length}건 · 운임미등록 ${DATA.lines.filter(l=>l.u).length}건은 평균·저운임 집계 제외) · POD ${Object.keys(DATA.podctr).length}개 · 국가 ${DATA.countries.length}개 · 실제 ADW 집계값. 적재범위 ${md(DATA.af)}~${md(DATA.at)}. RA 유효기간은 Revised ETA 기준.`;
  const g=document.getElementById('gate');if(g)g.style.display='none';
 }
 
