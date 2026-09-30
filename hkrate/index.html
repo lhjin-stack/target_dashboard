@@ -122,6 +122,8 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
    <span class=seg id=tclseg><button data-t="DRY" class=on>DRY</button><button data-t="RF">RF</button><button data-t="OOG">OOG</button><button data-t="TK">TK</button></span></span>
  <span class=fl><span class=lb>위험물</span>
    <span class=seg id=hzseg><button data-h="n" class=on>일반</button><button data-h="y">위험물</button><button data-h="a">전체</button></span></span>
+ <span class=fl><span class=lb>추정운임</span>
+   <span class=seg id=estseg><button data-e="0" class=on>제외</button><button data-e="1">포함</button></span></span>
  <span class=fl><span class=lb>등급</span><span id=gchips></span></span>
  <span class=fl><span class=lb>국가</span>
    <span class="dd" id=ctrdd><button id=ctrbtn>국가 <span class=cnt id=ctrcnt></span> ▾</button>
@@ -155,6 +157,8 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
    <span class=seg id=ltclseg><button data-t="DRY" class=on>DRY</button><button data-t="RF">RF</button><button data-t="OOG">OOG</button><button data-t="TK">TK</button></span></span>
  <span class=fl><span class=lb>위험물</span>
    <span class=seg id=lhzseg><button data-h="n" class=on>일반</button><button data-h="y">위험물</button><button data-h="a">전체</button></span></span>
+ <span class=fl><span class=lb>추정운임</span>
+   <span class=seg id=lestseg><button data-e="0" class=on>제외</button><button data-e="1">포함</button></span></span>
  <span class=fl id=lmetwrap><span class=lb>기준</span>
    <span class=seg id=lmetseg><button data-m="o" class=on>O/F</button><button data-m="c">CM1</button></span></span>
  <span class=note>가중평균 = Σ(운임×박스)/Σ박스<br>평균 미만 = 저운임</span>
@@ -177,7 +181,8 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 
 <script>
 const BAKED=null; let DATA=null;
-let TCL="DRY", HZS="n";              /* 화물종류(DRY/RF/OOG/TK) + 위험물(HZ)은 별개 축 */
+let TCL="DRY", HZS="n", INCE=0, LINCE=0;   /* 화물종류·위험물 축 + 추정운임 포함 여부 */
+const isEst=l=>l.f==="E";
 const tOf=l=>l.t||"DRY";
 const hOf=l=>l.h?1:0;
 const passH=(l,m)=>m==="a"||(m==="y"?hOf(l)===1:hOf(l)===0);
@@ -203,7 +208,7 @@ function passPod(l){return CSEL.has(DATA.podctr[l.p]) && PSEL.has(l.p);}
 
 /* ── 집계: 필터된 라인 → cell[p][g][s]={oq,q} ── */
 function aggCells(){const m={};
- for(const l of DATA.lines){ if(!inRange(l)||!passPod(l)||!passT(l)||l.x||l.u||l.k) continue;   /* x=RA만료 · u=운임미등록: 평균 제외 */
+ for(const l of DATA.lines){ if(!inRange(l)||!passPod(l)||!passT(l)||l.x||l.u||l.k||(isEst(l)&&!INCE)) continue;   /* x=RA만료 · u=운임미등록: 평균 제외 */
   (m[l.p]=m[l.p]||{}); (m[l.p][l.g]=m[l.p][l.g]||{});
   const c=(m[l.p][l.g][l.s]=m[l.p][l.g][l.s]||{oq:0,q:0}); c.oq+=l.o*l.q; c.q+=l.q; }
  return m;}
@@ -280,7 +285,7 @@ function tglCtr(cc){COLL.has(cc)?COLL.delete(cc):COLL.add(cc);renderMtx();}
 function drill(pod,g){SEL=[pod,g];
  const rows=DATA.lines.filter(l=>l.p===pod&&l.g===g&&l.s===SZ&&passT(l)&&inRange(l));
  let goq=0,gq=0;const byS={};
- for(const l of rows){const ok=!l.x&&!l.u&&!l.k;if(ok){goq+=l.o*l.q;gq+=l.q;}
+ for(const l of rows){const ok=!l.x&&!l.u&&!l.k&&!(isEst(l)&&!INCE);if(ok){goq+=l.o*l.q;gq+=l.q;}
   const s=(byS[l.n]=byS[l.n]||{nm:l.n,m:l.m,oq:0,q:0,bks:[]});
   if(ok){s.oq+=l.o*l.q;s.q+=l.q;}
   s.bks.push({b:l.b,v:l.v,l:l.l,d:l.d,q:l.q,e:l.e,o:l.o,r:l.r,x:l.x,u:l.u,k:l.k,h:l.h,f:l.f});}
@@ -305,7 +310,7 @@ function drill(pod,g){SEL=[pod,g];
    <td class="num ${s.dtgt==null?'dfl':s.dtgt<0?'dneg':'dpos'}">${s.dtgt==null?'-':(s.dtgt>0?'+':'')+s.dtgt}</td>
    <td>${sig}</td><td class=hn>${s.cnt*(SZ==='40'?2:1)}TEU</td></tr>
    <tr class=bkrow id=bk${i} style=display:none><td colspan=8><table><thead><tr><th>부킹넘버</th><th>항차</th><th>POL→POD</th><th>물량</th><th>ETD</th><th>O/F</th><th>RA넘버</th></tr></thead><tbody>`+
-   s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${b.q}</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.k?`<span class="pill" style="background:#eef1f5;color:var(--grey)" title="타선사 슬롯·자사 엠티 회송 — 우리 운임이 없는 물량이라 집계 대상 외">선사·엠티</span>`:b.u?`<span class="pill" style="background:#fff8e1;color:#8a6d00" title="실화주 부킹인데 연결된 RA·O/F가 없음 — 운임 미등록, 평균에서 제외">운임미등록</span>`:(b.f==="B"?`${b.o} <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구 O/F(CS165H) — 실제 청구된 금액">실청구</span>`:b.o)}</td><td>${b.r||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
+   s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${b.q}</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.k?`<span class="pill" style="background:#eef1f5;color:var(--grey)" title="타선사 슬롯·자사 엠티 회송 — 우리 운임이 없는 물량이라 집계 대상 외">선사·엠티</span>`:b.u?`<span class="pill" style="background:#fff8e1;color:#8a6d00" title="실화주 부킹인데 연결된 RA·O/F가 없음 — 운임 미등록, 평균에서 제외">운임미등록</span>`:(b.f==="B"?`${b.o} <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구 O/F(CS165H) — 실제 청구된 금액">실청구</span>`:b.f==="E"?`${b.o} <span class="pill" style="background:#fff3e0;color:#b26a00" title="임의연결 — 같은 화주·구간·규격·PPD/CTL 조건의 유효 RA에서 가져온 추정값. 평균·저운임 판정 기본 제외">추정</span>`:b.o)}</td><td>${b.r||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
    `</tbody></table></td></tr>`;});
  h+=`</tbody>`;$("#drill").innerHTML=h;
  $("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});}
@@ -313,6 +318,8 @@ function tog(i){const e=$("#bk"+i);e.style.display=e.style.display=="none"?"":"n
 
 $("#tclseg").onclick=e=>{if(e.target.dataset.t){TCL=e.target.dataset.t;
  [...$("#tclseg").children].forEach(b=>b.classList.toggle("on",b.dataset.t==TCL));updInfo();renderMtx();if(SEL)drill(...SEL);}};
+$("#estseg").onclick=e=>{if(e.target.dataset.e){INCE=+e.target.dataset.e;
+ [...$("#estseg").children].forEach(b=>b.classList.toggle("on",+b.dataset.e===INCE));updInfo();renderMtx();if(SEL)drill(...SEL);}};
 $("#hzseg").onclick=e=>{if(e.target.dataset.h){HZS=e.target.dataset.h;
  [...$("#hzseg").children].forEach(b=>b.classList.toggle("on",b.dataset.h==HZS));updInfo();renderMtx();if(SEL)drill(...SEL);}};
 $("#szseg").onclick=e=>{if(e.target.dataset.s){SZ=e.target.dataset.s;
@@ -335,7 +342,7 @@ const segKey=l=>l.l+'→'+l.d;
 /* 항차 목록: ETD 최신순 */
 function buildVoys(){const m={};
  for(const l of DATA.lines){if(l.k||tOf(l)!==LTCL||!passH(l,LHZ))continue;   /* 선사·엠티·타 화물종류·위험물구분만 제외 — 물량은 운임 없는 부킹도 포함해 실제 부킹량을 보여준다 */
-  const rated=!l.x&&!l.u;                                   /* 운임 확인 가능한 라인 */
+  const rated=!l.x&&!l.u&&!(isEst(l)&&!LINCE);              /* 운임 확인 가능한 라인(추정은 토글) */
   const v=(m[l.v]=m[l.v]||{v:l.v,e:l.e,q:0,qr:0,segs:{}});if(l.e>v.e)v.e=l.e;v.q+=teuOf(l);if(rated)v.qr+=teuOf(l);
   const s=(v.segs[segKey(l)]=v.segs[segKey(l)]||{k:segKey(l),p:l.p,q:0,qr:0,n20:0,n40:0});s.q+=teuOf(l);if(rated)s.qr+=teuOf(l);
   if(rated){if(l.s==='40')s.n40++;else s.n20++;}}
@@ -362,6 +369,9 @@ $("#lszseg").onclick=e=>{if(e.target.dataset.s)setLsz(e.target.dataset.s);};
 $("#ltclseg").onclick=e=>{if(e.target.dataset.t){LTCL=e.target.dataset.t;
  [...$("#ltclseg").children].forEach(b=>b.classList.toggle("on",b.dataset.t==LTCL));
  lowSel=null;buildVoys();renderLowAll();}};
+$("#lestseg").onclick=e=>{if(e.target.dataset.e){LINCE=+e.target.dataset.e;
+ [...$("#lestseg").children].forEach(b=>b.classList.toggle("on",+b.dataset.e===LINCE));
+ lowSel=null;buildVoys();renderLowAll();}};
 $("#lhzseg").onclick=e=>{if(e.target.dataset.h){LHZ=e.target.dataset.h;
  [...$("#lhzseg").children].forEach(b=>b.classList.toggle("on",b.dataset.h==LHZ));
  lowSel=null;buildVoys();renderLowAll();}};
@@ -370,7 +380,7 @@ $("#lviewseg").onclick=e=>{if(e.target.dataset.v){LVIEW=e.target.dataset.v;[...$
 
 /* 선택 항차·구간·규격의 라인 + 가중평균 + 빈 */
 function lowCompute(){
- const rows=DATA.lines.filter(l=>l.v===LV&&segKey(l)===LSEG&&l.s===LSZ&&tOf(l)===LTCL&&passH(l,LHZ)&&metVal(l)!=null&&!l.x&&!l.u&&!l.k);
+ const rows=DATA.lines.filter(l=>l.v===LV&&segKey(l)===LSEG&&l.s===LSZ&&tOf(l)===LTCL&&passH(l,LHZ)&&metVal(l)!=null&&!l.x&&!l.u&&!l.k&&!(isEst(l)&&!LINCE));
  let sq=0,sv=0;for(const l of rows){sq+=l.q;sv+=metVal(l)*l.q;}
  const avg=sq?sv/sq:0;
  const vals=rows.map(metVal);const mn=Math.min(...vals),mx=Math.max(...vals);
@@ -482,7 +492,7 @@ function renderLow(){const c=lowCur;if(!c)return;const avg=c.avg;
   if(!arr.length)h+=`<tr><td colspan=9 class=empty>해당 부킹이 없습니다</td></tr>`;
   arr.forEach(l=>{
    h+=`<tr class="${l.dev<0?'':'dim'}"><td class=tl><b>${esc(l.n)}</b> <span class=hn>월${l.m}T</span></td><td>${l.g}</td><td class="tl num">${l.b}</td><td class=tl>${l.r||'<span class=hn>≈ 항차평균</span>'}</td>
-    <td class=num>${fmt(teuOf(l))}TEU</td><td class=num>${md(l.e)}</td><td class=num>${fmt(l.v)}${l.f==="B"?' <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구">실청구</span>':''}</td>
+    <td class=num>${fmt(teuOf(l))}TEU</td><td class=num>${md(l.e)}</td><td class=num>${fmt(l.v)}${l.f==="B"?' <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구">실청구</span>':l.f==="E"?' <span class="pill" style="background:#fff3e0;color:#b26a00" title="임의연결(추정)">추정</span>':''}</td>
     <td class="num ${l.gap>0?'dneg':'dfl'}">${l.gap>0?'+'+fmt(l.gap):'—'}</td>
     <td class="num ${l.cmt==null?'dfl':l.cmt<0?'dneg':''}">${l.cmt==null?'—':fmt(Math.round(l.cmt))}</td></tr>`;});
  }
@@ -499,7 +509,7 @@ function boot(snap){ DATA=snap; CSEL=new Set(); PSEL=new Set();
  pt.min=iso(DATA.af);pt.max=iso(DATA.at);pt.value=iso(PT);pt.onchange=onDate;
  buildGchips();buildCtr();buildPort();updInfo();renderMtx();
  buildVoys(); if(!hasCM1()){$("#lmetwrap").style.display="none";LMET="o";}
- const f=$("#foot");if(f)f.textContent=`라인 ${DATA.lines.length}건 — 운임 출처 실청구 ${DATA.lines.filter(l=>l.f==="B").length}건 · RA ${DATA.lines.filter(l=>l.f==="R").length}건 / 제외분 RA만료 ${DATA.lines.filter(l=>l.x).length}건 · 운임미등록 ${DATA.lines.filter(l=>l.u).length}건 · 선사·엠티 ${DATA.lines.filter(l=>l.k).length}건 · POD ${Object.keys(DATA.podctr).length}개 · 국가 ${DATA.countries.length}개 · 실제 ADW 집계값. 적재범위 ${md(DATA.af)}~${md(DATA.at)}. RA 유효기간은 Revised ETA 기준.`;
+ const f=$("#foot");if(f)f.textContent=`라인 ${DATA.lines.length}건 — 운임 출처 실청구 ${DATA.lines.filter(l=>l.f==="B").length}건 · RA ${DATA.lines.filter(l=>l.f==="R").length}건 · 추정 ${DATA.lines.filter(l=>l.f==="E").length}건 / 제외분 RA만료 ${DATA.lines.filter(l=>l.x).length}건 · 운임미등록 ${DATA.lines.filter(l=>l.u).length}건 · 선사·엠티 ${DATA.lines.filter(l=>l.k).length}건 · POD ${Object.keys(DATA.podctr).length}개 · 국가 ${DATA.countries.length}개 · 실제 ADW 집계값. 적재범위 ${md(DATA.af)}~${md(DATA.at)}. RA 유효기간은 Revised ETA 기준.`;
  const g=document.getElementById('gate');if(g)g.style.display='none';
 }
 
