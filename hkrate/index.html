@@ -465,23 +465,25 @@ function renderLow(){const c=lowCur;if(!c)return;const avg=c.avg;
  const box=l=>l.q;   // q=박스수(40'도 1박스=1)
  let h;
  if(LVIEW==='s'){
-  const m={};for(const l of rows){const s=(m[l.n]=m[l.n]||{nm:l.n,g:l.g,q:0,vq:0,bx:0,n:0,ras:new Set()});s.q+=l.q;s.vq+=metVal(l)*l.q;s.bx+=box(l);s.n++;if(l.r)s.ras.add(l.r);}
-  const arr=Object.values(m).map(s=>({...s,v:s.vq/s.q,dev:s.vq/s.q-avg})).map(s=>({...s,gap:-s.dev*s.bx})).sort((a,b)=>b.gap-a.gap);
-  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th>부킹</th><th>물량</th><th>평균 ${metName()}</th><th>Δ평균</th><th>평균까지 갭(USD)</th><th class=tl>RA</th></tr></thead><tbody>`;
+  const m={};for(const l of rows){const s=(m[l.n]=m[l.n]||{nm:l.n,g:l.g,q:0,vq:0,bx:0,n:0,cmv:0,cmq:0,ras:new Set()});s.q+=l.q;s.vq+=metVal(l)*l.q;s.bx+=box(l);s.n++;
+   if(l.c!=null){s.cmv+=l.c*l.q;s.cmq+=l.q;}
+   if(l.r)s.ras.add(l.r);}
+  const arr=Object.values(m).map(s=>({...s,v:s.vq/s.q,dev:s.vq/s.q-avg,cmt:(s.cmq?(s.cmv/s.cmq)/teuF():null)})).map(s=>({...s,gap:-s.dev*s.bx})).sort((a,b)=>b.gap-a.gap);
+  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th>부킹</th><th>물량</th><th>평균 ${metName()}</th><th>평균까지 갭(USD)</th><th>CM1/TEU</th><th class=tl>RA</th></tr></thead><tbody>`;
   if(!arr.length)h+=`<tr><td colspan=8 class=empty>해당 부킹이 없습니다</td></tr>`;
   arr.forEach(s=>{
    h+=`<tr><td class=tl><b>${esc(s.nm)}</b></td><td>${s.g}</td><td class=num>${s.n}</td><td class=num>${fmt(s.q*teuF())}TEU</td><td class=num>${fmt(s.v)}</td>
-    <td class="num ${s.dev<0?'dneg':s.dev>0?'dpos':'dfl'}">${s.dev>0?'+':''}${fmt(s.dev)}</td>
-    <td class="num ${s.gap>0?'dneg':'dfl'}">${s.gap>0?'+'+fmt(s.gap):'—'}</td><td class="tl hn">${[...s.ras].slice(0,3).join(', ')}${s.ras.size>3?' 외 '+(s.ras.size-3):''}</td></tr>`;});
+    <td class="num ${s.gap>0?'dneg':'dfl'}">${s.gap>0?'+'+fmt(s.gap):'—'}</td>
+    <td class="num ${s.cmt==null?'dfl':s.cmt<0?'dneg':''}">${s.cmt==null?'—':fmt(Math.round(s.cmt))}</td><td class="tl hn">${[...s.ras].slice(0,3).join(', ')}${s.ras.size>3?' 외 '+(s.ras.size-3):''}</td></tr>`;});
  }else{
-  const arr=rows.map(l=>({...l,v:metVal(l),dev:metVal(l)-avg,gap:(avg-metVal(l))*box(l)})).sort((a,b)=>a.dev-b.dev||b.q-a.q);
-  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th class=tl>부킹넘버</th><th class=tl>RA넘버</th><th>물량</th><th>ETD</th><th>${metName()}</th><th>Δ평균</th><th>평균까지 갭(USD)</th></tr></thead><tbody>`;
+  const arr=rows.map(l=>({...l,v:metVal(l),dev:metVal(l)-avg,gap:(avg-metVal(l))*box(l),cmt:(l.c!=null?l.c/teuF():null)})).sort((a,b)=>a.dev-b.dev||b.q-a.q);
+  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th class=tl>부킹넘버</th><th class=tl>RA넘버</th><th>물량</th><th>ETD</th><th>${metName()}</th><th>평균까지 갭(USD)</th><th>CM1/TEU</th></tr></thead><tbody>`;
   if(!arr.length)h+=`<tr><td colspan=9 class=empty>해당 부킹이 없습니다</td></tr>`;
   arr.forEach(l=>{
    h+=`<tr class="${l.dev<0?'':'dim'}"><td class=tl><b>${esc(l.n)}</b> <span class=hn>월${l.m}T</span></td><td>${l.g}</td><td class="tl num">${l.b}</td><td class=tl>${l.r||'<span class=hn>≈ 항차평균</span>'}</td>
     <td class=num>${fmt(teuOf(l))}TEU</td><td class=num>${md(l.e)}</td><td class=num>${fmt(l.v)}</td>
-    <td class="num ${l.dev<0?'dneg':l.dev>0?'dpos':'dfl'}">${l.dev>0?'+':''}${fmt(l.dev)}</td>
-    <td class="num ${l.gap>0?'dneg':'dfl'}">${l.gap>0?'+'+fmt(l.gap):'—'}</td></tr>`;});
+    <td class="num ${l.gap>0?'dneg':'dfl'}">${l.gap>0?'+'+fmt(l.gap):'—'}</td>
+    <td class="num ${l.cmt==null?'dfl':l.cmt<0?'dneg':''}">${l.cmt==null?'—':fmt(Math.round(l.cmt))}</td></tr>`;});
  }
  h+=`</tbody>`;$("#lowlist").innerHTML=h;}
 
