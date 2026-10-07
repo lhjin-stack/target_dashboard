@@ -388,15 +388,21 @@ function buildSegs(){const v=VOYS.find(x=>x.v===LV);const sel=$("#lseg");
 function buildLanes(){
  const all=DATA.lines.filter(baseOk);
  if(!all.length)return;
- const pcq={};for(const l of all)pcq[polcOf(l)]=(pcq[polcOf(l)]||0)+teuOf(l);
+ /* 필터 순서대로 좁혀가며 집계: 주차 → POL 국가 → POL 포트 → DLY 국가 → DLY 포트 */
+ const wq={};for(const l of all){const w=wkOf(l.e);wq[w]=(wq[w]||0)+teuOf(l);}
+ const ws=Object.keys(wq).map(Number).sort((a,b)=>b-a);
+ if(!ws.includes(LWK)){const now=wkOf(ymd(new Date()));LWK=ws.includes(now)?now:ws[0];}
+ $("#lwk").innerHTML=ws.map(w=>`<option value="${w}"${w===LWK?" selected":""}>W${w} (${wkRange(w)}) · ${fmt(Math.round(wq[w]))}TEU</option>`).join("");
+ const inwk=all.filter(l=>wkOf(l.e)===LWK);
+ const pcq={};for(const l of inwk)pcq[polcOf(l)]=(pcq[polcOf(l)]||0)+teuOf(l);
  const pcs=Object.keys(pcq).sort((a,b)=>pcq[b]-pcq[a]);
  if(!pcs.includes(LPOLC))LPOLC=pcs.includes("HK")?"HK":pcs[0];
  $("#lpolc").innerHTML=pcs.map(c=>`<option value="${c}"${c===LPOLC?" selected":""}>${CTRNM(c)} · ${fmt(Math.round(pcq[c]))}TEU</option>`).join("");
- const inc=all.filter(l=>polcOf(l)===LPOLC);
+ const inc=inwk.filter(l=>polcOf(l)===LPOLC);
  const ppq={};for(const l of inc)ppq[polpOf(l)]=(ppq[polpOf(l)]||0)+teuOf(l);
  const pps=Object.keys(ppq).sort((a,b)=>ppq[b]-ppq[a]);
  if(LPOL!=="ALL"&&!pps.includes(LPOL))LPOL="ALL";
- $("#lpol").innerHTML=`<option value="ALL"${LPOL==="ALL"?" selected":""}>전체(국가 합산)</option>`
+ $("#lpol").innerHTML=`<option value="ALL"${LPOL==="ALL"?" selected":""}>전체(국가 합산) · ${fmt(Math.round(Object.values(ppq).reduce((a,b)=>a+b,0)))}TEU</option>`
    +pps.map(p=>`<option value="${p}"${p===LPOL?" selected":""}>${p} · ${fmt(Math.round(ppq[p]))}TEU</option>`).join("");
  const mine=inc.filter(l=>LPOL==="ALL"||polpOf(l)===LPOL);
  const cq={};for(const l of mine)cq[ctrOf(l)]=(cq[ctrOf(l)]||0)+teuOf(l);
@@ -406,13 +412,9 @@ function buildLanes(){
  const pq={};for(const l of mine)if(ctrOf(l)===LCTR)pq[portOf(l)]=(pq[portOf(l)]||0)+teuOf(l);
  const ports=Object.keys(pq).sort((a,b)=>pq[b]-pq[a]);
  if(LPORT!=="ALL"&&!ports.includes(LPORT))LPORT="ALL";
- $("#lport").innerHTML=`<option value="ALL"${LPORT==="ALL"?" selected":""}>전체(국가 합산)</option>`
+ $("#lport").innerHTML=`<option value="ALL"${LPORT==="ALL"?" selected":""}>전체(국가 합산) · ${fmt(Math.round(Object.values(pq).reduce((a,b)=>a+b,0)))}TEU</option>`
    +ports.map(p=>`<option value="${p}"${p===LPORT?" selected":""}>${p} · ${fmt(Math.round(pq[p]))}TEU</option>`).join("");
- // 주차 목록(선택 구간 기준, 규격 무관)
- const wq={};for(const l of mine)if(laneOk(l)){const w=wkOf(l.e);(wq[w]=wq[w]||{q:0,vq:0,bx:0})&&0;wq[w].q+=teuOf(l);wq[w].vq+=metVal(l)*l.q;wq[w].bx+=l.q;}
- WKS=Object.keys(wq).map(Number).sort((a,b)=>b-a).map(w=>({w,q:wq[w].q,avg:wq[w].vq/wq[w].bx}));
- if(!WKS.some(x=>x.w===LWK))LWK=WKS.length?WKS[0].w:null;
- $("#lwk").innerHTML=WKS.map(x=>`<option value="${x.w}"${x.w===LWK?" selected":""}>W${x.w} (${wkRange(x.w)}) · ${fmt(Math.round(x.q))}TEU</option>`).join("");
+ WKS=ws.map(w=>({w,q:wq[w]}));
 }
 const CTRNM=c=>({HK:"홍콩",KR:"한국",CN:"중국",TW:"대만",JP:"일본",ID:"인도네시아",SG:"싱가포르",MY:"말레이시아",TH:"태국",VN:"베트남",IN:"인도",PK:"파키스탄",AE:"아랍에미리트",SA:"사우디",OM:"오만",EG:"이집트",MX:"멕시코",US:"미주",TZ:"탄자니아",KE:"케냐",LK:"스리랑카",PH:"필리핀",MM:"미얀마",BD:"방글라데시",RU:"러시아"}[c]||c);
 function renderWkStrip(){
