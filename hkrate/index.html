@@ -103,7 +103,7 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 #lowlist tr.dim td{opacity:.45}
 </style><script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script><script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script></head><body><div class=wrap><div id=gate style="position:fixed;inset:0;z-index:100;background:#f6f7f9;display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:360px;padding:20px"><div style="font-size:44px">🚢</div><h2 style="margin:6px 0">HK 운임 모니터</h2><p style="color:#697488;font-size:13px">ekmtc.com 계정으로 로그인하세요.</p><button id=loginBtn onclick=signIn() disabled style="margin-top:8px;padding:9px 20px;border:0;border-radius:8px;background:#1e40af;color:#fff;font:600 14px sans-serif;cursor:pointer">구글 로그인</button><div id=gerr style="color:#b91c1c;font-size:12px;margin-top:10px"></div></div></div>
 <h1>🚢 HK 운임 모니터 <span class="tag tag-live">실데이터</span></h1>
-<div class=sub>홍콩 사무소 발 · 실적 O/F(ETD 기준) vs 시트 WK39&40 타겟 · 등급 = 20260301~20260531 TEU · D-1 ADW</div>
+<div class=sub>홍콩 사무소 발 · 실적 O/F(ETD 기준) vs 시트 WK41 타겟 · 등급 = 20260601~20260831 TEU · D-1 ADW</div>
 
 <div class=tabs><button id=tab-cmp class=on onclick="showTab('cmp')">운임 비교</button><button id=tab-low onclick="showTab('low')">저운임 관리</button></div>
 
@@ -310,7 +310,7 @@ function drill(pod,g){SEL=[pod,g];
    <td class="num ${s.dtgt==null?'dfl':s.dtgt<0?'dneg':'dpos'}">${s.dtgt==null?'-':(s.dtgt>0?'+':'')+s.dtgt}</td>
    <td>${sig}</td><td class=hn>${s.cnt*(SZ==='40'?2:1)}TEU</td></tr>
    <tr class=bkrow id=bk${i} style=display:none><td colspan=8><table><thead><tr><th>부킹넘버</th><th>항차</th><th>POL→POD</th><th>물량</th><th>ETD</th><th>O/F</th><th>RA넘버</th></tr></thead><tbody>`+
-   s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${b.q}</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.k?`<span class="pill" style="background:#eef1f5;color:var(--grey)" title="타선사 슬롯·자사 엠티 회송 — 우리 운임이 없는 물량이라 집계 대상 외">선사·엠티</span>`:b.u?`<span class="pill" style="background:#fff8e1;color:#8a6d00" title="실화주 부킹인데 연결된 RA·O/F가 없음 — 운임 미등록, 평균에서 제외">운임미등록</span>`:(b.f==="B"?`${b.o} <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구 O/F(CS165H) — 실제 청구된 금액">실청구</span>`:b.f==="E"?`${b.o} <span class="pill" style="background:#fff3e0;color:#b26a00" title="임의연결 — 같은 화주·구간·규격·PPD/CTL 조건의 유효 RA에서 가져온 추정값. 평균·저운임 판정 기본 제외">추정</span>`:b.o)}</td><td>${b.r||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
+   s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${b.q}</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.k?`<span class="pill" style="background:#eef1f5;color:var(--grey)" title="타선사 슬롯·자사 엠티 회송 — 우리 운임이 없는 물량이라 집계 대상 외">선사·엠티</span>`:b.u?`<span class="pill" style="background:#fff8e1;color:#8a6d00" title="실화주 부킹인데 연결된 RA·O/F가 없음 — 운임 미등록, 평균에서 제외">운임미등록</span>`:(b.f==="B"?`${b.o} <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구 O/F(CS165H) — 실제 청구된 금액">실청구</span>`:b.f==="E"?`${b.o} <span class="pill" style="background:#fff3e0;color:#b26a00" title="${String(b.r||'').startsWith('≈')?'임의연결 — 같은 화주·구간·규격·PPD/CTL 조건의 RA에서 가져온 추정값':'이 부킹에 연결된 RA가 출항일 기준 만료 — 그 단가를 추정값으로 사용'}. 평균·저운임 판정 기본 제외">추정${String(b.r||'').startsWith('≈')?'':'(만료RA)'}</span>`:b.o)}</td><td>${b.r||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
    `</tbody></table></td></tr>`;});
  h+=`</tbody>`;$("#drill").innerHTML=h;
  $("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});}
@@ -406,6 +406,7 @@ function renderTiles(){const c=lowCur;const F=teuF();
 /* ── SVG 히스토그램: X=운임(USD/box), Y=TEU, 세로선=가중평균, 평균 미만 빈=빨강 ── */
 function renderChart(){const c=lowCur,host=$("#lchart");const tip=$("#lctip");
  host.querySelectorAll("svg").forEach(s=>s.remove());
+ host.querySelectorAll(".empty").forEach(e=>e.remove());host._empty=null;   /* 안내문 중복 누적 방지(2026-10-07) */
  $("#lcharthead").textContent=`운임 분포 — ${LV||''} · ${LSEG||''} · ${LSZ}' · ${LTCL}${LHZ==="y"?" · 위험물":LHZ==="a"?" · 위험물포함":""} · X=${metName()}(USD/box) · Y=물량(TEU)`;
  if(!c.rows.length){$("#lchartinfo").textContent="";const d=ce("div");d.className="empty";
   const other=LSZ==='20'?'40':'20',oc=segCnt()[other];
@@ -491,7 +492,7 @@ function renderLow(){const c=lowCur;if(!c)return;const avg=c.avg;
   h=`<thead><tr><th class=tl>화주</th><th>등급</th><th class=tl>부킹넘버</th><th class=tl>RA넘버</th><th>물량</th><th>ETD</th><th>${metName()}</th><th>평균까지 갭(USD)</th><th>CM1/TEU</th></tr></thead><tbody>`;
   if(!arr.length)h+=`<tr><td colspan=9 class=empty>해당 부킹이 없습니다</td></tr>`;
   arr.forEach(l=>{
-   h+=`<tr class="${l.dev<0?'':'dim'}"><td class=tl><b>${esc(l.n)}</b> <span class=hn>월${l.m}T</span></td><td>${l.g}</td><td class="tl num">${l.b}</td><td class=tl>${l.r||'<span class=hn>≈ 항차평균</span>'}</td>
+   h+=`<tr class="${(!lowSel&&l.dev>=0)?'dim':''}"><td class=tl><b>${esc(l.n)}</b> <span class=hn>월${l.m}T</span></td><td>${l.g}</td><td class="tl num">${l.b}</td><td class=tl>${l.r||'<span class=hn>≈ 항차평균</span>'}</td>
     <td class=num>${fmt(teuOf(l))}TEU</td><td class=num>${md(l.e)}</td><td class=num>${fmt(l.v)}${l.f==="B"?' <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구">실청구</span>':l.f==="E"?' <span class="pill" style="background:#fff3e0;color:#b26a00" title="임의연결(추정)">추정</span>':''}</td>
     <td class="num ${l.gap>0?'dneg':'dfl'}">${l.gap>0?'+'+fmt(l.gap):'—'}</td>
     <td class="num ${l.cmt==null?'dfl':l.cmt<0?'dneg':''}">${l.cmt==null?'—':fmt(Math.round(l.cmt))}</td></tr>`;});
