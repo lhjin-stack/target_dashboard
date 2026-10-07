@@ -149,8 +149,14 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 <div class=tabpane id=pane-low>
 <div class=bar>
  <span class=brand>📉 저운임 관리</span>
- <span class=fl><span class=lb>항차</span><select id=lvoy class=dinput onchange="onVoy()"></select></span>
- <span class=fl><span class=lb>구간</span><select id=lseg class=dinput onchange="onSeg()"></select></span>
+ <span class=fl><span class=lb>기준</span>
+   <span class=seg id=lmodeseg><button data-m="wk" class=on>주차별</button><button data-m="voy">항차별</button></span></span>
+ <span class=fl id=flpol><span class=lb>선적지</span><select id=lpol class=dinput onchange="onPol()"></select></span>
+ <span class=fl id=flctr><span class=lb>도착 국가</span><select id=lctr class=dinput onchange="onCtr()"></select></span>
+ <span class=fl id=flport><span class=lb>포트</span><select id=lport class=dinput onchange="onPort()"></select></span>
+ <span class=fl id=flwk><span class=lb>주차</span><select id=lwk class=dinput onchange="onWk()"></select></span>
+ <span class=fl id=flvoy style=display:none><span class=lb>항차</span><select id=lvoy class=dinput onchange="onVoy()"></select></span>
+ <span class=fl id=flseg style=display:none><span class=lb>구간</span><select id=lseg class=dinput onchange="onSeg()"></select></span>
  <span class=fl><span class=lb>규격</span>
    <span class=seg id=lszseg><button data-s="20" class=on>20'</button><button data-s="40">40'</button></span></span>
  <span class=fl><span class=lb>화물</span>
@@ -163,9 +169,13 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
    <span class=seg id=lmetseg><button data-m="o" class=on>O/F</button><button data-m="c">CM1</button></span></span>
  <span class=note>가중평균 = Σ(운임×박스)/Σ박스<br>평균 미만 = 저운임</span>
 </div>
-<div class=helprow><b>항차 → 구간(POL→POD)</b>을 고르면 그 구간의 부킹이 운임(USD/box)별로 쌓입니다. 구간은 <b>본선 레그</b>(T/S면 환적항→도착항), 집계는 <b>홍콩 사무소 부킹만</b>. <b>세로선=가중평균</b>, 평균보다 왼쪽(빨강)이 저운임 구간. <b>빨간 영역이나 막대를 클릭</b>하면 해당 부킹·RA와 평균 대비 차이가 아래에 나옵니다.</div>
+<div class=helprow id=lhelp_wk><b>선적지 → 도착 국가(·포트) → 주차</b>를 고르면 그 구간의 주차별 운임이 아래 띠에 쌓이고, 선택한 주차의 부킹이 운임(USD/box)별로 분포합니다. 포트를 고르지 않으면 <b>국가 전체</b>로 봅니다. 집계는 <b>홍콩 사무소 부킹만</b>. <b>세로선=가중평균</b>, 왼쪽(빨강)이 저운임.</div>
+<div class=helprow id=lhelp_voy style=display:none><b>항차 → 구간(POL→POD)</b>을 고르면 그 구간의 부킹이 운임(USD/box)별로 쌓입니다. 구간은 <b>본선 레그</b>(T/S면 환적항→도착항), 집계는 <b>홍콩 사무소 부킹만</b>. <b>세로선=가중평균</b>, 평균보다 왼쪽(빨강)이 저운임 구간. <b>빨간 영역이나 막대를 클릭</b>하면 해당 부킹·RA와 평균 대비 차이가 아래에 나옵니다.</div>
 
 <div class=tiles id=ltiles></div>
+
+<div class=panel id=wkpanel><div class=ph><span>주차별 추이 <span class=hn id=wkhead></span></span></div>
+ <div id=wkstrip style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px"></div></div>
 
 <div class=panel><div class=ph><span id=lcharthead>운임 분포</span><span class=r id=lchartinfo></span></div>
  <div class=chartwrap id=lchart><div class=ctip id=lctip></div></div>
@@ -330,6 +340,15 @@ document.addEventListener("click",e=>{if(!$("#ctrdd").contains(e.target))$("#ctr
 
 /* ══════════════ 저운임 관리 탭 ══════════════ */
 let LTCL="DRY", LHZ="n", LV=null, LSEG=null, LSZ="20", LMET="o", LVIEW="b", lowSel=null, lowCur=null, VOYS=[];
+let LMODE="wk", LPOL=null, LCTR=null, LPORT="ALL", LWK=null, WKS=[];   /* 주차별 보기(기본) */
+const W33=Date.UTC(2026,7,16);                       /* KMTC 주차 기준: W33 = 2026-08-16(일), 일~토 */
+const wkOf=e=>33+Math.floor((Date.UTC(+e.slice(0,4),+e.slice(4,6)-1,+e.slice(6,8))-W33)/6048e5);
+function wkRange(w){const a=new Date(W33+(w-33)*6048e5),b=new Date(W33+(w-33)*6048e5+5184e5);
+ const f=d=>(d.getUTCMonth()+1)+"/"+d.getUTCDate();return f(a)+"~"+f(b);}
+const ctrOf=l=>DATA.podctr[l.p]||"??";
+/* 공통 필터(규격 제외) — 선사·엠티·운임미등록·타 화물종류·위험물구분·추정토글 */
+const baseOk=l=>!l.k&&!l.u&&tOf(l)===LTCL&&passH(l,LHZ)&&!(isEst(l)&&!LINCE)&&metVal(l)!=null;
+const laneOk=l=>l.l===LPOL&&ctrOf(l)===LCTR&&(LPORT==="ALL"||l.d===LPORT);
 const hasCM1=()=>DATA&&DATA.lines.some(l=>l.c!=null);
 const metVal=l=>LMET==='c'?l.c:l.o;
 /* ★라인의 q는 컨테이너(박스) 수. TEU는 40'=2배. 운임 가중평균은 박스당 요율이므로 박스 가중이 맞고,
@@ -359,9 +378,63 @@ function buildSegs(){const v=VOYS.find(x=>x.v===LV);const sel=$("#lseg");
  const segs=Object.values(v.segs).sort((a,b)=>b.q-a.q);
  sel.innerHTML=segs.map(s=>`<option value="${s.k}">${s.k} (${s.p}) · ${fmt(s.q)}TEU (운임 ${fmt(s.qr)}) · 20' ${s.n20}건 / 40' ${s.n40}건</option>`).join("");
  if(!segs.some(s=>s.k===LSEG))LSEG=segs[0].k;sel.value=LSEG;}
+/* ── 주차별 보기: 선적지 → 도착국가 → (포트) → 주차 ── */
+function buildLanes(){
+ const pols=[...new Set(DATA.lines.filter(baseOk).map(l=>l.l))].sort();
+ if(!pols.length)return;
+ if(!pols.includes(LPOL))LPOL=pols.includes("HKG")?"HKG":pols[0];
+ $("#lpol").innerHTML=pols.map(p=>`<option value="${p}"${p===LPOL?" selected":""}>${p}</option>`).join("");
+ const mine=DATA.lines.filter(l=>baseOk(l)&&l.l===LPOL);
+ const cq={};for(const l of mine)cq[ctrOf(l)]=(cq[ctrOf(l)]||0)+teuOf(l);
+ const ctrs=Object.keys(cq).sort((a,b)=>cq[b]-cq[a]);
+ if(!ctrs.includes(LCTR))LCTR=ctrs[0]||null;
+ $("#lctr").innerHTML=ctrs.map(c=>`<option value="${c}"${c===LCTR?" selected":""}>${CTRNM(c)} · ${fmt(Math.round(cq[c]))}TEU</option>`).join("");
+ const pq={};for(const l of mine)if(ctrOf(l)===LCTR)pq[l.d]=(pq[l.d]||0)+teuOf(l);
+ const ports=Object.keys(pq).sort((a,b)=>pq[b]-pq[a]);
+ if(LPORT!=="ALL"&&!ports.includes(LPORT))LPORT="ALL";
+ $("#lport").innerHTML=`<option value="ALL"${LPORT==="ALL"?" selected":""}>전체(국가 합산)</option>`
+   +ports.map(p=>`<option value="${p}"${p===LPORT?" selected":""}>${p} · ${fmt(Math.round(pq[p]))}TEU</option>`).join("");
+ // 주차 목록(선택 구간 기준, 규격 무관)
+ const wq={};for(const l of mine)if(laneOk(l)){const w=wkOf(l.e);(wq[w]=wq[w]||{q:0,vq:0,bx:0})&&0;wq[w].q+=teuOf(l);wq[w].vq+=metVal(l)*l.q;wq[w].bx+=l.q;}
+ WKS=Object.keys(wq).map(Number).sort((a,b)=>b-a).map(w=>({w,q:wq[w].q,avg:wq[w].vq/wq[w].bx}));
+ if(!WKS.some(x=>x.w===LWK))LWK=WKS.length?WKS[0].w:null;
+ $("#lwk").innerHTML=WKS.map(x=>`<option value="${x.w}"${x.w===LWK?" selected":""}>W${x.w} (${wkRange(x.w)}) · ${fmt(Math.round(x.q))}TEU</option>`).join("");
+}
+const CTRNM=c=>({KR:"한국",CN:"중국",TW:"대만",JP:"일본",ID:"인도네시아",SG:"싱가포르",MY:"말레이시아",TH:"태국",VN:"베트남",IN:"인도",PK:"파키스탄",AE:"아랍에미리트",SA:"사우디"}[c]||c);
+function renderWkStrip(){
+ const host=$("#wkstrip");if(!host)return;
+ $("#wkpanel").style.display=LMODE==="wk"?"":"none";
+ if(LMODE!=="wk"){host.innerHTML="";return;}
+ $("#wkhead").textContent=`${LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":" "+LPORT} · ${LSZ}' · ${LTCL} · ${metName()}`;
+ const rows=DATA.lines.filter(l=>baseOk(l)&&laneOk(l)&&l.s===LSZ);
+ const m={};for(const l of rows){const w=wkOf(l.e);const o=(m[w]=m[w]||{q:0,vq:0,bx:0,n:0});o.q+=teuOf(l);o.vq+=metVal(l)*l.q;o.bx+=l.q;o.n++;}
+ const ws=Object.keys(m).map(Number).sort((a,b)=>a-b);
+ if(!ws.length){host.innerHTML='<span class=hn>이 구간·규격에 부킹이 없습니다</span>';return;}
+ const avgs=ws.map(w=>m[w].vq/m[w].bx),lo=Math.min(...avgs),hi=Math.max(...avgs);
+ host.innerHTML=ws.map(w=>{const o=m[w],a=o.vq/o.bx,sel=w===LWK;
+  const t=hi>lo?(a-lo)/(hi-lo):0.5;const col=`hsl(${Math.round(210-150*t)},65%,${sel?42:94}%)`;
+  return `<span onclick="setWk(${w})" title="부킹 ${o.n}건" style="cursor:pointer;border:1px solid ${sel?'var(--ink)':'var(--line)'};border-radius:8px;padding:6px 10px;background:${sel?col:'#fff'};color:${sel?'#fff':'var(--ink)'};font-size:12px">
+   <b>W${w}</b> <span style="opacity:.7">${wkRange(w)}</span><br><b style="font-size:13px">$${fmt(Math.round(a))}</b> <span style="opacity:.7">· ${fmt(Math.round(o.q))}TEU</span></span>`;}).join("");
+}
+function setWk(w){LWK=w;$("#lwk").value=w;lowSel=null;renderLowAll();}
+function onPol(){LPOL=$("#lpol").value;LCTR=null;LPORT="ALL";lowSel=null;renderLowAll();}
+function onCtr(){LCTR=$("#lctr").value;LPORT="ALL";lowSel=null;renderLowAll();}
+function onPort(){LPORT=$("#lport").value;lowSel=null;renderLowAll();}
+function onWk(){LWK=+$("#lwk").value;lowSel=null;renderLowAll();}
+function setMode(m){LMODE=m;[...$("#lmodeseg").children].forEach(b=>b.classList.toggle("on",b.dataset.m===m));
+ const wk=m==="wk";["flpol","flctr","flport","flwk"].forEach(i=>$("#"+i).style.display=wk?"":"none");
+ ["flvoy","flseg"].forEach(i=>$("#"+i).style.display=wk?"none":"");
+ $("#lhelp_wk").style.display=wk?"":"none";$("#lhelp_voy").style.display=wk?"none":"";
+ lowSel=null;renderLowAll();}
+$("#lmodeseg").onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m);};
+
 function onVoy(){LV=$("#lvoy").value;buildSegs();lowSel=null;renderLowAll();}
 function onSeg(){LSEG=$("#lseg").value;lowSel=null;renderLowAll();}
-function segCnt(){const v=VOYS.find(x=>x.v===LV);const s=v&&v.segs[LSEG];return s?{20:s.n20,40:s.n40}:{20:0,40:0};}
+function segCnt(){
+ if(LMODE==="wk"){const c={20:0,40:0};
+  for(const l of DATA.lines)if(baseOk(l)&&laneOk(l)&&wkOf(l.e)===LWK)c[l.s==="40"?40:20]++;
+  return c;}
+ const v=VOYS.find(x=>x.v===LV);const s=v&&v.segs[LSEG];return s?{20:s.n20,40:s.n40}:{20:0,40:0};}
 function markSz(){const c=segCnt();[...$("#lszseg").children].forEach(b=>{const e=!c[b.dataset.s];
  b.style.opacity=e?.45:1;b.title=e?"이 구간엔 이 규격 부킹이 없습니다":"";});}
 function setLsz(v){LSZ=v;[...$("#lszseg").children].forEach(b=>b.classList.toggle("on",b.dataset.s==LSZ));lowSel=null;renderLowAll();}
@@ -380,7 +453,9 @@ $("#lviewseg").onclick=e=>{if(e.target.dataset.v){LVIEW=e.target.dataset.v;[...$
 
 /* 선택 항차·구간·규격의 라인 + 가중평균 + 빈 */
 function lowCompute(){
- const rows=DATA.lines.filter(l=>l.v===LV&&segKey(l)===LSEG&&l.s===LSZ&&tOf(l)===LTCL&&passH(l,LHZ)&&metVal(l)!=null&&!l.x&&!l.u&&!l.k&&!(isEst(l)&&!LINCE));
+ const rows=LMODE==="wk"
+   ? DATA.lines.filter(l=>baseOk(l)&&laneOk(l)&&l.s===LSZ&&wkOf(l.e)===LWK)
+   : DATA.lines.filter(l=>baseOk(l)&&l.v===LV&&segKey(l)===LSEG&&l.s===LSZ);
  let sq=0,sv=0;for(const l of rows){sq+=l.q;sv+=metVal(l)*l.q;}
  const avg=sq?sv/sq:0;
  const vals=rows.map(metVal);const mn=Math.min(...vals),mx=Math.max(...vals);
@@ -394,7 +469,10 @@ function lowCompute(){
  let lq=0,gap=0;for(const l of low){lq+=l.q;gap+=(avg-metVal(l))*l.q;}   // q=박스수 → 박스당 갭×박스
  return {rows,avg,sq,bins,bw,low,lq,gap,mn,mx};}
 
-function renderLowAll(){if(!DATA||!LV)return;markSz();lowCur=lowCompute();renderTiles();renderChart();renderLow();}
+function renderLowAll(){if(!DATA)return;
+ if(LMODE==="wk"){buildLanes();if(!LCTR||LWK==null){$("#wkstrip").innerHTML='<span class=hn>표시할 구간이 없습니다</span>';return;}}
+ else if(!LV)return;
+ markSz();renderWkStrip();lowCur=lowCompute();renderTiles();renderChart();renderLow();}
 
 function renderTiles(){const c=lowCur;const F=teuF();
  $("#ltiles").innerHTML=
@@ -407,7 +485,8 @@ function renderTiles(){const c=lowCur;const F=teuF();
 function renderChart(){const c=lowCur,host=$("#lchart");const tip=$("#lctip");
  host.querySelectorAll("svg").forEach(s=>s.remove());
  host.querySelectorAll(".empty").forEach(e=>e.remove());host._empty=null;   /* 안내문 중복 누적 방지(2026-10-07) */
- $("#lcharthead").textContent=`운임 분포 — ${LV||''} · ${LSEG||''} · ${LSZ}' · ${LTCL}${LHZ==="y"?" · 위험물":LHZ==="a"?" · 위험물포함":""} · X=${metName()}(USD/box) · Y=물량(TEU)`;
+ const _scope=LMODE==="wk"?`W${LWK} (${wkRange(LWK)}) · ${LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":" "+LPORT}`:`${LV||''} · ${LSEG||''}`;
+ $("#lcharthead").textContent=`운임 분포 — ${_scope} · ${LSZ}' · ${LTCL}${LHZ==="y"?" · 위험물":LHZ==="a"?" · 위험물포함":""} · X=${metName()}(USD/box) · Y=물량(TEU)`;
  if(!c.rows.length){$("#lchartinfo").textContent="";const d=ce("div");d.className="empty";
   const other=LSZ==='20'?'40':'20',oc=segCnt()[other];
   d.innerHTML=oc?`이 구간에 <b>${LSZ}' 부킹은 없습니다</b> — ${other}'로 ${oc}건 실렸습니다. `+
@@ -473,7 +552,7 @@ function renderLow(){const c=lowCur;if(!c)return;const avg=c.avg;
  if(lowSel){const [lo,hi]=lowSel;rows=c.rows.filter(l=>{const v=metVal(l);return v>=lo&&(v<hi||(hi===c.bins[c.bins.length-1].hi&&v<=hi));});
   title=`선택 구간 $${fmt(lo)}~$${fmt(hi)} 부킹 ${rows.length}건`;$("#lowreset").style.display="";}
  else{rows=c.low;title=`저운임 부킹 — 평균 $${fmt(avg)} 미만 ${rows.length}건 · ${fmt(c.lq*teuF())}TEU`;$("#lowreset").style.display="none";}
- $("#lowhead").innerHTML=`<span>${title} <span class=hn>(${LV||''} · ${LSEG||''} · ${LSZ}' · ${metName()})</span></span>`;
+ $("#lowhead").innerHTML=`<span>${title} <span class=hn>(${LMODE==="wk"?`W${LWK} · ${LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":" "+LPORT}`:`${LV||''} · ${LSEG||''}`} · ${LSZ}' · ${metName()})</span></span>`;
  const box=l=>l.q;   // q=박스수(40'도 1박스=1)
  let h;
  if(LVIEW==='s'){
