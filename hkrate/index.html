@@ -175,8 +175,8 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 
 <div class=tiles id=ltiles></div>
 
-<div class=panel id=wkpanel><div class=ph><span>주차별 추이 <span class=hn id=wkhead></span></span></div>
- <div id=wkstrip style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px"></div></div>
+<div class=panel id=wkpanel><div class=ph><span>주차별 추이 <span class=hn>(이번 주 기준 전 9주 ~ 향후 3주, 점 클릭 = 그 주차 상세)</span> <span class=hn id=wkhead></span></span></div>
+ <div id=wkstrip style="padding:8px 12px 4px"></div></div>
 
 <div class=panel><div class=ph><span id=lcharthead>운임 분포</span><span class=r id=lchartinfo></span></div>
  <div class=chartwrap id=lchart><div class=ctip id=lctip></div></div>
@@ -422,15 +422,46 @@ function renderWkStrip(){
  $("#wkpanel").style.display=LMODE==="wk"?"":"none";
  if(LMODE!=="wk"){host.innerHTML="";return;}
  $("#wkhead").textContent=`${CTRNM(LPOLC)}${LPOL==="ALL"?"":"/"+LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":"/"+LPORT} · ${LSZ}' · ${LTCL} · ${metName()}`;
+ /* 이번 주차 기준 -9 ~ +3 = 13주 추이 */
+ const now=wkOf(ymd(new Date())),w0=now-9,w1=now+3;
  const rows=DATA.lines.filter(l=>baseOk(l)&&laneOk(l)&&l.s===LSZ);
- const m={};for(const l of rows){const w=wkOf(l.e);const o=(m[w]=m[w]||{q:0,vq:0,bx:0,n:0});o.q+=teuOf(l);o.vq+=metVal(l)*l.q;o.bx+=l.q;o.n++;}
- const ws=Object.keys(m).map(Number).sort((a,b)=>a-b);
- if(!ws.length){host.innerHTML='<span class=hn>이 구간·규격에 부킹이 없습니다</span>';return;}
- const avgs=ws.map(w=>m[w].vq/m[w].bx),lo=Math.min(...avgs),hi=Math.max(...avgs);
- host.innerHTML=ws.map(w=>{const o=m[w],a=o.vq/o.bx,sel=w===LWK;
-  const t=hi>lo?(a-lo)/(hi-lo):0.5;const col=`hsl(${Math.round(210-150*t)},65%,${sel?42:94}%)`;
-  return `<span onclick="setWk(${w})" title="부킹 ${o.n}건" style="cursor:pointer;border:1px solid ${sel?'var(--ink)':'var(--line)'};border-radius:8px;padding:6px 10px;background:${sel?col:'#fff'};color:${sel?'#fff':'var(--ink)'};font-size:12px">
-   <b>W${w}</b> <span style="opacity:.7">${wkRange(w)}</span><br><b style="font-size:13px">$${fmt(Math.round(a))}</b> <span style="opacity:.7">· ${fmt(Math.round(o.q))}TEU</span></span>`;}).join("");
+ const m={};for(const l of rows){const w=wkOf(l.e);if(w<w0||w>w1)continue;
+  const o=(m[w]=m[w]||{q:0,vq:0,bx:0,n:0});o.q+=teuOf(l);o.vq+=metVal(l)*l.q;o.bx+=l.q;o.n++;}
+ const ws=[];for(let w=w0;w<=w1;w++)ws.push(w);
+ const has=ws.filter(w=>m[w]);
+ host.innerHTML="";
+ if(!has.length){host.innerHTML='<span class=hn style="padding:10px 12px;display:block">이 구간·규격에 최근 13주 부킹이 없습니다</span>';return;}
+ const W=Math.max(560,host.clientWidth-24),H=230,ml=52,mr=52,mt=18,mb=34,pw=W-ml-mr,ph=H-mt-mb;
+ const el=(t,a,txt)=>{const e=document.createElementNS("http://www.w3.org/2000/svg",t);
+  for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;};
+ const svg=el("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,style:"display:block"});
+ const avgs=has.map(w=>m[w].vq/m[w].bx),amax=Math.max(...avgs),amin=Math.min(...avgs);
+ const lo=Math.max(0,amin-(amax-amin||amin*0.1)*0.35),hi=amax+(amax-amin||amin*0.1)*0.25;
+ const qmax=Math.max(...has.map(w=>m[w].q))||1;
+ const bw=pw/ws.length, X=i=>ml+bw*i+bw/2, Y=v=>mt+ph-(v-lo)/((hi-lo)||1)*ph, YQ=q=>mt+ph-q/qmax*ph*0.45;
+ for(let g=0;g<=3;g++){const v=lo+(hi-lo)*g/3,y=Y(v);
+  svg.appendChild(el("line",{x1:ml,x2:W-mr,y1:y,y2:y,stroke:"var(--soft)"}));
+  svg.appendChild(el("text",{x:ml-8,y:y+4,"text-anchor":"end",style:"font:11px var(--mono);fill:var(--grey)"},"$"+fmt(Math.round(v))));}
+ ws.forEach((w,i)=>{const o=m[w];if(!o)return;
+  svg.appendChild(el("rect",{x:X(i)-bw*0.3,y:YQ(o.q),width:bw*0.6,height:mt+ph-YQ(o.q),fill:"var(--soft)",rx:3}));});
+ const pts=[];ws.forEach((w,i)=>{const o=m[w];if(o)pts.push([X(i),Y(o.vq/o.bx)]);});
+ if(pts.length>1)svg.appendChild(el("polyline",{points:pts.map(p=>p.join(",")).join(" "),fill:"none",stroke:"var(--accent)","stroke-width":2.5}));
+ ws.forEach((w,i)=>{const o=m[w],sel=w===LWK;
+  svg.appendChild(el("text",{x:X(i),y:H-14,"text-anchor":"middle",
+   style:`font:${sel?"700":"400"} 11px var(--mono);fill:${sel?"var(--ink)":"var(--grey)"}`},"W"+w));
+  if(!o)return;const a=o.vq/o.bx;
+  if(sel)svg.appendChild(el("line",{x1:X(i),x2:X(i),y1:mt,y2:mt+ph,stroke:"var(--ink)","stroke-dasharray":"3 3",opacity:.35}));
+  const g=el("g",{style:"cursor:pointer"});
+  g.appendChild(el("circle",{cx:X(i),cy:Y(a),r:sel?6:4,fill:sel?"var(--ink)":"var(--accent)"}));
+  g.appendChild(el("text",{x:X(i),y:Y(a)-11,"text-anchor":"middle",style:`font:${sel?"700":"600"} 11.5px var(--mono);fill:var(--ink)`},"$"+fmt(Math.round(a))));
+  g.appendChild(el("rect",{x:X(i)-bw/2,y:mt,width:bw,height:ph,fill:"transparent"}));
+  g.onclick=()=>setWk(w);
+  g.appendChild(el("title",null,`W${w} (${wkRange(w)})\n평균 $${fmt(Math.round(a))} · ${fmt(Math.round(o.q))}TEU · 부킹 ${o.n}건`));
+  svg.appendChild(g);});
+ svg.appendChild(el("text",{x:W-mr+8,y:mt+ph+4,style:"font:10.5px var(--sans);fill:var(--grey)"},"막대=TEU"));
+ host.appendChild(svg);
+ const cur=m[LWK];
+ const info=el("div",null);host.appendChild(info);
 }
 function setWk(w){LWK=w;$("#lwk").value=w;lowSel=null;renderLowAll();}
 function onPolc(){LPOLC=$("#lpolc").value;LPOL="ALL";LCTR=null;LPORT="ALL";lowSel=null;renderLowAll();}
