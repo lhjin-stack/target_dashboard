@@ -82,9 +82,14 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 .sig{display:inline-block;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600}
 .sig.lo{background:var(--cbg);color:var(--crit)}.sig.ok{background:var(--gbg);color:var(--good)}.sig.hi{background:#e8f0fe;color:#1a56db}.sig.na{background:#eef1f5;color:var(--grey)}
 .ropill{background:#fff3e0;color:#b26a00}
-.board{display:flex;gap:12px;overflow-x:auto;padding:12px 14px 14px;align-items:flex-start}
-.bcol{flex:0 0 186px;display:flex;flex-direction:column;gap:8px}
-.bhd{font-weight:700;font-size:13px;color:var(--ink2);padding:0 2px 2px;display:flex;justify-content:space-between;align-items:baseline}
+.board{padding:4px 0 6px}
+.brow{display:flex;gap:12px;padding:12px 14px;border-top:1px solid var(--line);align-items:flex-start}
+.brow:first-child{border-top:0}
+.bcards{display:flex;flex-wrap:wrap;gap:8px;flex:1}
+.bcards .pc{flex:0 0 178px}
+.bhd{flex:0 0 96px;font-weight:700;font-size:13px;color:var(--ink2);padding-top:8px;display:flex;flex-direction:column;gap:3px}
+.bslot #drill>thead>tr>th,.bslot #drill>tbody>tr>td{padding:8px 9px}.bslot #drill>tbody>tr>td:first-child{max-width:300px;white-space:normal}
+.bslot{padding:0 14px 12px}.bslot .panel{margin:0;border-color:var(--accent);box-shadow:0 2px 10px rgba(30,64,175,.08)}
 .bhd .cc{margin-right:5px}
 .pc{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;cursor:pointer;transition:outline .08s}
 .pc:hover{outline:2px solid var(--accent)}
@@ -157,7 +162,7 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
        <div id=portopts></div></div></span></span>
  <span class=note>D-1 마감 기준<br>확정 O/F + 항차평균</span>
 </div>
-<div class=helprow>운임은 <b>20' / 40'</b> 나란히. 공시 O/F = 운임표의 <b>출항(ETD) 주차 · 화주 등급(A·B → AB, C·D·N/A → CD)</b> 요율. <b>카드를 클릭</b>하면 그 국가·포트의 화주별 리스트(저운임부터). 카드 색 = 공시 대비 신호(빨강 저운임 · 파랑 고운임). 필터는 모두 <b>다중 선택</b>. <b>기간(ETD 출항일)을 직접 선택</b>하면 그 기간 부킹으로 다시 집계됩니다. 포트는 국가의 하위.</div>
+<div class=helprow>운임은 <b>20' / 40'</b> 나란히. 공시 O/F = 운임표의 <b>출항(ETD) 주차 · 화주 등급(A·B → AB, C·D·N/A → CD)</b> 요율. <b>카드를 클릭</b>하면 그 국가 줄 바로 아래에 화주별 리스트(저운임부터)가 펼쳐지고, 다시 누르면 닫힙니다. 카드 색 = 공시 대비 신호(빨강 저운임 · 파랑 고운임). 필터는 모두 <b>다중 선택</b>. <b>기간(ETD 출항일)을 직접 선택</b>하면 그 기간 부킹으로 다시 집계됩니다. 포트는 국가의 하위.</div>
 
 <div class=panel><div class=ph><span>① POD 국가 × 포트 — 실제 O/F vs <span class=hn>공시 O/F</span> (USD/box, 20' / 40' · <span id=tcllbl>DRY</span>)</span>
   <span class=r id=mtxinfo></span></div>
@@ -317,7 +322,7 @@ function renderMtx(){const C={};
   const cc=DATA.podctr[l.p],k=portKey(l);
   const o=(C[cc]=C[cc]||{tot:emptyAgg(),ports:{}});addAgg(o.tot,l);addAgg(o.ports[k]=o.ports[k]||emptyAgg(),l);}
  const tt=P=>P["20"].t+P["40"].t;
- const card=(nm,P,kind,key,isTot)=>{const v={"20":cellVals(P["20"]),"40":cellVals(P["40"])};
+ let cc0="";const card=(nm,P,kind,key,isTot)=>{const v={"20":cellVals(P["20"]),"40":cellVals(P["40"])};
   /* 카드 색 = 두 규격 합친 공시 대비 신호 */
   const A=P["20"].aq+P["40"].aq,B=P["20"].pq+P["40"].pq,N=P["20"].pn+P["40"].pn;
   const sig=(N&&pubOn())?sigOf(A/N,B/N):"na",thin=(P["20"].q+P["40"].q)<3;
@@ -325,7 +330,7 @@ function renderMtx(){const C={};
   const pub=z=>v[z].pub==null?'—':fmt(v[z].pub);
   const gap=z=>v[z].gap==null?'—':(v[z].gap>0?'+':'')+fmt(v[z].gap);
   const rt=P["20"].rt+P["40"].rt,on=SEL&&SEL[0]===kind&&SEL[1]===key;
-  return `<div class="pc ${isTot?'tot':''} ${sig==='lo'||sig==='hi'?sig:''} ${thin?'thin':''} ${on?'sel':''}" onclick="drill('${kind}','${esc(key)}')" title="클릭 = 화주별 리스트${thin?' · 운임 표본 3박스 미만(참고용)':''}">
+  return `<div class="pc ${isTot?'tot':''} ${sig==='lo'||sig==='hi'?sig:''} ${thin?'thin':''} ${on?'sel':''}" onclick="cardClick('${kind}','${esc(key)}','${cc0}')" title="클릭 = 화주별 리스트${thin?' · 운임 표본 3박스 미만(참고용)':''}">
    <div class=nm><span>${esc(nm)}</span><span class=hn>20' / 40'</span></div>
    <div class=a>${val("20")}<span class=sl>/</span>${val("40")}</div>
    <div class=t>공시 ${pub("20")} / ${pub("40")}</div>
@@ -334,15 +339,22 @@ function renderMtx(){const C={};
  let h="";
  DATA.countries.forEach(([cc,nm])=>{const o=C[cc];if(!o||!CSEL.has(cc)||!tt(o.tot))return;
   const ports=Object.keys(o.ports).filter(p=>tt(o.ports[p])>0).sort((a,b)=>tt(o.ports[b])-tt(o.ports[a]));
-  h+=`<div class=bcol><div class=bhd><span><span class=cc>${cc}</span>${nm}</span><span class=hn>포트 ${ports.length}</span></div>`+
-     card(nm+" 전체",o.tot,"c",cc,true)+ports.map(p=>card(p,o.ports[p],"p",p,false)).join("")+`</div>`;});
+  cc0=cc;
+  h+=`<div class=brow><div class=bhd><span><span class=cc>${cc}</span>${nm}</span><span class=hn style="font-weight:400">포트 ${ports.length}</span></div><div class=bcards>`+
+     card(nm+" 전체",o.tot,"c",cc,true)+ports.map(p=>card(p,o.ports[p],"p",p,false)).join("")+`</div></div><div class=bslot id="slot-${cc}"></div>`;});
+ const dp=$("#drillpanel");$("#pane-cmp").appendChild(dp);       /* 다시 그리기 전에 패널을 보드 밖으로 빼둔다 */
  $("#mtx").innerHTML=h||'<div class=empty style="padding:16px">이 기간·필터에 부킹이 없습니다</div>';
+ const slot=SEL&&document.getElementById("slot-"+SEL[2]);
+ if(slot&&dp.style.display!=="none")slot.appendChild(dp);else{dp.style.display="none";}
  const tl=$("#tcllbl");if(tl)tl.textContent=TCL+(HZS==="y"?" · 위험물":HZS==="a"?" · 위험물포함":"");}
 function tglCtr(){}
+function cardClick(kind,key,cc){
+ if(SEL&&SEL[0]===kind&&SEL[1]===key){SEL=null;$("#drillpanel").style.display="none";renderMtx();return;}   /* 같은 카드 다시 클릭 = 닫기 */
+ drill(kind,key,cc);}
 
 /* 드릴다운: 선택 POD의 화주 × 규격 — 저운임(편차 작은 순)부터 */
 let DRILL=[];
-function drill(kind,key){SEL=[kind,key];
+function drill(kind,key,cc){SEL=[kind,key,cc];
  const pod=kind==="c"?(DATA.countries.find(c=>c[0]===key)||[key,key])[1]+" 전체":key;
  const rows=DATA.lines.filter(l=>(kind==="c"?DATA.podctr[l.p]===key:portKey(l)===key)&&passPod(l)&&passT(l)&&inRange(l)&&passG(l)&&!l.k);
  document.querySelectorAll("#mtx .pc.sel").forEach(e=>e.classList.remove("sel"));
@@ -378,7 +390,7 @@ function drill(kind,key){SEL=[kind,key];
    s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}${ROPILL(b)}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${fmt(teuOf(b))}TEU</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.u?`<span class="pill" style="background:#fff8e1;color:#8a6d00" title="실화주 부킹인데 연결된 RA·O/F가 없음 — 운임 미등록, 평균에서 제외">운임미등록</span>`:(b.f==="B"?`${b.o} <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구 O/F(CS165H) — 실제 청구된 금액">실청구</span>`:b.f==="E"?`${b.o} <span class="pill" style="background:#fff3e0;color:#b26a00" title="${String(b.r||'').startsWith('≈')?'임의연결 — 같은 화주·구간·규격·PPD/CTL 조건의 RA에서 가져온 추정값':'이 부킹에 연결된 RA가 출항일 기준 만료 — 그 단가를 추정값으로 사용'}. 평균·저운임 판정 기본 제외">추정${String(b.r||'').startsWith('≈')?'':'(만료RA)'}</span>`:b.o)}</td><td>${b.r||'<span class=hn>—</span>'}</td></tr>`).join("")+
    `</tbody></table></td></tr>`;});
  h+=`</tbody>`;$("#drill").innerHTML=h;
- $("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});renderMtx();}
+ renderMtx();$("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});}
 function tog(i){const e=$("#bk"+i);e.style.display=e.style.display=="none"?"":"none";}
 
 $("#tclseg").onclick=e=>{if(e.target.dataset.t){TCL=e.target.dataset.t;
