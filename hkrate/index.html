@@ -86,7 +86,11 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 .brow{display:flex;gap:12px;padding:12px 14px;border-top:1px solid var(--line);align-items:flex-start}
 .brow:first-child{border-top:0}
 .bcards{display:flex;flex-wrap:wrap;gap:8px;flex:1}
-.bcards .pc{flex:0 0 178px}
+.bcards .pc{flex:0 0 150px;padding:7px 10px}
+.bcards .pc .nm{font-size:12px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bcards .pc .a{font-size:14.5px}
+.bmore{flex:0 0 auto;align-self:center;border:1px dashed var(--line);background:#fff;border-radius:10px;padding:8px 12px;font:inherit;font-size:12px;color:var(--accent);cursor:pointer;font-weight:600}
+.bmore:hover{background:var(--asoft)}
 .bhd{flex:0 0 96px;font-weight:700;font-size:13px;color:var(--ink2);padding-top:8px;display:flex;flex-direction:column;gap:3px}
 .bslot #drill>thead>tr>th,.bslot #drill>tbody>tr>td{padding:8px 9px}.bslot #drill>tbody>tr>td:first-child{max-width:300px;white-space:normal}
 .bslot{padding:0 14px 12px}.bslot .panel{margin:0;border-color:var(--accent);box-shadow:0 2px 10px rgba(30,64,175,.08)}
@@ -162,7 +166,7 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
        <div id=portopts></div></div></span></span>
  <span class=note>D-1 마감 기준<br>확정 O/F + 항차평균</span>
 </div>
-<div class=helprow>운임은 <b>20' / 40'</b> 나란히. 공시 O/F = 운임표의 <b>출항(ETD) 주차 · 화주 등급(A·B → AB, C·D·N/A → CD)</b> 요율. <b>카드를 클릭</b>하면 그 국가 줄 바로 아래에 화주별 리스트(저운임부터)가 펼쳐지고, 다시 누르면 닫힙니다. 카드 색 = 공시 대비 신호(빨강 저운임 · 파랑 고운임). 필터는 모두 <b>다중 선택</b>. <b>기간(ETD 출항일)을 직접 선택</b>하면 그 기간 부킹으로 다시 집계됩니다. 포트는 국가의 하위.</div>
+<div class=helprow>운임은 <b>20' / 40'</b> 나란히. 공시 O/F = 운임표의 <b>출항(ETD) 주차 · 화주 등급(A·B → AB, C·D·N/A → CD)</b> 요율. <b>카드를 클릭</b>하면 그 국가 줄 바로 아래에 화주별 리스트(저운임부터)가 펼쳐지고, 다시 누르면 닫힙니다. 카드 = 평균 실제 O/F(20' / 40'), 색 = 공시 대비 신호(빨강 저운임 · 파랑 고운임 · 흰색 양호). 국가별 포트는 물량 상위 4개, 나머지는 <b>더보기</b>. 필터는 모두 <b>다중 선택</b>. <b>기간(ETD 출항일)을 직접 선택</b>하면 그 기간 부킹으로 다시 집계됩니다. 포트는 국가의 하위.</div>
 
 <div class=panel><div class=ph><span>① POD 국가 × 포트 — 실제 O/F vs <span class=hn>공시 O/F</span> (USD/box, 20' / 40' · <span id=tcllbl>DRY</span>)</span>
   <span class=r id=mtxinfo></span></div>
@@ -330,24 +334,26 @@ function renderMtx(){const C={};
   const pub=z=>v[z].pub==null?'—':fmt(v[z].pub);
   const gap=z=>v[z].gap==null?'—':(v[z].gap>0?'+':'')+fmt(v[z].gap);
   const rt=P["20"].rt+P["40"].rt,on=SEL&&SEL[0]===kind&&SEL[1]===key;
-  return `<div class="pc ${isTot?'tot':''} ${sig==='lo'||sig==='hi'?sig:''} ${thin?'thin':''} ${on?'sel':''}" onclick="cardClick('${kind}','${esc(key)}','${cc0}')" title="클릭 = 화주별 리스트${thin?' · 운임 표본 3박스 미만(참고용)':''}">
-   <div class=nm><span>${esc(nm)}</span><span class=hn>20' / 40'</span></div>
-   <div class=a>${val("20")}<span class=sl>/</span>${val("40")}</div>
-   <div class=t>공시 ${pub("20")} / ${pub("40")}</div>
-   <div class=t>편차 ${gap("20")} / ${gap("40")}</div>
-   <div class=q><span>${fmt(P["20"].t)} / ${fmt(P["40"].t)} TEU</span>${rt?`<span class="pill ropill">R/O ${fmt(rt)}</span>`:''}</div></div>`;};
+  return `<div class="pc ${isTot?'tot':''} ${sig==='lo'||sig==='hi'?sig:''} ${thin?'thin':''} ${on?'sel':''}" onclick="cardClick('${kind}','${esc(key)}','${cc0}')" title="${esc(nm)} (20' / 40')&#10;공시 ${pub("20")} / ${pub("40")} · 편차 ${gap("20")} / ${gap("40")}&#10;물량 ${fmt(P["20"].t)} / ${fmt(P["40"].t)} TEU${rt?` · R/O ${fmt(rt)} TEU`:''}${thin?'&#10;운임 표본 3박스 미만(참고용)':''}&#10;클릭 = 화주별 리스트">
+   <div class=nm><span>${esc(nm)}</span></div>
+   <div class=a>${val("20")}<span class=sl>/</span>${val("40")}</div></div>`;};
  let h="";
  DATA.countries.forEach(([cc,nm])=>{const o=C[cc];if(!o||!CSEL.has(cc)||!tt(o.tot))return;
   const ports=Object.keys(o.ports).filter(p=>tt(o.ports[p])>0).sort((a,b)=>tt(o.ports[b])-tt(o.ports[a]));
   cc0=cc;
   h+=`<div class=brow><div class=bhd><span><span class=cc>${cc}</span>${nm}</span><span class=hn style="font-weight:400">포트 ${ports.length}</span></div><div class=bcards>`+
-     card(nm+" 전체",o.tot,"c",cc,true)+ports.map(p=>card(p,o.ports[p],"p",p,false)).join("")+`</div></div><div class=bslot id="slot-${cc}"></div>`;});
+     card(nm+" 전체",o.tot,"c",cc,true)+
+     ports.filter((p,i)=>i<PMAX||MORE.has(cc)||(SEL&&SEL[1]===p)).map(p=>card(p,o.ports[p],"p",p,false)).join("")+
+     (ports.length>PMAX?`<button class=bmore onclick="tglMore('${cc}')">${MORE.has(cc)?'접기 ▴':`+${ports.length-PMAX} 더보기 ▾`}</button>`:'')+
+     `</div></div><div class=bslot id="slot-${cc}"></div>`;});
  const dp=$("#drillpanel");$("#pane-cmp").appendChild(dp);       /* 다시 그리기 전에 패널을 보드 밖으로 빼둔다 */
  $("#mtx").innerHTML=h||'<div class=empty style="padding:16px">이 기간·필터에 부킹이 없습니다</div>';
  const slot=SEL&&document.getElementById("slot-"+SEL[2]);
  if(slot&&dp.style.display!=="none")slot.appendChild(dp);else{dp.style.display="none";}
  const tl=$("#tcllbl");if(tl)tl.textContent=TCL+(HZS==="y"?" · 위험물":HZS==="a"?" · 위험물포함":"");}
 function tglCtr(){}
+const PMAX=4, MORE=new Set();          /* 국가별 포트 카드는 물량 상위 4개까지, 나머지는 더보기 */
+function tglMore(cc){MORE.has(cc)?MORE.delete(cc):MORE.add(cc);renderMtx();}
 function cardClick(kind,key,cc){
  if(SEL&&SEL[0]===kind&&SEL[1]===key){SEL=null;$("#drillpanel").style.display="none";renderMtx();return;}   /* 같은 카드 다시 클릭 = 닫기 */
  drill(kind,key,cc);}
