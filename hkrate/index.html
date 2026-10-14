@@ -101,9 +101,10 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 #lowlist th,#lowlist td{text-align:right}#lowlist th:first-child,#lowlist td:first-child,#lowlist td.tl,#lowlist th.tl{text-align:left}
 #lowlist tr.hi td{background:#fff7f7}
 #lowlist tr.dim td{opacity:.45}
+.szhd{padding:10px 14px 0;font-size:12.5px}.szhd b{font-size:13.5px;margin-right:6px}
 </style><script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script><script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script></head><body><div class=wrap><div id=gate style="position:fixed;inset:0;z-index:100;background:#f6f7f9;display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:360px;padding:20px"><div style="font-size:44px">🚢</div><h2 style="margin:6px 0">HK 운임 모니터</h2><p style="color:#697488;font-size:13px">ekmtc.com 계정으로 로그인하세요.</p><button id=loginBtn onclick=signIn() disabled style="margin-top:8px;padding:9px 20px;border:0;border-radius:8px;background:#1e40af;color:#fff;font:600 14px sans-serif;cursor:pointer">구글 로그인</button><div id=gerr style="color:#b91c1c;font-size:12px;margin-top:10px"></div></div></div>
 <h1>🚢 HK 운임 모니터 <span class="tag tag-live">실데이터</span></h1>
-<div class=sub>홍콩 사무소 발 · 실적 O/F(ETD 기준) vs 시트 WK41 타겟 · 등급 = 20260601~20260831 TEU · D-1 ADW</div>
+<div class=sub>홍콩 사무소 발 · 실적 O/F(ETD 기준) vs 시트 WK42 타겟 · 등급 = 20260601~20260831 TEU · D-1 ADW</div>
 
 <div class=tabs><button id=tab-cmp class=on onclick="showTab('cmp')">운임 비교</button><button id=tab-low onclick="showTab('low')">저운임 관리</button></div>
 
@@ -159,20 +160,20 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
  <span class=fl id=flvoy style=display:none><span class=lb>항차</span><select id=lvoy class=dinput onchange="onVoy()"></select></span>
  <span class=fl id=flseg style=display:none><span class=lb>구간</span><select id=lseg class=dinput onchange="onSeg()"></select></span>
  <span class=fl><span class=lb>규격</span>
-   <span class=seg id=lszseg><button data-s="20" class=on>20'</button><button data-s="40">40'</button></span></span>
+   <span class=seg id=lszseg title="복수 선택 가능 — 둘 다 켜면 20'·40'를 나란히 비교"><button data-s="20" class=on>20'</button><button data-s="40">40'</button></span></span>
  <span class=fl><span class=lb>화물</span>
    <span class=seg id=ltclseg><button data-t="DRY" class=on>DRY</button><button data-t="RF">RF</button><button data-t="OOG">OOG</button><button data-t="TK">TK</button></span></span>
  <span class=fl><span class=lb>위험물</span>
    <span class=seg id=lhzseg><button data-h="n" class=on>일반</button><button data-h="y">위험물</button><button data-h="a">전체</button></span></span>
  <span class=fl><span class=lb>추정운임</span>
    <span class=seg id=lestseg><button data-e="0" class=on>제외</button><button data-e="1">포함</button></span></span>
- <span class=fl><span class=lb>롤오버</span>
-   <span class=seg id=lroseg><button data-r="a" class=on>전체</button><button data-r="y">롤오버만</button><button data-r="n">제외</button></span></span>
+ <span class=fl><span class=lb>R/O</span>
+   <span class=seg id=lroseg><button data-r="a" class=on>전체</button><button data-r="y">R/O만</button><button data-r="n">제외</button></span></span>
  <span class=fl id=lmetwrap><span class=lb>기준</span>
    <span class=seg id=lmetseg><button data-m="o" class=on>O/F</button><button data-m="c">CM1</button></span></span>
  <span class=note>가중평균 = Σ(운임×박스)/Σ박스<br>평균 미만 = 저운임</span>
 </div>
-<div class=helprow id=lhelp_wk><b>주차 → POL 국가·포트 → DLY 국가·포트</b>를 고르면 (POL은 <b>최초 선적지</b> 기준이라 T/S 환적항은 무시됩니다) 그 구간의 주차별 운임이 아래 띠에 쌓이고, 선택한 주차의 부킹이 운임(USD/box)별로 분포합니다. 포트를 고르지 않으면 <b>국가 전체</b>로 봅니다. 집계는 <b>홍콩 사무소 부킹만</b>. <b>세로선=가중평균</b>, 왼쪽(빨강)이 저운임.</div>
+<div class=helprow id=lhelp_wk><b>주차 → POL 국가·포트 → DLY 국가·포트</b>를 고르면 (POL은 <b>최초 선적지</b> 기준이라 T/S 환적항은 무시됩니다) 그 구간의 주차별 운임이 아래 띠에 쌓이고, 선택한 주차의 부킹이 운임(USD/box)별로 분포합니다. <b>규격은 20'·40' 같이 선택 가능</b>(추이선 2줄·분포 2개, 평균·저운임은 규격별로 따로). 포트를 고르지 않으면 <b>국가 전체</b>로 봅니다. 집계는 <b>홍콩 사무소 부킹만</b>. <b>세로선=가중평균</b>, 왼쪽(빨강)이 저운임.</div>
 <div class=helprow id=lhelp_voy style=display:none><b>항차 → 구간(POL→POD)</b>을 고르면 그 구간의 부킹이 운임(USD/box)별로 쌓입니다. 구간은 <b>본선 레그</b>(T/S면 환적항→도착항), 집계는 <b>홍콩 사무소 부킹만</b>. <b>세로선=가중평균</b>, 평균보다 왼쪽(빨강)이 저운임 구간. <b>빨간 영역이나 막대를 클릭</b>하면 해당 부킹·RA와 평균 대비 차이가 아래에 나옵니다.</div>
 
 <div class=tiles id=ltiles></div>
@@ -323,7 +324,7 @@ function drill(pod,g){SEL=[pod,g];
    <td class="num ${s.dtgt==null?'dfl':s.dtgt<0?'dneg':'dpos'}">${s.dtgt==null?'-':(s.dtgt>0?'+':'')+s.dtgt}</td>
    <td>${sig}</td><td class=hn>${s.cnt*(SZ==='40'?2:1)}TEU</td></tr>
    <tr class=bkrow id=bk${i} style=display:none><td colspan=8><table><thead><tr><th>부킹넘버</th><th>항차</th><th>POL→POD</th><th>물량</th><th>ETD</th><th>O/F</th><th>RA넘버</th></tr></thead><tbody>`+
-   s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}${b.ro?` <span class="pill" style="background:#fff3e0;color:#b26a00" title="항차 변경 ${b.ro}회 — 최초 ${b.r0} → 현재 ${b.v}, 최종변경 ${md(b.rd)}">롤오버${b.ro>1?" "+b.ro+"회":""}</span>`:''}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${b.q}</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.k?`<span class="pill" style="background:#eef1f5;color:var(--grey)" title="타선사 슬롯·자사 엠티 회송 — 우리 운임이 없는 물량이라 집계 대상 외">선사·엠티</span>`:b.u?`<span class="pill" style="background:#fff8e1;color:#8a6d00" title="실화주 부킹인데 연결된 RA·O/F가 없음 — 운임 미등록, 평균에서 제외">운임미등록</span>`:(b.f==="B"?`${b.o} <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구 O/F(CS165H) — 실제 청구된 금액">실청구</span>`:b.f==="E"?`${b.o} <span class="pill" style="background:#fff3e0;color:#b26a00" title="${String(b.r||'').startsWith('≈')?'임의연결 — 같은 화주·구간·규격·PPD/CTL 조건의 RA에서 가져온 추정값':'이 부킹에 연결된 RA가 출항일 기준 만료 — 그 단가를 추정값으로 사용'}. 평균·저운임 판정 기본 제외">추정${String(b.r||'').startsWith('≈')?'':'(만료RA)'}</span>`:b.o)}</td><td>${b.r||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
+   s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}${b.ro?` <span class="pill" style="background:#fff3e0;color:#b26a00" title="항차 변경 ${b.ro}회 — 최초 ${b.r0} → 현재 ${b.v}, 최종변경 ${md(b.rd)}">R/O${b.ro>1?" "+b.ro+"회":""}</span>`:''}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${b.q}</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.k?`<span class="pill" style="background:#eef1f5;color:var(--grey)" title="타선사 슬롯·자사 엠티 회송 — 우리 운임이 없는 물량이라 집계 대상 외">선사·엠티</span>`:b.u?`<span class="pill" style="background:#fff8e1;color:#8a6d00" title="실화주 부킹인데 연결된 RA·O/F가 없음 — 운임 미등록, 평균에서 제외">운임미등록</span>`:(b.f==="B"?`${b.o} <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구 O/F(CS165H) — 실제 청구된 금액">실청구</span>`:b.f==="E"?`${b.o} <span class="pill" style="background:#fff3e0;color:#b26a00" title="${String(b.r||'').startsWith('≈')?'임의연결 — 같은 화주·구간·규격·PPD/CTL 조건의 RA에서 가져온 추정값':'이 부킹에 연결된 RA가 출항일 기준 만료 — 그 단가를 추정값으로 사용'}. 평균·저운임 판정 기본 제외">추정${String(b.r||'').startsWith('≈')?'':'(만료RA)'}</span>`:b.o)}</td><td>${b.r||'<span class=hn>≈ 항차평균</span>'}</td></tr>`).join("")+
    `</tbody></table></td></tr>`;});
  h+=`</tbody>`;$("#drill").innerHTML=h;
  $("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});}
@@ -342,7 +343,7 @@ $("#portbtn").onclick=e=>{e.stopPropagation();$("#ctrdd").classList.remove("open
 document.addEventListener("click",e=>{if(!$("#ctrdd").contains(e.target))$("#ctrdd").classList.remove("open");if(!$("#portdd").contains(e.target))$("#portdd").classList.remove("open");});
 
 /* ══════════════ 저운임 관리 탭 ══════════════ */
-let LTCL="DRY", LHZ="n", LV=null, LSEG=null, LSZ="20", LMET="o", LVIEW="b", lowSel=null, lowCur=null, VOYS=[];
+let LTCL="DRY", LHZ="n", LV=null, LSEG=null, LMET="o", LVIEW="b", lowSel=null, lowCur=null, VOYS=[];
 let LRO="a";                                      /* 롤오버 필터: a=전체 y=롤오버만 n=제외 */
 const isRoll=l=>!!l.ro;
 const passR=l=>LRO==="a"||(LRO==="y"?isRoll(l):!isRoll(l));
@@ -365,7 +366,13 @@ const metVal=l=>LMET==='c'?l.c:l.o;
 /* ★라인의 q는 컨테이너(박스) 수. TEU는 40'=2배. 운임 가중평균은 박스당 요율이므로 박스 가중이 맞고,
    화면에 보여주는 '물량'만 TEU로 환산한다. */
 const teuOf=l=>l.q*(l.s==='40'?2:1);
-const teuF=()=>LSZ==='40'?2:1;
+let LSZS=new Set(["20"]);                         /* 규격 복수선택 — 둘 다 켜면 규격별로 따로 집계해 나란히 그림 */
+const SZL=()=>["20","40"].filter(z=>LSZS.has(z));
+const szOk=l=>LSZS.has(l.s);
+const szOf=l=>l.s==="40"?"40":"20";
+const szF=z=>z==="40"?2:1;
+const szLbl=()=>SZL().map(z=>z+"'").join("+");
+const SZC={"20":"var(--accent)","40":"#0f766e"}, SZBAR={"20":"#d3dcf2","40":"#cde5e1"};
 const metName=()=>LMET==='c'?'CM1/box':'O/F';
 const segKey=l=>l.l+'→'+l.d;
 
@@ -426,49 +433,58 @@ function renderWkStrip(){
  const host=$("#wkstrip");if(!host)return;
  $("#wkpanel").style.display=LMODE==="wk"?"":"none";
  if(LMODE!=="wk"){host.innerHTML="";return;}
- $("#wkhead").textContent=`${CTRNM(LPOLC)}${LPOL==="ALL"?"":"/"+LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":"/"+LPORT} · ${LSZ}' · ${LTCL} · ${metName()}`;
- /* 이번 주차 기준 -9 ~ +3 = 13주 추이 */
+ const sizes=SZL(),two=sizes.length>1;
+ $("#wkhead").textContent=`${CTRNM(LPOLC)}${LPOL==="ALL"?"":"/"+LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":"/"+LPORT} · ${szLbl()} · ${LTCL} · ${metName()}`;
+ /* 이번 주차 기준 -9 ~ +3 = 13주 추이 (규격별로 따로 집계) */
  const now=wkOf(ymd(new Date())),w0=now-9,w1=now+3;
- const rows=DATA.lines.filter(l=>baseOk(l)&&laneOk(l)&&l.s===LSZ);
- const m={};for(const l of rows){const w=wkOf(l.e);if(w<w0||w>w1)continue;
-  const o=(m[w]=m[w]||{q:0,rq:0,vq:0,bx:0,n:0});o.q+=teuOf(l);if(isRoll(l))o.rq+=teuOf(l);o.vq+=metVal(l)*l.q;o.bx+=l.q;o.n++;}
+ const rows=DATA.lines.filter(l=>baseOk(l)&&laneOk(l)&&szOk(l));
+ const m={};sizes.forEach(z=>m[z]={});
+ for(const l of rows){const w=wkOf(l.e);if(w<w0||w>w1)continue;
+  const o=(m[szOf(l)][w]=m[szOf(l)][w]||{q:0,rq:0,vq:0,bx:0,n:0});o.q+=teuOf(l);if(isRoll(l))o.rq+=teuOf(l);o.vq+=metVal(l)*l.q;o.bx+=l.q;o.n++;}
  const ws=[];for(let w=w0;w<=w1;w++)ws.push(w);
- const has=ws.filter(w=>m[w]);
+ const has=ws.filter(w=>sizes.some(z=>m[z][w]));
  host.innerHTML="";
  if(!has.length){host.innerHTML='<span class=hn style="padding:10px 12px;display:block">이 구간·규격에 최근 13주 부킹이 없습니다</span>';return;}
- const W=Math.max(560,host.clientWidth-24),H=230,ml=52,mr=52,mt=18,mb=34,pw=W-ml-mr,ph=H-mt-mb;
+ const W=Math.max(560,host.clientWidth-24),H=two?250:230,ml=52,mr=64,mt=18,mb=34,pw=W-ml-mr,ph=H-mt-mb;
  const el=(t,a,txt)=>{const e=document.createElementNS("http://www.w3.org/2000/svg",t);
   for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;};
  const svg=el("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,style:"display:block"});
- const avgs=has.map(w=>m[w].vq/m[w].bx),amax=Math.max(...avgs),amin=Math.min(...avgs);
+ const os=sizes.flatMap(z=>ws.filter(w=>m[z][w]).map(w=>m[z][w]));
+ const avgs=os.map(o=>o.vq/o.bx),amax=Math.max(...avgs),amin=Math.min(...avgs);
  const lo=Math.max(0,amin-(amax-amin||amin*0.1)*0.35),hi=amax+(amax-amin||amin*0.1)*0.25;
- const qmax=Math.max(...has.map(w=>m[w].q))||1;
+ const qmax=Math.max(...os.map(o=>o.q))||1;
  const bw=pw/ws.length, X=i=>ml+bw*i+bw/2, Y=v=>mt+ph-(v-lo)/((hi-lo)||1)*ph, YQ=q=>mt+ph-q/qmax*ph*0.45;
  for(let g=0;g<=3;g++){const v=lo+(hi-lo)*g/3,y=Y(v);
   svg.appendChild(el("line",{x1:ml,x2:W-mr,y1:y,y2:y,stroke:"var(--soft)"}));
   svg.appendChild(el("text",{x:ml-8,y:y+4,"text-anchor":"end",style:"font:11px var(--mono);fill:var(--grey)"},"$"+fmt(Math.round(v))));}
- ws.forEach((w,i)=>{const o=m[w];if(!o)return;
-  svg.appendChild(el("rect",{x:X(i)-bw*0.3,y:YQ(o.q),width:bw*0.6,height:mt+ph-YQ(o.q),fill:"var(--soft)",rx:3}));
-  if(o.rq>0)svg.appendChild(el("rect",{x:X(i)-bw*0.3,y:YQ(o.rq),width:bw*0.6,height:mt+ph-YQ(o.rq),fill:"#f6c88a",rx:3}));});
- const pts=[];ws.forEach((w,i)=>{const o=m[w];if(o)pts.push([X(i),Y(o.vq/o.bx)]);});
- if(pts.length>1)svg.appendChild(el("polyline",{points:pts.map(p=>p.join(",")).join(" "),fill:"none",stroke:"var(--accent)","stroke-width":2.5}));
- ws.forEach((w,i)=>{const o=m[w],sel=w===LWK;
+ /* 막대 = TEU. 2규격이면 주차마다 20'·40' 나란히(색으로 구분), R/O분은 주황으로 겹침 */
+ const gw=bw*0.6,sw=gw/sizes.length;
+ ws.forEach((w,i)=>sizes.forEach((z,k)=>{const o=m[z][w];if(!o)return;
+  const x=X(i)-gw/2+sw*k+(two?1:0),wd=Math.max(1,sw-(two?2:0));
+  svg.appendChild(el("rect",{x,y:YQ(o.q),width:wd,height:mt+ph-YQ(o.q),fill:two?SZBAR[z]:"var(--soft)",rx:3}));
+  if(o.rq>0)svg.appendChild(el("rect",{x,y:YQ(o.rq),width:wd,height:mt+ph-YQ(o.rq),fill:"#f6c88a",rx:3}));}));
+ /* 선 = 가중평균. 규격마다 한 줄 */
+ sizes.forEach(z=>{const pts=[];ws.forEach((w,i)=>{const o=m[z][w];if(o)pts.push([X(i),Y(o.vq/o.bx)]);});
+  if(pts.length>1)svg.appendChild(el("polyline",{points:pts.map(p=>p.join(",")).join(" "),fill:"none",stroke:two?SZC[z]:"var(--accent)","stroke-width":2.5}));});
+ ws.forEach((w,i)=>{const sel=w===LWK;
   svg.appendChild(el("text",{x:X(i),y:H-14,"text-anchor":"middle",
    style:`font:${sel?"700":"400"} 11px var(--mono);fill:${sel?"var(--ink)":"var(--grey)"}`},"W"+w));
-  if(!o)return;const a=o.vq/o.bx;
+  const av=sizes.filter(z=>m[z][w]).map(z=>[z,m[z][w].vq/m[z][w].bx]);if(!av.length)return;
   if(sel)svg.appendChild(el("line",{x1:X(i),x2:X(i),y1:mt,y2:mt+ph,stroke:"var(--ink)","stroke-dasharray":"3 3",opacity:.35}));
+  const lowZ=av.length>1?av.reduce((a,b)=>b[1]<a[1]?b:a)[0]:null;   /* 두 점이면 낮은 쪽 라벨은 점 아래로 */
   const g=el("g",{style:"cursor:pointer"});
-  g.appendChild(el("circle",{cx:X(i),cy:Y(a),r:sel?6:4,fill:sel?"var(--ink)":"var(--accent)"}));
-  g.appendChild(el("text",{x:X(i),y:Y(a)-11,"text-anchor":"middle",style:`font:${sel?"700":"600"} 11.5px var(--mono);fill:var(--ink)`},"$"+fmt(Math.round(a))));
+  av.forEach(([z,a])=>{const col=two?SZC[z]:"var(--accent)";
+   g.appendChild(el("circle",two?{cx:X(i),cy:Y(a),r:sel?6:4,fill:col,stroke:sel?"var(--ink)":"none","stroke-width":2}:{cx:X(i),cy:Y(a),r:sel?6:4,fill:sel?"var(--ink)":col}));
+   g.appendChild(el("text",{x:X(i),y:z===lowZ?Y(a)+19:Y(a)-11,"text-anchor":"middle",style:`font:${sel?"700":"600"} 11.5px var(--mono);fill:${two?col:"var(--ink)"}`},"$"+fmt(Math.round(a))));});
   g.appendChild(el("rect",{x:X(i)-bw/2,y:mt,width:bw,height:ph,fill:"transparent"}));
   g.onclick=()=>setWk(w);
-  g.appendChild(el("title",null,`W${w} (${wkRange(w)})\n평균 $${fmt(Math.round(a))} · ${fmt(Math.round(o.q))}TEU · 부킹 ${o.n}건`+(o.rq>0?` / 롤오버 ${fmt(Math.round(o.rq))}TEU`:"")));
+  g.appendChild(el("title",null,`W${w} (${wkRange(w)})`+av.map(([z,a])=>{const o=m[z][w];
+   return `\n${two?z+"' ":""}평균 $${fmt(Math.round(a))} · ${fmt(Math.round(o.q))}TEU · 부킹 ${o.n}건`+(o.rq>0?` / R/O ${fmt(Math.round(o.rq))}TEU`:"");}).join("")));
   svg.appendChild(g);});
+ if(two)sizes.forEach((z,k)=>svg.appendChild(el("text",{x:W-mr+8,y:mt+6+k*15,style:`font:700 11px var(--mono);fill:${SZC[z]}`},"━ "+z+"'")));
  svg.appendChild(el("text",{x:W-mr+8,y:mt+ph+4,style:"font:10.5px var(--sans);fill:var(--grey)"},"막대=TEU"));
- svg.appendChild(el("text",{x:W-mr+8,y:mt+ph+18,style:"font:10.5px var(--sans);fill:#b26a00"},"주황=롤오버"));
+ svg.appendChild(el("text",{x:W-mr+8,y:mt+ph+18,style:"font:10.5px var(--sans);fill:#b26a00"},"주황=R/O"));
  host.appendChild(svg);
- const cur=m[LWK];
- const info=el("div",null);host.appendChild(info);
 }
 function setWk(w){LWK=w;$("#lwk").value=w;lowSel=null;renderLowAll();}
 function onPolc(){LPOLC=$("#lpolc").value;LPOL="ALL";LCTR=null;LPORT="ALL";lowSel=null;renderLowAll();}
@@ -492,8 +508,11 @@ function segCnt(){
  const v=VOYS.find(x=>x.v===LV);const s=v&&v.segs[LSEG];return s?{20:s.n20,40:s.n40}:{20:0,40:0};}
 function markSz(){const c=segCnt();[...$("#lszseg").children].forEach(b=>{const e=!c[b.dataset.s];
  b.style.opacity=e?.45:1;b.title=e?"이 구간엔 이 규격 부킹이 없습니다":"";});}
-function setLsz(v){LSZ=v;[...$("#lszseg").children].forEach(b=>b.classList.toggle("on",b.dataset.s==LSZ));lowSel=null;renderLowAll();}
-$("#lszseg").onclick=e=>{if(e.target.dataset.s)setLsz(e.target.dataset.s);};
+function syncSz(){[...$("#lszseg").children].forEach(b=>b.classList.toggle("on",LSZS.has(b.dataset.s)));}
+function setLsz(v){LSZS=new Set([v]);syncSz();lowSel=null;renderLowAll();}
+$("#lszseg").onclick=e=>{const z=e.target.dataset.s;if(!z)return;   /* 복수선택 — 마지막 하나는 못 끔 */
+ if(LSZS.has(z)){if(LSZS.size===1)return;LSZS.delete(z);}else LSZS.add(z);
+ syncSz();lowSel=null;renderLowAll();};
 $("#ltclseg").onclick=e=>{if(e.target.dataset.t){LTCL=e.target.dataset.t;
  [...$("#ltclseg").children].forEach(b=>b.classList.toggle("on",b.dataset.t==LTCL));
  lowSel=null;buildVoys();renderLowAll();}};
@@ -509,11 +528,8 @@ $("#lhzseg").onclick=e=>{if(e.target.dataset.h){LHZ=e.target.dataset.h;
 $("#lmetseg").onclick=e=>{if(e.target.dataset.m){LMET=e.target.dataset.m;[...$("#lmetseg").children].forEach(b=>b.classList.toggle("on",b.dataset.m==LMET));lowSel=null;renderLowAll();}};
 $("#lviewseg").onclick=e=>{if(e.target.dataset.v){LVIEW=e.target.dataset.v;[...$("#lviewseg").children].forEach(b=>b.classList.toggle("on",b.dataset.v==LVIEW));renderLow();}};
 
-/* 선택 항차·구간·규격의 라인 + 가중평균 + 빈 */
-function lowCompute(){
- const rows=LMODE==="wk"
-   ? DATA.lines.filter(l=>baseOk(l)&&laneOk(l)&&l.s===LSZ&&wkOf(l.e)===LWK)
-   : DATA.lines.filter(l=>baseOk(l)&&l.v===LV&&segKey(l)===LSEG&&l.s===LSZ);
+/* 한 규격의 라인 → 가중평균 + 빈 */
+function compOne(rows){
  let sq=0,sv=0;for(const l of rows){sq+=l.q;sv+=metVal(l)*l.q;}
  const avg=sq?sv/sq:0;
  const vals=rows.map(metVal);const mn=Math.min(...vals),mx=Math.max(...vals);
@@ -526,33 +542,51 @@ function lowCompute(){
  const low=rows.filter(l=>metVal(l)<avg);
  let lq=0,gap=0;for(const l of low){lq+=l.q;gap+=(avg-metVal(l))*l.q;}   // q=박스수 → 박스당 갭×박스
  return {rows,avg,sq,bins,bw,low,lq,gap,mn,mx};}
+/* 선택 항차·구간의 라인을 규격별로 따로 집계 — 20'·40' 운임을 한 평균에 섞지 않는다 */
+function lowCompute(){
+ const base=LMODE==="wk"
+   ? DATA.lines.filter(l=>baseOk(l)&&laneOk(l)&&wkOf(l.e)===LWK)
+   : DATA.lines.filter(l=>baseOk(l)&&l.v===LV&&segKey(l)===LSEG);
+ const sizes=SZL(),per={};for(const z of sizes)per[z]=compOne(base.filter(l=>l.s===z));
+ let sqT=0,lqT=0,gap=0;for(const z of sizes){sqT+=per[z].sq*szF(z);lqT+=per[z].lq*szF(z);gap+=per[z].gap;}
+ return {sizes,per,rows:sizes.flatMap(z=>per[z].rows),low:sizes.flatMap(z=>per[z].low),sqT,lqT,gap};}
+const avgOf=l=>(lowCur.per[szOf(l)]||{avg:0}).avg;
 
 function renderLowAll(){if(!DATA)return;
  if(LMODE==="wk"){buildLanes();if(!LPOLC||!LCTR||LWK==null){$("#wkstrip").innerHTML='<span class=hn>표시할 구간이 없습니다</span>';return;}}
  else if(!LV)return;
  markSz();renderWkStrip();lowCur=lowCompute();renderTiles();renderChart();renderLow();}
 
-function renderTiles(){const c=lowCur;const F=teuF();
+function renderTiles(){const c=lowCur,P=c.per,ss=c.sizes,two=ss.length>1;
+ const zs=(f,sep=" · ")=>ss.map(z=>`<span style="color:${SZC[z]}">${z}'</span> ${f(P[z],z)}`).join(sep);
+ const rng=x=>x.rows.length?'$'+fmt(x.mn)+' ~ $'+fmt(x.mx):'—';
+ const big='style="font-size:17px"';
  $("#ltiles").innerHTML=
-  `<div class=tile><div class=lb>가중평균 ${metName()} (${LSZ}')</div><div class=v>$${fmt(c.avg)}</div><div class=d>${fmt(c.sq*F)}TEU · ${fmt(c.sq)}box · 부킹 ${c.rows.length}건</div></div>`+
-  `<div class="tile crit"><div class=lb>저운임 물량 (평균 미만)</div><div class=v>${fmt(c.lq*F)}<span style="font-size:13px;color:var(--grey)"> TEU</span></div><div class=d>구간 물량의 ${c.sq?Math.round(c.lq/c.sq*100):0}% · 부킹 ${c.low.length}건</div></div>`+
+  (two?`<div class=tile><div class=lb>가중평균 ${metName()} (규격별)</div><div class=v ${big}>${zs(x=>x.rows.length?'$'+fmt(x.avg):'—')}</div><div class=d>${zs((x,z)=>fmt(x.sq*szF(z))+'TEU')} · 부킹 ${c.rows.length}건</div></div>`
+      :(()=>{const z=ss[0],x=P[z];return `<div class=tile><div class=lb>가중평균 ${metName()} (${z}')</div><div class=v>$${fmt(x.avg)}</div><div class=d>${fmt(x.sq*szF(z))}TEU · ${fmt(x.sq)}box · 부킹 ${x.rows.length}건</div></div>`;})())+
+  `<div class="tile crit"><div class=lb>저운임 물량 (평균 미만)</div><div class=v>${fmt(c.lqT)}<span style="font-size:13px;color:var(--grey)"> TEU</span></div><div class=d>구간 물량의 ${c.sqT?Math.round(c.lqT/c.sqT*100):0}% · 부킹 ${c.low.length}건${two?' · 규격별 평균 기준':''}</div></div>`+
   `<div class="tile crit"><div class=lb>평균까지 갭 합계</div><div class=v>$${fmt(c.gap)}</div><div class=d>저운임 부킹을 전부 평균으로 올릴 때 증분(box 기준)</div></div>`+
-  `<div class=tile><div class=lb>운임 범위</div><div class=v>${c.rows.length?'$'+fmt(c.mn)+' ~ $'+fmt(c.mx):'—'}</div><div class=d>최저 ~ 최고 (${metName()}, USD/box)</div></div>`;}
+  `<div class=tile><div class=lb>운임 범위</div><div class=v ${two?big:''}>${two?zs(rng,'<br>'):rng(P[ss[0]])}</div><div class=d>최저 ~ 최고 (${metName()}, USD/box)</div></div>`;}
 
-/* ── SVG 히스토그램: X=운임(USD/box), Y=TEU, 세로선=가중평균, 평균 미만 빈=빨강 ── */
-function renderChart(){const c=lowCur,host=$("#lchart");const tip=$("#lctip");
- host.querySelectorAll("svg").forEach(s=>s.remove());
- host.querySelectorAll(".empty").forEach(e=>e.remove());host._empty=null;   /* 안내문 중복 누적 방지(2026-10-07) */
+/* ── SVG 히스토그램: X=운임(USD/box), Y=TEU, 세로선=가중평균, 평균 미만 빈=빨강. 2규격이면 규격별로 하나씩 ── */
+function renderChart(){const c=lowCur,host=$("#lchart");const two=c.sizes.length>1;
+ host.querySelectorAll("svg,.empty,.szhd").forEach(e=>e.remove());host._empty=null;   /* 안내문 중복 누적 방지(2026-10-07) */
  const _scope=LMODE==="wk"?`W${LWK} (${wkRange(LWK)}) · ${CTRNM(LPOLC)}${LPOL==="ALL"?"":"/"+LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":"/"+LPORT}`:`${LV||''} · ${LSEG||''}`;
- $("#lcharthead").textContent=`운임 분포 — ${_scope} · ${LSZ}' · ${LTCL}${LHZ==="y"?" · 위험물":LHZ==="a"?" · 위험물포함":""} · X=${metName()}(USD/box) · Y=물량(TEU)`;
+ $("#lcharthead").textContent=`운임 분포 — ${_scope} · ${szLbl()} · ${LTCL}${LHZ==="y"?" · 위험물":LHZ==="a"?" · 위험물포함":""} · X=${metName()}(USD/box) · Y=물량(TEU)`;
  if(!c.rows.length){$("#lchartinfo").textContent="";const d=ce("div");d.className="empty";
-  const other=LSZ==='20'?'40':'20',oc=segCnt()[other];
-  d.innerHTML=oc?`이 구간에 <b>${LSZ}' 부킹은 없습니다</b> — ${other}'로 ${oc}건 실렸습니다. `+
+  const z0=c.sizes[0],other=z0==='20'?'40':'20',oc=two?0:segCnt()[other];
+  d.innerHTML=oc?`이 구간에 <b>${z0}' 부킹은 없습니다</b> — ${other}'로 ${oc}건 실렸습니다. `+
     `<a onclick="setLsz('${other}')" style="color:var(--accent);cursor:pointer;font-weight:600">${other}'로 보기</a>`
    :"이 항차·구간·규격에 부킹이 없습니다";const s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("height","1");host.appendChild(s);host.appendChild(d);host._empty=d;return;}
- if(host._empty){host._empty.remove();host._empty=null;}
- $("#lchartinfo").textContent=`빈 폭 $${fmt(c.bw)} · 저운임 ${c.low.length}건/${fmt(c.lq*teuF())}TEU`;
- const W=Math.max(520,host.clientWidth-24),H=290,ml=48,mr=18,mt=26,mb=36,pw=W-ml-mr,ph=H-mt-mb;
+ if(!two){const z=c.sizes[0],x=c.per[z];$("#lchartinfo").textContent=`빈 폭 $${fmt(x.bw)} · 저운임 ${x.low.length}건/${fmt(x.lq*szF(z))}TEU`;drawHist(x,z,false);return;}
+ $("#lchartinfo").textContent=`저운임 ${c.low.length}건/${fmt(c.lqT)}TEU (규격별 평균 기준)`;
+ for(const z of c.sizes){const x=c.per[z],F=szF(z);
+  const hd=ce("div");hd.className="szhd";
+  hd.innerHTML=`<b style="color:${SZC[z]}">${z}'</b><span class=hn>${x.rows.length?`평균 $${fmt(x.avg)} · ${fmt(x.sq*F)}TEU · 빈 폭 $${fmt(x.bw)} · 저운임 ${x.low.length}건/${fmt(x.lq*F)}TEU`:'이 구간에 부킹 없음'}</span>`;
+  host.insertBefore(hd,$("#lctip"));
+  if(x.rows.length)drawHist(x,z,true);}}
+function drawHist(c,sz,two){const host=$("#lchart"),tip=$("#lctip"),F=szF(sz);
+ const W=Math.max(520,host.clientWidth-24),H=two?230:290,ml=48,mr=18,mt=26,mb=36,pw=W-ml-mr,ph=H-mt-mb;
  let x0=c.bins[0].lo,x1=c.bins[c.bins.length-1].hi;if(c.bins.length<3){x0-=c.bw*2;x1+=c.bw*2;}const span=x1-x0||1;
  const X=v=>ml+(v-x0)/span*pw;
  const qmax=Math.max(...c.bins.map(b=>b.q))||1;
@@ -584,7 +618,7 @@ function renderChart(){const c=lowCur,host=$("#lchart");const tip=$("#lctip");
   const g=el("g",{class:"bin"});
   const r=Math.min(4,w/2,h);
   const path=`M${x},${y+h} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${y+h} Z`;
-  g.appendChild(el("path",{class:"b",d:path,fill:isLow?"var(--crit)":"var(--bar)",opacity:mixed?.7:1}));
+  g.appendChild(el("path",{class:"b",d:path,fill:isLow?"var(--crit)":(two?SZC[sz]:"var(--bar)"),opacity:mixed?.7:(two&&!isLow?.35:1)}));
   if(mixed){ // 평균이 빈 안을 지나면 평균 왼쪽만 빨강으로 겹쳐 칠함
    const lowQ=b.rows.filter(l=>metVal(l)<c.avg).reduce((a,l)=>a+l.q,0);
    if(lowQ){const hy=Y(lowQ);g.appendChild(el("rect",{x:x,y:hy,width:Math.max(0,Math.min(ax,x+w)-x),height:Y(0)-hy,fill:"var(--crit)"}));}}
@@ -592,10 +626,10 @@ function renderChart(){const c=lowCur,host=$("#lchart");const tip=$("#lctip");
   const hit=el("rect",{x:X(b.lo),y:mt,width:bwpx,height:ph,fill:"transparent"});
   g.appendChild(hit);
   const shp=new Set(b.rows.map(l=>l.n)).size;
-  g.onmousemove=ev=>{tip.style.display="block";tip.innerHTML=`<b>$${fmt(b.lo)} ~ $${fmt(b.hi)}</b>${isLow?' · 저운임':mixed?' · 평균 경계':''}<br>${fmt(b.q*teuF())} TEU · 부킹 ${b.n}건 · 화주 ${shp}<br><span style="opacity:.75">클릭 → 이 구간 부킹 보기</span>`;
+  g.onmousemove=ev=>{tip.style.display="block";tip.innerHTML=`<b>${two?sz+"' · ":""}$${fmt(b.lo)} ~ $${fmt(b.hi)}</b>${isLow?' · 저운임':mixed?' · 평균 경계':''}<br>${fmt(b.q*F)} TEU · 부킹 ${b.n}건 · 화주 ${shp}<br><span style="opacity:.75">클릭 → 이 구간 부킹 보기</span>`;
    const r=host.getBoundingClientRect();let tx=ev.clientX-r.left+14,ty=ev.clientY-r.top-10;if(tx+tip.offsetWidth>r.width-8)tx=ev.clientX-r.left-tip.offsetWidth-14;tip.style.left=tx+"px";tip.style.top=ty+"px";};
   g.onmouseleave=()=>{tip.style.display="none";};
-  g.onclick=()=>{lowSel=[b.lo,b.hi];renderLow();$("#lowpanel").scrollIntoView({behavior:"smooth",block:"nearest"});};
+  g.onclick=()=>{lowSel=[b.lo,b.hi,sz];renderLow();$("#lowpanel").scrollIntoView({behavior:"smooth",block:"nearest"});};
   svg.appendChild(g);});
  // 평균선
  svg.appendChild(el("line",{x1:ax,x2:ax,y1:mt-4,y2:Y(0),stroke:"var(--ink)","stroke-width":2}));
@@ -604,32 +638,40 @@ function renderChart(){const c=lowCur,host=$("#lchart");const tip=$("#lctip");
  svg.appendChild(el("line",{x1:ml,x2:W-mr,y1:Y(0),y2:Y(0),stroke:"var(--line)"}));
  host.insertBefore(svg,tip);}
 
-/* ── 리스트: 저운임 부킹(또는 클릭한 빈) · 부킹별 / 화주별 ── */
-function renderLow(){const c=lowCur;if(!c)return;const avg=c.avg;
+/* ── 리스트: 저운임 부킹(또는 클릭한 빈) · 부킹별 / 화주별. 평균·갭은 각 라인 규격의 평균 기준 ── */
+function renderLow(){const c=lowCur;if(!c)return;const two=c.sizes.length>1;
  let rows,title;
- if(lowSel){const [lo,hi]=lowSel;rows=c.rows.filter(l=>{const v=metVal(l);return v>=lo&&(v<hi||(hi===c.bins[c.bins.length-1].hi&&v<=hi));});
-  title=`선택 구간 $${fmt(lo)}~$${fmt(hi)} 부킹 ${rows.length}건`;$("#lowreset").style.display="";}
- else{rows=c.low;title=`저운임 부킹 — 평균 $${fmt(avg)} 미만 ${rows.length}건 · ${fmt(c.lq*teuF())}TEU`;$("#lowreset").style.display="none";}
- $("#lowhead").innerHTML=`<span>${title} <span class=hn>(${LMODE==="wk"?`W${LWK} · ${CTRNM(LPOLC)}${LPOL==="ALL"?"":"/"+LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":"/"+LPORT}`:`${LV||''} · ${LSEG||''}`} · ${LSZ}' · ${metName()})</span></span>`;
+ if(lowSel){const [lo,hi,sz]=lowSel;const x=c.per[sz];
+  if(!x||!x.bins.length){lowSel=null;return renderLow();}
+  const top=x.bins[x.bins.length-1].hi;
+  rows=x.rows.filter(l=>{const v=metVal(l);return v>=lo&&(v<hi||(hi===top&&v<=hi));});
+  title=`선택 구간 ${two?sz+"' ":""}$${fmt(lo)}~$${fmt(hi)} 부킹 ${rows.length}건`;$("#lowreset").style.display="";}
+ else{rows=c.low;
+  title=`저운임 부킹 — ${two?`규격별 평균 미만(${c.sizes.map(z=>`${z}' $${fmt(c.per[z].avg)}`).join(" / ")})`:`평균 $${fmt(c.per[c.sizes[0]].avg)} 미만`} ${rows.length}건 · ${fmt(c.lqT)}TEU`;
+  $("#lowreset").style.display="none";}
+ $("#lowhead").innerHTML=`<span>${title} <span class=hn>(${LMODE==="wk"?`W${LWK} · ${CTRNM(LPOLC)}${LPOL==="ALL"?"":"/"+LPOL}→${CTRNM(LCTR)}${LPORT==="ALL"?" 전체":"/"+LPORT}`:`${LV||''} · ${LSEG||''}`} · ${szLbl()} · ${metName()})</span></span>`;
  const box=l=>l.q;   // q=박스수(40'도 1박스=1)
+ const szTd=z=>two?`<td><b style="color:${SZC[z]}">${z}'</b></td>`:'';
+ const szTh=two?'<th>규격</th>':'';
  let h;
  if(LVIEW==='s'){
-  const m={};for(const l of rows){const s=(m[l.n]=m[l.n]||{nm:l.n,g:l.g,q:0,vq:0,bx:0,n:0,cmv:0,cmq:0,ras:new Set()});s.q+=l.q;s.vq+=metVal(l)*l.q;s.bx+=box(l);s.n++;
+  const m={};for(const l of rows){const z=szOf(l),key=l.n+(two?"|"+z:"");
+   const s=(m[key]=m[key]||{nm:l.n,z,g:l.g,q:0,vq:0,bx:0,n:0,cmv:0,cmq:0,ras:new Set()});s.q+=l.q;s.vq+=metVal(l)*l.q;s.bx+=box(l);s.n++;
    if(l.c!=null){s.cmv+=l.c*l.q;s.cmq+=l.q;}
    if(l.r)s.ras.add(l.r);}
-  const arr=Object.values(m).map(s=>({...s,v:s.vq/s.q,dev:s.vq/s.q-avg,cmt:(s.cmq?(s.cmv/s.cmq)/teuF():null)})).map(s=>({...s,gap:-s.dev*s.bx})).sort((a,b)=>b.gap-a.gap);
-  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th>부킹</th><th>물량</th><th>평균 ${metName()}</th><th>평균까지 갭(USD)</th><th>CM1/TEU</th><th class=tl>RA</th></tr></thead><tbody>`;
-  if(!arr.length)h+=`<tr><td colspan=8 class=empty>해당 부킹이 없습니다</td></tr>`;
+  const arr=Object.values(m).map(s=>({...s,v:s.vq/s.q,dev:s.vq/s.q-c.per[s.z].avg,cmt:(s.cmq?(s.cmv/s.cmq)/szF(s.z):null)})).map(s=>({...s,gap:-s.dev*s.bx})).sort((a,b)=>b.gap-a.gap);
+  h=`<thead><tr><th class=tl>화주</th>${szTh}<th>등급</th><th>부킹</th><th>물량</th><th>평균 ${metName()}</th><th>평균까지 갭(USD)</th><th>CM1/TEU</th><th class=tl>RA</th></tr></thead><tbody>`;
+  if(!arr.length)h+=`<tr><td colspan=${two?9:8} class=empty>해당 부킹이 없습니다</td></tr>`;
   arr.forEach(s=>{
-   h+=`<tr><td class=tl><b>${esc(s.nm)}</b></td><td>${s.g}</td><td class=num>${s.n}</td><td class=num>${fmt(s.q*teuF())}TEU</td><td class=num>${fmt(s.v)}</td>
+   h+=`<tr><td class=tl><b>${esc(s.nm)}</b></td>${szTd(s.z)}<td>${s.g}</td><td class=num>${s.n}</td><td class=num>${fmt(s.q*szF(s.z))}TEU</td><td class=num>${fmt(s.v)}</td>
     <td class="num ${s.gap>0?'dneg':'dfl'}">${s.gap>0?'+'+fmt(s.gap):'—'}</td>
     <td class="num ${s.cmt==null?'dfl':s.cmt<0?'dneg':''}">${s.cmt==null?'—':fmt(Math.round(s.cmt))}</td><td class="tl hn">${[...s.ras].slice(0,3).join(', ')}${s.ras.size>3?' 외 '+(s.ras.size-3):''}</td></tr>`;});
  }else{
-  const arr=rows.map(l=>({...l,v:metVal(l),dev:metVal(l)-avg,gap:(avg-metVal(l))*box(l),cmt:(l.c!=null?l.c/teuF():null)})).sort((a,b)=>a.dev-b.dev||b.q-a.q);
-  h=`<thead><tr><th class=tl>화주</th><th>등급</th><th class=tl>부킹넘버</th><th class=tl>RA넘버</th><th>물량</th><th>ETD</th><th>${metName()}</th><th>평균까지 갭(USD)</th><th>CM1/TEU</th></tr></thead><tbody>`;
-  if(!arr.length)h+=`<tr><td colspan=9 class=empty>해당 부킹이 없습니다</td></tr>`;
+  const arr=rows.map(l=>{const a=avgOf(l);return {...l,v:metVal(l),dev:metVal(l)-a,gap:(a-metVal(l))*box(l),cmt:(l.c!=null?l.c/szF(szOf(l)):null)};}).sort((a,b)=>a.dev-b.dev||b.q-a.q);
+  h=`<thead><tr><th class=tl>화주</th>${szTh}<th>등급</th><th class=tl>부킹넘버</th><th class=tl>RA넘버</th><th>물량</th><th>ETD</th><th>${metName()}</th><th>평균까지 갭(USD)</th><th>CM1/TEU</th></tr></thead><tbody>`;
+  if(!arr.length)h+=`<tr><td colspan=${two?10:9} class=empty>해당 부킹이 없습니다</td></tr>`;
   arr.forEach(l=>{
-   h+=`<tr class="${(!lowSel&&l.dev>=0)?'dim':''}"><td class=tl><b>${esc(l.n)}</b> <span class=hn>월${l.m}T</span>${l.ro?` <span class="pill" style="background:#fff3e0;color:#b26a00" title="항차 변경 ${l.ro}회 — 최초 ${l.r0} → 현재 ${l.v}, 최종변경 ${md(l.rd)}">롤오버</span>`:''}</td><td>${l.g}</td><td class="tl num">${l.b}</td><td class=tl>${l.r||'<span class=hn>≈ 항차평균</span>'}</td>
+   h+=`<tr class="${(!lowSel&&l.dev>=0)?'dim':''}"><td class=tl><b>${esc(l.n)}</b> <span class=hn>월${l.m}T</span>${l.ro?` <span class="pill" style="background:#fff3e0;color:#b26a00" title="항차 변경 ${l.ro}회 — 최초 ${l.r0} → 현재 ${l.v}, 최종변경 ${md(l.rd)}">R/O</span>`:''}</td>${szTd(szOf(l))}<td>${l.g}</td><td class="tl num">${l.b}</td><td class=tl>${l.r||'<span class=hn>≈ 항차평균</span>'}</td>
     <td class=num>${fmt(teuOf(l))}TEU</td><td class=num>${md(l.e)}</td><td class=num>${fmt(l.v)}${l.f==="B"?' <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구">실청구</span>':l.f==="E"?' <span class="pill" style="background:#fff3e0;color:#b26a00" title="임의연결(추정)">추정</span>':''}</td>
     <td class="num ${l.gap>0?'dneg':'dfl'}">${l.gap>0?'+'+fmt(l.gap):'—'}</td>
     <td class="num ${l.cmt==null?'dfl':l.cmt<0?'dneg':''}">${l.cmt==null?'—':fmt(Math.round(l.cmt))}</td></tr>`;});
@@ -647,7 +689,7 @@ function boot(snap){ DATA=snap; CSEL=new Set(); PSEL=new Set();
  pt.min=iso(DATA.af);pt.max=iso(DATA.at);pt.value=iso(PT);pt.onchange=onDate;
  buildGchips();buildCtr();buildPort();updInfo();renderMtx();
  buildVoys(); if(!hasCM1()){$("#lmetwrap").style.display="none";LMET="o";}
- const f=$("#foot");if(f)f.textContent=`라인 ${DATA.lines.length}건 — 운임 출처 실청구 ${DATA.lines.filter(l=>l.f==="B").length}건 · RA ${DATA.lines.filter(l=>l.f==="R").length}건 · 추정 ${DATA.lines.filter(l=>l.f==="E").length}건 / 제외분 RA만료 ${DATA.lines.filter(l=>l.x).length}건 · 운임미등록 ${DATA.lines.filter(l=>l.u).length}건 · 선사·엠티 ${DATA.lines.filter(l=>l.k).length}건 / 롤오버 ${DATA.lines.filter(l=>l.ro).length}건 · POD ${Object.keys(DATA.podctr).length}개 · 국가 ${DATA.countries.length}개 · 실제 ADW 집계값. 적재범위 ${md(DATA.af)}~${md(DATA.at)}. RA 유효기간은 Revised ETA 기준.`;
+ const f=$("#foot");if(f)f.textContent=`라인 ${DATA.lines.length}건 — 운임 출처 실청구 ${DATA.lines.filter(l=>l.f==="B").length}건 · RA ${DATA.lines.filter(l=>l.f==="R").length}건 · 추정 ${DATA.lines.filter(l=>l.f==="E").length}건 / 제외분 RA만료 ${DATA.lines.filter(l=>l.x).length}건 · 운임미등록 ${DATA.lines.filter(l=>l.u).length}건 · 선사·엠티 ${DATA.lines.filter(l=>l.k).length}건 / R/O ${DATA.lines.filter(l=>l.ro).length}건 · POD ${Object.keys(DATA.podctr).length}개 · 국가 ${DATA.countries.length}개 · 실제 ADW 집계값. 적재범위 ${md(DATA.af)}~${md(DATA.at)}. RA 유효기간은 Revised ETA 기준.`;
  const g=document.getElementById('gate');if(g)g.style.display='none';
 }
 
