@@ -280,7 +280,9 @@ async function loadPickup(){
     const g=await gapi.client.drive.files.get({fileId:PICKUP_FILE_ID, alt:'media'});
     const snap=JSON.parse(g.body); _pickTs=snap.ts||'';
     const m={};
-    ((snap.regions&&snap.regions.SZP&&snap.regions.SZP.voyages)||[]).forEach(v=>{
+    // board_pick = SHK/DCB 항차 전체(한국향 포함). 없으면(구 스냅샷) 픽업모니터 SZP(한국향 제외)로 폴백.
+    if(snap.board_pick){ Object.entries(snap.board_pick).forEach(([k,v])=>{ m[k]=v; }); }
+    else ((snap.regions&&snap.regions.SZP&&snap.regions.SZP.voyages)||[]).forEach(v=>{
       m[v.vsl+'|'+v.voy]={picked:v.picked_teu, pct:v.pickup_pct, notp:v.not_picked_teu,
                           booked:v.booked_teu, eir:v.eir_teu, bsa:v.bsa};
     });
