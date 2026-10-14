@@ -103,7 +103,7 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 #lowlist tr.dim td{opacity:.45}
 </style><script src="https://accounts.google.com/gsi/client" onload="_gisInit()" async defer></script><script src="https://apis.google.com/js/api.js" onload="_gapiInit()" async defer></script></head><body><div class=wrap><div id=gate style="position:fixed;inset:0;z-index:100;background:#f6f7f9;display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:360px;padding:20px"><div style="font-size:44px">🚢</div><h2 style="margin:6px 0">HK 운임 모니터</h2><p style="color:#697488;font-size:13px">ekmtc.com 계정으로 로그인하세요.</p><button id=loginBtn onclick=signIn() disabled style="margin-top:8px;padding:9px 20px;border:0;border-radius:8px;background:#1e40af;color:#fff;font:600 14px sans-serif;cursor:pointer">구글 로그인</button><div id=gerr style="color:#b91c1c;font-size:12px;margin-top:10px"></div></div></div>
 <h1>🚢 HK 운임 모니터 <span class="tag tag-live">실데이터</span></h1>
-<div class=sub>홍콩 사무소 발 · 실적 O/F(ETD 기준) vs 시트 WK41 타겟 · 등급 = 20260601~20260831 TEU · D-1 ADW</div>
+<div class=sub>홍콩 사무소 발 · 실적 O/F(ETD 기준) vs 시트 WK42 타겟 · 등급 = 20260601~20260831 TEU · D-1 ADW</div>
 
 <div class=tabs><button id=tab-cmp class=on onclick="showTab('cmp')">운임 비교</button><button id=tab-low onclick="showTab('low')">저운임 관리</button></div>
 
@@ -352,7 +352,9 @@ const wkOf=e=>33+Math.floor((Date.UTC(+e.slice(0,4),+e.slice(4,6)-1,+e.slice(6,8
 function wkRange(w){const a=new Date(W33+(w-33)*6048e5),b=new Date(W33+(w-33)*6048e5+5184e5);
  const f=d=>(d.getUTCMonth()+1)+"/"+d.getUTCDate();return f(a)+"~"+f(b);}
 const ctrOf=l=>l.yc||DATA.podctr[l.p]||"??";      /* 도착 국가 = DLY 기준(없으면 POD명 매핑) */
-const portOf=l=>l.y||l.d;                         /* 도착 포트 = DLY 기준 */
+const rawPortOf=l=>l.y||l.d;                      /* 도착 포트 = DLY 기준 */
+/* 베트남 DLY는 2그룹: HPH / SGN 외(SGN·TCP·TNT·IPL 등 호치민권 — 전부 본선 POD=SGN) (2026-10-14 요청) */
+const portOf=l=>{const p=rawPortOf(l);return ctrOf(l)==="VN"?(p==="HPH"?"HPH":"SGN 외"):p;};
 const POLCTR={HKG:"HK",SHK:"CN",NBO:"CN",SHA:"CN",TAO:"CN",XMN:"CN",NNS:"CN",HUA:"CN",LCH:"TH",BKK:"TH",
  PKG:"MY",PKW:"MY",PGU:"MY",PEN:"MY",SIN:"SG",JKT:"ID",SUB:"ID",PUS:"KR",INC:"KR",KAN:"KR",SGN:"VN",HPH:"VN"};
 const polcOf=l=>l.lc||POLCTR[l.l]||"??";          /* 1st leg(최초 선적) POL 국가 — 구 스냅샷은 POL 포트로 추정 */
@@ -414,11 +416,11 @@ function buildLanes(){
  const ctrs=Object.keys(cq).sort((a,b)=>cq[b]-cq[a]);
  if(!ctrs.includes(LCTR))LCTR=ctrs[0]||null;
  $("#lctr").innerHTML=ctrs.map(c=>`<option value="${c}"${c===LCTR?" selected":""}>${CTRNM(c)} · ${fmt(Math.round(cq[c]))}TEU</option>`).join("");
- const pq={};for(const l of mine)if(ctrOf(l)===LCTR)pq[portOf(l)]=(pq[portOf(l)]||0)+teuOf(l);
+ const pq={},pm={};for(const l of mine)if(ctrOf(l)===LCTR){const g=portOf(l);pq[g]=(pq[g]||0)+teuOf(l);(pm[g]=pm[g]||new Set()).add(rawPortOf(l));}
  const ports=Object.keys(pq).sort((a,b)=>pq[b]-pq[a]);
  if(LPORT!=="ALL"&&!ports.includes(LPORT))LPORT="ALL";
  $("#lport").innerHTML=`<option value="ALL"${LPORT==="ALL"?" selected":""}>전체(국가 합산) · ${fmt(Math.round(Object.values(pq).reduce((a,b)=>a+b,0)))}TEU</option>`
-   +ports.map(p=>`<option value="${p}"${p===LPORT?" selected":""}>${p} · ${fmt(Math.round(pq[p]))}TEU</option>`).join("");
+   +ports.map(p=>`<option value="${p}"${p===LPORT?" selected":""}>${p}${pm[p]&&(pm[p].size>1||!pm[p].has(p))?" ("+[...pm[p]].sort((a,b)=>a==="SGN"?-1:b==="SGN"?1:a<b?-1:1).join("·")+")":""} · ${fmt(Math.round(pq[p]))}TEU</option>`).join("");
  WKS=ws.map(w=>({w,q:wq[w]}));
 }
 const CTRNM=c=>({HK:"홍콩",KR:"한국",CN:"중국",TW:"대만",JP:"일본",ID:"인도네시아",SG:"싱가포르",MY:"말레이시아",TH:"태국",VN:"베트남",IN:"인도",PK:"파키스탄",AE:"아랍에미리트",SA:"사우디",OM:"오만",EG:"이집트",MX:"멕시코",US:"미주",TZ:"탄자니아",KE:"케냐",LK:"스리랑카",PH:"필리핀",MM:"미얀마",BD:"방글라데시",RU:"러시아"}[c]||c);
