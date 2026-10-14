@@ -180,8 +180,9 @@ table.board.grid{table-layout:auto;width:auto;max-width:100%}
 .board th.gs.g2,.board td.gs.g2{border-left:2px solid #b2d2a2}
 .board th.gend,.board td.gend{border-left:2px solid #b2d2a2}
 #b-sub.on,#b-skp.on,#b-last.on,#b-rmkw.on,#b-tssub.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
-body.unit-wt .g1{background:#fff8ec}   /* 중량 모드 — 지표 컬럼 배경으로 단위 전환을 알린다 */
 .langbtn{position:absolute;top:12px;right:16px;font-weight:700}
+body.unit-wt .g1{background:#fff8ec}          /* 중량 모드 — 지표 컬럼에 옅은 색으로 단위 전환을 알린다 */
+body.unit-wt #unitseg #unit-wt{font-weight:700}
 
 .board .pk1{border-left:2px solid #cbd6e8}
 #appbody{display:none}
@@ -356,7 +357,7 @@ function logout(){ _clearTok(); try{ sessionStorage.removeItem('lb_view_state');
   <span class="flab" data-i="f_achv">달성률</span><span class="mtseg" id="achvseg" title="달성률(Lifting/BSA) 공컨 기준 · ALL=MT+Laden, Laden=laden만, Empty=공컨(MT)만(영업주체 필터 무관)"><button id="achv-all">ALL</button><button id="achv-laden" class="on">Laden</button><button id="achv-mty">Empty</button></span>
   <span class="flab" data-i="f_util" style="margin-left:8px">소석률</span><span class="mtseg" title="소석률(ROB/Own Slot) 공컨 기준 · ALL=MT+Laden ROB, Laden=laden ROB, Empty=공컨(MT) ROB"><button id="util-all" class="on">ALL</button><button id="util-laden">Laden</button><button id="util-mty">Empty</button></span>
   <span class="flab" data-i="f_cgo" style="margin-left:8px">화물구분</span><span class="mtseg" id="cgoseg" title="BSA·Lifting·달성률의 화물 구분 · Local=Local 화물만(laden−T/S), T/S=환적화물만. 영업주체 필터도 그대로 적용된다(T/S×팀 교차). 공컨(MT) 토글은 laden 기준이라 무효. ROB·소석률·Loadable Space 는 본선 총량이라 구분 없음(Own Slot 이 화물별로 안 나뉨)"><button id="cgo-all" class="on" data-i="cgo_all">전체</button><button id="cgo-lcl">Local</button><button id="cgo-ts">T/S</button></span>
-  <span class="flab" data-i="f_unit" style="margin-left:8px">단위</span><span class="mtseg" id="unitseg" title="TEU = 기존 보드. 중량 = ERP UISCBS114 WEIGHT 모드와 동일한 톤 기준(화물중량 + 컨테이너 tare). 중량 데이터가 수집된 주차에서만 켜진다"><button id="unit-teu" class="on">TEU</button><button id="unit-wt" data-i="u_wt">중량(T)</button></span>
+  <span class="flab" data-i="f_unit" id="lab-unit" style="margin-left:8px">단위</span><span class="mtseg" id="unitseg" title="TEU = 기존 보드. 중량 = ERP UISCBS114 WEIGHT 모드와 동일한 톤 기준(화물중량 + 컨테이너 tare). 중량 데이터가 수집된 주차에서만 켜진다"><button id="unit-teu" class="on">TEU</button><button id="unit-wt" data-i="u_wt">중량(T)</button></span>
   <span class="sep"></span><span class="vgrp"><span class="vlab" data-i="viewopt">보기옵션</span><button id="b-sub" data-i="f_sub">소계·총계</button><button id="b-skp" data-i="f_skp" title="포트 스킵된 적출항 포함 여부(기본=제외)">스킵 포함</button><button id="b-tssub" data-i="f_tssub" title="BSA·Lifting 숫자 아래에 그 행의 T/S 분을 작은 글씨로 같이 표시(비교용)">T/S 병기</button><button id="b-last" data-i="f_last" title="라스트 포트: 각 항차의 마지막 적출항. 주차별=라스트항만 1줄 / 항차별=전 기항지 표시 + 라스트항 강조. 기준(중국/동남아)은 옆 토글">라스트포트</button><button id="b-rmkw" data-i="f_rmkw" title="리마크가 컬럼 폭보다 길면 줄을 바꿔 전체 내용을 보여줌(행 높이가 늘어남). 끄면 한 줄 + 말줄임">리마크 줄바꿈</button></span>
   <span class="mtseg lbseg" id="lbseg" style="display:none"><button id="lb-cn" class="on" data-i="lb_cn">중국</button><button id="lb-sea" data-i="lb_sea">동남아</button></span>
   <span class="sep"></span><button id="b-hist" data-i="f_hist" title="변경내역">🕘 변경내역</button><button id="b-csv" data-i="f_csv" title="현재 필터에 걸린 전 행을 CSV로 내려받기(접힌 주차 포함). 숫자는 서식 없는 원본값 — 엑셀에서 바로 계산 가능">⬇ CSV</button>
@@ -468,10 +469,10 @@ function vsLoad(){
 function vsSyncUI(){                                  // 복원한 상태를 버튼/체크박스에 반영
   if(_vsRt){ const keep=new Set(_vsRt);
     document.querySelectorAll('.rt').forEach(c=>{ c.checked=keep.has(c.value); }); _vsRt=null; }
+  ['teu','wt'].forEach(k=>{const e=$('unit-'+k); if(e) e.classList.toggle('on',unit===k);});
   MTMODES.forEach(k=>{ $('achv-'+k).classList.toggle('on',achvMode===k);
                        $('util-'+k).classList.toggle('on',utilMode===k); });
   CGOMODES.forEach(k=>$('cgo-'+k).classList.toggle('on',cgoMode===k));
-  ['teu','wt'].forEach(k=>{const e=$('unit-'+k); if(e) e.classList.toggle('on',unit===k);});
   $('achvseg').classList.toggle('segoff', cgoMode!=='all');
   $('b-tssub').classList.toggle('segoff', cgoMode==='ts');
   $('b-sub').classList.toggle('on',showSub);
@@ -515,11 +516,11 @@ const TEAMS=['o','e','i','j'];
 const T_TEAM=t=>T('t_'+t);
 const selTeam=new Set(TEAMS);
 // laden BSA/Lifting: 전체선택이면 클린 총계(r.bsa/r.lifting), 부분선택이면 선택 팀 합. 달성률 ALL이면 MT(bsa_mty/lift_mty) 가산.
-// ── 단위(TEU/중량) — 중량 행은 w_ 접두로 같은 이름·같은 의미로 실린다(gen_weight.BOARD_MAP).
+// ── 단위(TEU/중량) ────────────────────────────────────────────────
+//   중량 행은 w_ 접두 필드로 같은 이름·같은 의미로 실려 있다(gen_weight.BOARD_MAP).
 //   V(r,k) 한 군데만 거치면 아래 지표식은 단위와 무관하게 그대로 쓴다.
 const HAS_WT=ALL.some(r=>r.w_has);
 const V=(r,k)=>(unit==='wt'?(r['w_'+k]||0):(r[k]||0));
-const HASF=(r,k)=>(unit==='wt'?r['w_'+k]:r[k])!=null;
 const bsaLaden=r=>selTeam.size===TEAMS.length?V(r,'bsa'):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?V(r,'bsa_'+t):0),0);
 const liftLaden=r=>selTeam.size===TEAMS.length?V(r,'lifting'):TEAMS.reduce((a,t)=>a+(selTeam.has(t)?V(r,'lift_'+t):0),0);
 // T/S 도 원천에 팀 분해가 있다(SC052D POR/DLY · TEU_2 의 CGO_MODE='T' 행 ET/OVRS/IM/JPN).
@@ -541,6 +542,9 @@ const tsSubCell=(r,k)=>{ if(!tsSub||cgoMode==='ts') return '';
 const tsSubAgg=v=>(tsSub&&cgoMode!=='ts'&&v)?`<span class="tssub">T/S ${fmt(v)}</span>`:'';
 const achvOf=r=>{const b=bsaOf(r);return b?Math.round(liftOf(r)/b*1000)/10:null;};
 // ROB/소석률: ALL=r.rob(MT포함) / Laden=r.rob_laden / Empty=r.rob_mty. 각 필드 미탑재 시 r.rob·차감값으로 폴백.
+// ★필드 유무는 !=null 로 본다 — 0 을 '없음'으로 보면 공컨만 실린 레그의 laden ROB 이
+//   총계로 폴백돼 laden+empty != all 이 된다(검증에서 걸린 회귀).
+const HASF=(r,k)=>(unit==='wt'?r['w_'+k]:r[k])!=null;
 const robOf=r=>utilMode==='all'?V(r,'rob')
   :utilMode==='mty'?(HASF(r,'rob_mty')?V(r,'rob_mty'):Math.max(0,V(r,'rob')-V(r,'rob_laden')))
   :(HASF(r,'rob_laden')?V(r,'rob_laden'):V(r,'rob'));
@@ -1119,7 +1123,7 @@ function renderVoyage(voys){
        + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
        + `<td class="g1 gs">${isDis?'<span class="dim">–</span>':fmt(bsaOf(r))+tsSubCell(r,'b')}</td><td class="${sC} g1">${fmt(sv)}</td><td class="g1">${isDis?'<span class="dim">–</span>':fmt(liftOf(r))+tsSubCell(r,'l')}</td><td class="${aC} g1">${av==null?'<span class="dim">–</span>':av+'%'}</td>`
        + `<td class="gk own g2 gs">${first?fmt(v.own):''}</td><td class="g2">${fmt(robOf(r))}</td>`
-       + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${cfmCell(r)}${_pmShow?pickCells(r,_PMAP):''}</tr>`;
+       + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${cfmCell(r)}</tr>`;
     });
   });
   $('wrap').innerHTML=h+'</tbody></table>';
@@ -1141,7 +1145,7 @@ function leafRow(r,o){
    + `<td class="l key">${r.pol||''} <span class="muted">${r.pol_ctr||''}</span>${isLastP?' <span class="lasttag">LAST</span>':''}</td><td class="l dim">${etd(r.etd)}</td>`
    + `<td class="g1 gs">${fmt(bsaOf(r))+tsSubCell(r,'b')}</td><td class="${sC} g1">${fmt(sv)}</td><td class="g1">${fmt(liftOf(r))+tsSubCell(r,'l')}</td><td class="${aC} g1" style="${ast}">${av==null?'–':av+'%'}</td>`
    + `<td class="gk own g2 gs">${o.first?fmt(V(r,'own_slot')):''}</td><td class="g2">${fmt(robOf(r))}</td>`
-   + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${cfmCell(r)}</tr>`;
+   + `<td class="g2">${uv==null?'–':uv+'%'}</td><td class="g2"${slk<0?' style="color:#c0392b"':''}>${fmt(slk)}</td>${rmkCell(r)}${cfmCell(r)}${_pmShow?pickCells(r,_PMAP):''}</tr>`;
 }
 let _pmShow=false,_PMAP=null;      // render()가 매번 갱신 — leafRow()에서 참조
 function pickCells(r, PMAP){
@@ -1296,7 +1300,9 @@ function setCgo(m, quiet){
   apply();
 }
 CGOMODES.forEach(k=>{ $('cgo-'+k).onclick=()=>setCgo(k); });
+
 // ── 단위 토글 ───────────────────────────────────────────────────────────
+//   중량 행이 하나도 없는 스냅샷이면 버튼을 잠근다(오해 방지).
 function setUnit(u){
   if(u==='wt'&&!HAS_WT) return;
   unit=u;
@@ -1304,9 +1310,10 @@ function setUnit(u){
   document.body.classList.toggle('unit-wt', unit==='wt');
   apply();
 }
-['teu','wt'].forEach(k=>{ const e=$('unit-'+k); if(e) e.onclick=()=>setUnit(k); });
-if(!HAS_WT){ const g=$('unitseg'); if(g) g.classList.add('segoff');
-  const b=$('unit-wt'); if(b) b.title='이 스냅샷에는 중량 데이터가 없습니다 (gen_weight.py 로 수집 필요)'; }
+['teu','wt'].forEach(k=>{ $('unit-'+k).onclick=()=>setUnit(k); });
+if(!HAS_WT){ $('unitseg').classList.add('segoff');
+  $('unit-wt').title='이 스냅샷에는 중량 데이터가 없습니다 (gen_weight.py 로 수집 필요)'; }
+
 function applyTsSub(){ $('b-tssub').classList.toggle('on', tsSub); }
 $('s_miss').onclick=()=>{ missOnly=!missOnly; apply(); };
 // 컬럼명 클릭: 같은 컬럼이면 오름 → 내림 → 해제, 다른 컬럼이면 오름차순부터
