@@ -82,6 +82,22 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
 .sig{display:inline-block;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600}
 .sig.lo{background:var(--cbg);color:var(--crit)}.sig.ok{background:var(--gbg);color:var(--good)}.sig.hi{background:#e8f0fe;color:#1a56db}.sig.na{background:#eef1f5;color:var(--grey)}
 .ropill{background:#fff3e0;color:#b26a00}
+.board{display:flex;gap:12px;overflow-x:auto;padding:12px 14px 14px;align-items:flex-start}
+.bcol{flex:0 0 186px;display:flex;flex-direction:column;gap:8px}
+.bhd{font-weight:700;font-size:13px;color:var(--ink2);padding:0 2px 2px;display:flex;justify-content:space-between;align-items:baseline}
+.bhd .cc{margin-right:5px}
+.pc{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;cursor:pointer;transition:outline .08s}
+.pc:hover{outline:2px solid var(--accent)}
+.pc.tot{background:var(--soft)}
+.pc.lo{background:#fdf1f1;border-color:#f1c9c9}.pc.hi{background:#eef3fe;border-color:#c9d8f6}
+.pc.sel{outline:2px solid var(--accent)}
+.pc.thin{border-style:dashed;opacity:.8}
+.pc .nm{font-weight:700;font-size:12.5px;margin-bottom:4px;display:flex;justify-content:space-between;gap:6px}
+.pc .nm .hn{font-weight:400;font-size:10.5px}
+.pc .a{font:700 16px var(--mono);white-space:nowrap}
+.pc .sl{color:#c3cad6;margin:0 4px;font-weight:400}
+.pc .t{font:11px var(--mono);color:var(--grey);margin-top:3px;white-space:nowrap}
+.pc .q{font:10.5px var(--mono);color:var(--grey);margin-top:4px;display:flex;justify-content:space-between;align-items:center}
 #drill td,#drill th{text-align:right}#drill td.tl,#drill th.tl{text-align:left}
 .bkrow td{background:#fafbfc}.bkrow table{margin:2px 0}.bkrow thead th{background:#f4f6f9;font-size:10px}.bkrow th,.bkrow td{padding:6px 12px}
 .devbar{position:relative;height:17px;width:120px;background:var(--soft);border-radius:3px;display:inline-block;vertical-align:middle}
@@ -141,11 +157,11 @@ tbody tr+tr td{border-top:1px solid var(--soft)}
        <div id=portopts></div></div></span></span>
  <span class=note>D-1 마감 기준<br>확정 O/F + 항차평균</span>
 </div>
-<div class=helprow>운임은 <b>20' / 40'</b> 나란히. 공시 O/F = 운임표의 <b>출항(ETD) 주차 · 화주 등급(A·B → AB, C·D·N/A → CD)</b> 요율. <b>실제 운임을 클릭</b>하면 화주별 리스트(저운임부터). 필터는 모두 <b>다중 선택</b>. <b>기간(ETD 출항일)을 직접 선택</b>하면 그 기간 부킹으로 다시 집계됩니다. 포트는 국가의 하위.</div>
+<div class=helprow>운임은 <b>20' / 40'</b> 나란히. 공시 O/F = 운임표의 <b>출항(ETD) 주차 · 화주 등급(A·B → AB, C·D·N/A → CD)</b> 요율. <b>카드를 클릭</b>하면 그 국가·포트의 화주별 리스트(저운임부터). 카드 색 = 공시 대비 신호(빨강 저운임 · 파랑 고운임). 필터는 모두 <b>다중 선택</b>. <b>기간(ETD 출항일)을 직접 선택</b>하면 그 기간 부킹으로 다시 집계됩니다. 포트는 국가의 하위.</div>
 
-<div class=panel><div class=ph><span>① POD별 요약 — 실제 O/F vs <span class=hn>공시 O/F</span> (USD/box, 20' / 40' · <span id=tcllbl>DRY</span>)</span>
+<div class=panel><div class=ph><span>① POD 국가 × 포트 — 실제 O/F vs <span class=hn>공시 O/F</span> (USD/box, 20' / 40' · <span id=tcllbl>DRY</span>)</span>
   <span class=r id=mtxinfo></span></div>
- <div class=scroll><table id=mtx></table></div></div>
+ <div class=board id=mtx></div></div>
 
 <div class=panel id=drillpanel style=display:none><div class=ph id=drillhead></div>
  <div class=scroll><table id=drill></table></div></div>
@@ -275,7 +291,7 @@ function buildPort(){const h=$("#portopts");h.innerHTML="";let shown=0,vis=0;
  if(!shown)h.innerHTML='<div class=ddempty>국가를 먼저 선택하세요</div>';
  $("#portcnt").textContent=vis;}
 function portAll(on){DATA.countries.forEach(([cc])=>{if(CSEL.has(cc))(DATA.ports[cc]||[]).forEach(p=>on?PSEL.add(p):PSEL.delete(p));});buildPort();applyF();}
-function applyF(){renderMtx();if(SEL && CSEL.has(DATA.podctr[SEL[0]]) && PSEL.has(SEL[0]))drill(...SEL);else{SEL=null;$("#drillpanel").style.display="none";}}
+function applyF(){renderMtx();if(SEL)drill(...SEL);}
 
 /* 기간 */
 function ymd(dt){return dt.getFullYear()+String(dt.getMonth()+1).padStart(2,'0')+String(dt.getDate()).padStart(2,'0');}
@@ -290,33 +306,46 @@ function updInfo(){const noT=(TCL!=="DRY"||HZS==="y");
  $("#mtxinfo").textContent=`기간 ${md(PF)}~${md(PT)} · 색 = 공시 대비 신호(빨강 저운임 · 파랑 고운임, ±5%·최소 $10 안은 양호) · 편차는 공시 O/F가 있는 부킹끼리 비교`
    +(noT?` · ${TCL}${HZS==="y"?"·위험물":""}는 운임표(드라이 기준) 공시 O/F가 없어 비교 제외`:"");}
 
-/* 매트릭스: 행 = 국가 > POD, 열 = 지역 · 실제 O/F · 공시 O/F · 편차 · 물량 (각 20' / 40') */
-function renderMtx(){const m=aggCells();
- const pair=(a,b)=>`<span class=pr>${a}<span class=sl>/</span>${b}</span>`;
- const money=v=>v==null?'<span class=hn>—</span>':'$'+fmt(v);
- const gapS=v=>v==null?'<span class=hn>—</span>':`<span class="${v<0?'dneg':v>0?'dpos':'dfl'}">${v>0?'+':''}${fmt(v)}</span>`;
- let h=`<thead><tr><th class=pod>POD</th><th>지역</th><th>실제 O/F<br><span class=hn>20' / 40'</span></th><th>공시 O/F<br><span class=hn>20' / 40'</span></th><th>편차(GAP)<br><span class=hn>20' / 40'</span></th><th>물량 TEU<br><span class=hn>20' / 40'</span></th><th>R/O TEU</th></tr></thead><tbody>`;
- let any=false;
- DATA.countries.forEach(([cc,nm])=>{if(!CSEL.has(cc))return;
-  const ports=(DATA.ports[cc]||[]).filter(p=>PSEL.has(p)&&m[p]&&(m[p]["20"].t+m[p]["40"].t)>0);
-  if(!ports.length)return;any=true;const open=!COLL.has(cc);
-  let t20=0,t40=0,trt=0;ports.forEach(p=>{t20+=m[p]["20"].t;t40+=m[p]["40"].t;trt+=m[p]["20"].rt+m[p]["40"].rt;});
-  h+=`<tr class=ctrhead onclick="tglCtr('${cc}')"><td class=pod colspan=5><span class=cc>${cc}</span>${open?'▾':'▸'} ${nm} <span class=hn style="font-weight:400">· 포트 ${ports.length}</span></td><td>${pair(fmt(t20),fmt(t40))}</td><td>${trt?fmt(trt):''}</td></tr>`;
-  if(open)ports.forEach(p=>{const v={"20":cellVals(m[p]["20"]),"40":cellVals(m[p]["40"])};
-   const act=z=>v[z].act==null?'<span class=hn>—</span>':`<a class="v v${v[z].sig}" onclick="drill('${p}')" title="${z}' ${SIGNM[v[z].sig]} · 클릭 = 화주별 리스트">$${fmt(v[z].act)}</a>`;
-   const rt=m[p]["20"].rt+m[p]["40"].rt;
-   h+=`<tr class=portrow><td class=pod><b>${p}</b></td><td class=hn>${nm}</td><td>${pair(act("20"),act("40"))}</td>`+
-      `<td>${pair(money(v["20"].pub),money(v["40"].pub))}</td><td>${pair(gapS(v["20"].gap),gapS(v["40"].gap))}</td>`+
-      `<td>${pair(fmt(m[p]["20"].t),fmt(m[p]["40"].t))}</td><td>${rt?`<span class="pill ropill">R/O</span> ${fmt(rt)}`:''}</td></tr>`;});
- });
- if(!any)h+=`<tr><td class=empty colspan=7>이 기간·필터에 부킹이 없습니다</td></tr>`;
- h+=`</tbody>`;$("#mtx").innerHTML=h;const tl=$("#tcllbl");if(tl)tl.textContent=TCL+(HZS==="y"?" · 위험물":HZS==="a"?" · 위험물포함":"");}
-function tglCtr(cc){COLL.has(cc)?COLL.delete(cc):COLL.add(cc);renderMtx();}
+/* 요약 보드: 가로 = POD 국가(물량순), 세로 = 국가 합계 카드 + 포트 카드(물량순).
+   베트남은 저운임 탭과 같은 2그룹(HAIPHONG / SGN 외). 카드 클릭 = 화주별 드릴다운 */
+const portKey=l=>(DATA.podctr[l.p]==="VN"&&l.p!=="HAIPHONG")?"SGN 외":l.p;
+function emptyAgg(){return {"20":{oq:0,q:0,aq:0,pq:0,pn:0,t:0,rt:0},"40":{oq:0,q:0,aq:0,pq:0,pn:0,t:0,rt:0}};}
+function addAgg(P,l){const c=P[z2(l)];c.t+=teuOf(l);if(l.ro)c.rt+=teuOf(l);
+ if(okRate(l)){c.oq+=l.o*l.q;c.q+=l.q;if(l.pb!=null){c.aq+=l.o*l.q;c.pq+=l.pb*l.q;c.pn+=l.q;}}}
+function renderMtx(){const C={};
+ for(const l of DATA.lines){ if(!inRange(l)||!passPod(l)||!passT(l)||!passG(l)||l.k) continue;
+  const cc=DATA.podctr[l.p],k=portKey(l);
+  const o=(C[cc]=C[cc]||{tot:emptyAgg(),ports:{}});addAgg(o.tot,l);addAgg(o.ports[k]=o.ports[k]||emptyAgg(),l);}
+ const tt=P=>P["20"].t+P["40"].t;
+ const card=(nm,P,kind,key,isTot)=>{const v={"20":cellVals(P["20"]),"40":cellVals(P["40"])};
+  /* 카드 색 = 두 규격 합친 공시 대비 신호 */
+  const A=P["20"].aq+P["40"].aq,B=P["20"].pq+P["40"].pq,N=P["20"].pn+P["40"].pn;
+  const sig=(N&&pubOn())?sigOf(A/N,B/N):"na",thin=(P["20"].q+P["40"].q)<3;
+  const val=z=>v[z].act==null?'<span class=hn>—</span>':`<span class=v${v[z].sig}>$${fmt(v[z].act)}</span>`;
+  const pub=z=>v[z].pub==null?'—':fmt(v[z].pub);
+  const gap=z=>v[z].gap==null?'—':(v[z].gap>0?'+':'')+fmt(v[z].gap);
+  const rt=P["20"].rt+P["40"].rt,on=SEL&&SEL[0]===kind&&SEL[1]===key;
+  return `<div class="pc ${isTot?'tot':''} ${sig==='lo'||sig==='hi'?sig:''} ${thin?'thin':''} ${on?'sel':''}" onclick="drill('${kind}','${esc(key)}')" title="클릭 = 화주별 리스트${thin?' · 운임 표본 3박스 미만(참고용)':''}">
+   <div class=nm><span>${esc(nm)}</span><span class=hn>20' / 40'</span></div>
+   <div class=a>${val("20")}<span class=sl>/</span>${val("40")}</div>
+   <div class=t>공시 ${pub("20")} / ${pub("40")}</div>
+   <div class=t>편차 ${gap("20")} / ${gap("40")}</div>
+   <div class=q><span>${fmt(P["20"].t)} / ${fmt(P["40"].t)} TEU</span>${rt?`<span class="pill ropill">R/O ${fmt(rt)}</span>`:''}</div></div>`;};
+ let h="";
+ DATA.countries.forEach(([cc,nm])=>{const o=C[cc];if(!o||!CSEL.has(cc)||!tt(o.tot))return;
+  const ports=Object.keys(o.ports).filter(p=>tt(o.ports[p])>0).sort((a,b)=>tt(o.ports[b])-tt(o.ports[a]));
+  h+=`<div class=bcol><div class=bhd><span><span class=cc>${cc}</span>${nm}</span><span class=hn>포트 ${ports.length}</span></div>`+
+     card(nm+" 전체",o.tot,"c",cc,true)+ports.map(p=>card(p,o.ports[p],"p",p,false)).join("")+`</div>`;});
+ $("#mtx").innerHTML=h||'<div class=empty style="padding:16px">이 기간·필터에 부킹이 없습니다</div>';
+ const tl=$("#tcllbl");if(tl)tl.textContent=TCL+(HZS==="y"?" · 위험물":HZS==="a"?" · 위험물포함":"");}
+function tglCtr(){}
 
 /* 드릴다운: 선택 POD의 화주 × 규격 — 저운임(편차 작은 순)부터 */
 let DRILL=[];
-function drill(pod){SEL=[pod];
- const rows=DATA.lines.filter(l=>l.p===pod&&passT(l)&&inRange(l)&&passG(l)&&!l.k);
+function drill(kind,key){SEL=[kind,key];
+ const pod=kind==="c"?(DATA.countries.find(c=>c[0]===key)||[key,key])[1]+" 전체":key;
+ const rows=DATA.lines.filter(l=>(kind==="c"?DATA.podctr[l.p]===key:portKey(l)===key)&&passPod(l)&&passT(l)&&inRange(l)&&passG(l)&&!l.k);
+ document.querySelectorAll("#mtx .pc.sel").forEach(e=>e.classList.remove("sel"));
  const by={};
  for(const l of rows){const z=z2(l),key=l.n+"|"+z;
   const s=(by[key]=by[key]||{nm:l.n,z,g:l.g,m:l.m,oq:0,q:0,aq:0,pq:0,pn:0,bt:0,ro:0,sr:{},bks:[]});
@@ -335,7 +364,7 @@ function drill(pod){SEL=[pod];
  $("#drillhead").innerHTML=`<span>② 화주별 — <b style="color:var(--accent)">${pod}</b> <span class=hn>(${md(PF)}~${md(PT)} · 저운임부터 · 화주명 클릭 = 부킹 상세)</span></span><span class=r>화주·규격 ${DRILL.length}행 · <span style="color:var(--crit)">저운임 ${nlo}</span></span>`;
  const money=v=>v==null?'<span class=hn>—</span>':'$'+fmt(v);
  let h=`<thead><tr><th class=tl>화주명</th><th class=tl>영업사원</th><th>화주별 등급</th><th>R/O</th><th>월 TEU</th><th>공시 O/F</th><th>실제 O/F</th><th>편차(GAP)</th><th>신호</th><th>컨테이너</th><th>부킹 TEU</th></tr></thead><tbody>`;
- if(!DRILL.length)h+=`<tr><td colspan=11 class=empty>이 POD·기간에 부킹이 없습니다</td></tr>`;
+ if(!DRILL.length)h+=`<tr><td colspan=11 class=empty>이 국가·포트·기간에 부킹이 없습니다</td></tr>`;
  DRILL.forEach((s,i)=>{
   h+=`<tr><td class=tl><span class=shname onclick="tog(${i})">▸ ${esc(s.nm)}</span></td>
    <td class=tl>${s.srs.length?esc(s.srs[0])+(s.srs.length>1?` <span class=hn title="${esc(s.srs.join(', '))}">외 ${s.srs.length-1}</span>`:''):'<span class=hn>—</span>'}</td>
@@ -349,7 +378,7 @@ function drill(pod){SEL=[pod];
    s.bks.map(b=>`<tr><td>${b.b}${b.h?' <span class="pill" style="background:#fdecef;color:#b3261e" title="위험물">HZ</span>':''}${ROPILL(b)}</td><td>${esc(b.v)}</td><td>${b.l}→${b.d}</td><td class=num>${fmt(teuOf(b))}TEU</td><td class=num>${md(b.e)}</td><td class=num>${b.x?`<span class="pill" style="background:#fff3e0;color:#b26a00" title="RA 유효기간 밖(Revised ETA 기준) — 이 항차엔 쓸 수 없는 운임이라 평균에서 제외">RA만료</span> <span class=hn>${b.o}</span>`:b.u?`<span class="pill" style="background:#fff8e1;color:#8a6d00" title="실화주 부킹인데 연결된 RA·O/F가 없음 — 운임 미등록, 평균에서 제외">운임미등록</span>`:(b.f==="B"?`${b.o} <span class="pill" style="background:#e8f0fe;color:#1a56db" title="B/L 실청구 O/F(CS165H) — 실제 청구된 금액">실청구</span>`:b.f==="E"?`${b.o} <span class="pill" style="background:#fff3e0;color:#b26a00" title="${String(b.r||'').startsWith('≈')?'임의연결 — 같은 화주·구간·규격·PPD/CTL 조건의 RA에서 가져온 추정값':'이 부킹에 연결된 RA가 출항일 기준 만료 — 그 단가를 추정값으로 사용'}. 평균·저운임 판정 기본 제외">추정${String(b.r||'').startsWith('≈')?'':'(만료RA)'}</span>`:b.o)}</td><td>${b.r||'<span class=hn>—</span>'}</td></tr>`).join("")+
    `</tbody></table></td></tr>`;});
  h+=`</tbody>`;$("#drill").innerHTML=h;
- $("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});}
+ $("#drillpanel").scrollIntoView({behavior:"smooth",block:"nearest"});renderMtx();}
 function tog(i){const e=$("#bk"+i);e.style.display=e.style.display=="none"?"":"none";}
 
 $("#tclseg").onclick=e=>{if(e.target.dataset.t){TCL=e.target.dataset.t;
